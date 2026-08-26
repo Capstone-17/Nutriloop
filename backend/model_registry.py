@@ -58,9 +58,14 @@ class ModelRegistry:
         self.load_feature_metadata()
         return disease in self.features
 
+    def get_feature_names(self, disease: str) -> List[str]:
+        self.load_feature_metadata()
+        return self.features.get(disease, [])
+
     def get_risk_profile(self, disease: str) -> Dict:
         self.load_risk_profiles()
         return self.risk_profiles.get(disease, {})
+
 
     def predict(self, disease: str, feature_payload: Dict) -> Tuple[int, float, str]:
         if not self.is_ready(disease):

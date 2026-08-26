@@ -10,5 +10,10 @@
   "BMI_glucose",
   "BMI_glucose_ratio",
   "age_glucose",
-  "insulin_glucose_ratio"
+  "Age_Glucose_Interaction",
+  "insulin_glucose_ratio",
+  "HOMA_IR_proxy",
+  "Log_Insulin_Glucose",
+  "Metabolic_Burden",
+  "BP_BMI_risk"
 ]

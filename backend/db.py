@@ -1,7 +1,8 @@
 import sqlite3
 import json
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Generator
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -9,102 +10,197 @@ DB_PATH = BASE_DIR / "app_data.db"
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30.0)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA busy_timeout=30000;")
     return conn
 
 
+@contextmanager
+def get_db_conn() -> Generator[sqlite3.Connection, None, None]:
+    conn = sqlite3.connect(DB_PATH, timeout=30.0)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA busy_timeout=30000;")
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def init_db() -> None:
-    conn = get_conn()
-    cur = conn.cursor()
+    with get_db_conn() as conn:
+        cur = conn.cursor()
 
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS risk_profile (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            disease TEXT NOT NULL,
-            risk_score REAL NOT NULL,
-            predicted_class INTEGER NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS risk_profile (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                disease TEXT NOT NULL,
+                risk_score REAL NOT NULL,
+                predicted_class INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
         )
-        """
-    )
 
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS diet_plan (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            disease TEXT NOT NULL,
-            calories_target INTEGER NOT NULL,
-            protein_target_g INTEGER NOT NULL,
-            carb_target_g INTEGER NOT NULL,
-            fat_target_g INTEGER NOT NULL,
-            sodium_limit_mg INTEGER NOT NULL,
-            potassium_limit_mg INTEGER NOT NULL,
-            recommendation_note TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS diet_plan (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                disease TEXT NOT NULL,
+                calories_target INTEGER NOT NULL,
+                protein_target_g INTEGER NOT NULL,
+                carb_target_g INTEGER NOT NULL,
+                fat_target_g INTEGER NOT NULL,
+                sodium_limit_mg INTEGER NOT NULL,
+                potassium_limit_mg INTEGER NOT NULL,
+                recommendation_note TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
         )
-        """
-    )
 
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS meal_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            planned_calories INTEGER NOT NULL,
-            consumed_calories INTEGER NOT NULL,
-            deviation_flag INTEGER NOT NULL,
-            deviation_percent REAL NOT NULL,
-            notes TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS meal_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                planned_calories INTEGER NOT NULL,
+                consumed_calories INTEGER NOT NULL,
+                deviation_flag INTEGER NOT NULL,
+                deviation_percent REAL NOT NULL,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
         )
-        """
-    )
 
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS alert (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            severity TEXT NOT NULL,
-            message TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'open',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS alert (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                message TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'open',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
         )
-        """
-    )
 
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS risk_explanation_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT,
-            disease TEXT NOT NULL,
-            model_name TEXT NOT NULL,
-            predicted_class INTEGER NOT NULL,
-            risk_score REAL NOT NULL,
-            risk_level TEXT NOT NULL,
-            threshold_moderate REAL NOT NULL,
-            threshold_high REAL NOT NULL,
-            threshold_band TEXT NOT NULL,
-            major_risk_factors_json TEXT NOT NULL,
-            validation_warnings_json TEXT NOT NULL,
-            raw_inputs_json TEXT NOT NULL,
-            transformed_features_json TEXT NOT NULL,
-            top_factors_json TEXT NOT NULL,
-            calibration_context_json TEXT NOT NULL,
-            explanation_text TEXT NOT NULL,
-            source TEXT NOT NULL DEFAULT 'api',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS risk_explanation_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT,
+                disease TEXT NOT NULL,
+                model_name TEXT NOT NULL,
+                predicted_class INTEGER NOT NULL,
+                risk_score REAL NOT NULL,
+                risk_level TEXT NOT NULL,
+                threshold_moderate REAL NOT NULL,
+                threshold_high REAL NOT NULL,
+                threshold_band TEXT NOT NULL,
+                major_risk_factors_json TEXT NOT NULL,
+                validation_warnings_json TEXT NOT NULL,
+                raw_inputs_json TEXT NOT NULL,
+                transformed_features_json TEXT NOT NULL,
+                top_factors_json TEXT NOT NULL,
+                calibration_context_json TEXT NOT NULL,
+                explanation_text TEXT NOT NULL,
+                source TEXT NOT NULL DEFAULT 'api',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
         )
-        """
-    )
 
-    conn.commit()
-    conn.close()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS adaptation_action (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                action_id TEXT UNIQUE NOT NULL,
+                trigger_type TEXT NOT NULL,
+                action_type TEXT NOT NULL,
+                parameters_json TEXT NOT NULL,
+                priority INTEGER NOT NULL,
+                reason TEXT NOT NULL,
+                executed INTEGER NOT NULL DEFAULT 0,
+                result TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_pattern (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                pattern_type TEXT NOT NULL,
+                pattern_data_json TEXT NOT NULL,
+                confidence REAL NOT NULL,
+                sample_size INTEGER NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, pattern_type)
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS feedback_record (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                feedback_type TEXT NOT NULL,
+                source TEXT NOT NULL,
+                rating INTEGER,
+                text_feedback TEXT,
+                meal_id TEXT,
+                recommendation_id TEXT,
+                metadata_json TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS health_outcome (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                outcome_type TEXT NOT NULL,
+                value REAL NOT NULL,
+                unit TEXT NOT NULL,
+                baseline_value REAL,
+                change_from_baseline REAL,
+                clinical_significance TEXT NOT NULL,
+                measurement_context_json TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS agent_session (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT UNIQUE NOT NULL,
+                conversation_history_json TEXT NOT NULL,
+                user_profile_json TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
 
 
 def insert_risk_profile(user_id: str, disease: str, risk_score: float, predicted_class: int) -> None:
@@ -395,3 +491,273 @@ def get_risk_explanation_summary() -> Dict[str, Any]:
             for r in latest
         ],
     }
+
+
+# ==============================================================================
+# Persistent Helpers: Adaptation Actions & User Patterns
+# ==============================================================================
+def insert_adaptation_action(
+    user_id: str,
+    action_id: str,
+    trigger_type: str,
+    action_type: str,
+    parameters: Dict[str, Any],
+    priority: int,
+    reason: str,
+    executed: bool = False,
+    result: Optional[str] = None,
+) -> int:
+    with get_db_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT OR REPLACE INTO adaptation_action (
+                user_id, action_id, trigger_type, action_type, parameters_json, priority, reason, executed, result
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                action_id,
+                trigger_type,
+                action_type,
+                json.dumps(parameters),
+                int(priority),
+                reason,
+                int(executed),
+                result,
+            ),
+        )
+        return int(cur.lastrowid)
+
+
+def get_adaptation_actions(user_id: Optional[str] = None, executed_only: Optional[bool] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    with get_db_conn() as conn:
+        query = "SELECT * FROM adaptation_action WHERE 1=1"
+        params: List[Any] = []
+        if user_id:
+            query += " AND user_id = ?"
+            params.append(user_id)
+        if executed_only is not None:
+            query += " AND executed = ?"
+            params.append(1 if executed_only else 0)
+        query += " ORDER BY datetime(created_at) DESC, id DESC LIMIT ?"
+        params.append(int(limit))
+
+        rows = conn.execute(query, params).fetchall()
+        return [
+            {
+                "id": int(r["id"]),
+                "user_id": r["user_id"],
+                "action_id": r["action_id"],
+                "trigger_type": r["trigger_type"],
+                "action_type": r["action_type"],
+                "parameters": json.loads(r["parameters_json"]),
+                "priority": int(r["priority"]),
+                "reason": r["reason"],
+                "executed": bool(r["executed"]),
+                "result": r["result"],
+                "created_at": r["created_at"],
+            }
+            for r in rows
+        ]
+
+
+def upsert_user_pattern(
+    user_id: str,
+    pattern_type: str,
+    pattern_data: Dict[str, Any],
+    confidence: float,
+    sample_size: int,
+) -> None:
+    with get_db_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO user_pattern (user_id, pattern_type, pattern_data_json, confidence, sample_size, updated_at)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id, pattern_type) DO UPDATE SET
+                pattern_data_json = excluded.pattern_data_json,
+                confidence = excluded.confidence,
+                sample_size = excluded.sample_size,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (user_id, pattern_type, json.dumps(pattern_data), float(confidence), int(sample_size)),
+        )
+
+
+def get_user_patterns(user_id: str) -> Dict[str, Dict[str, Any]]:
+    with get_db_conn() as conn:
+        rows = conn.execute(
+            "SELECT pattern_type, pattern_data_json, confidence, sample_size FROM user_pattern WHERE user_id = ?",
+            (user_id,),
+        ).fetchall()
+        return {
+            r["pattern_type"]: {
+                "data": json.loads(r["pattern_data_json"]),
+                "confidence": float(r["confidence"]),
+                "sample_size": int(r["sample_size"]),
+            }
+            for r in rows
+        }
+
+
+# ==============================================================================
+# Persistent Helpers: Feedback & Health Outcomes
+# ==============================================================================
+def insert_feedback_record(
+    user_id: str,
+    feedback_type: str,
+    source: str,
+    rating: Optional[int] = None,
+    text_feedback: Optional[str] = None,
+    meal_id: Optional[str] = None,
+    recommendation_id: Optional[str] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> int:
+    with get_db_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO feedback_record (
+                user_id, feedback_type, source, rating, text_feedback, meal_id, recommendation_id, metadata_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                feedback_type,
+                source,
+                rating,
+                text_feedback,
+                meal_id,
+                recommendation_id,
+                json.dumps(metadata or {}),
+            ),
+        )
+        return int(cur.lastrowid)
+
+
+def get_feedback_records(user_id: Optional[str] = None, feedback_type: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    with get_db_conn() as conn:
+        query = "SELECT * FROM feedback_record WHERE 1=1"
+        params: List[Any] = []
+        if user_id:
+            query += " AND user_id = ?"
+            params.append(user_id)
+        if feedback_type:
+            query += " AND feedback_type = ?"
+            params.append(feedback_type)
+        query += " ORDER BY datetime(created_at) DESC, id DESC LIMIT ?"
+        params.append(int(limit))
+
+        rows = conn.execute(query, params).fetchall()
+        return [
+            {
+                "id": int(r["id"]),
+                "user_id": r["user_id"],
+                "feedback_type": r["feedback_type"],
+                "source": r["source"],
+                "rating": r["rating"],
+                "text_feedback": r["text_feedback"],
+                "meal_id": r["meal_id"],
+                "recommendation_id": r["recommendation_id"],
+                "metadata": json.loads(r["metadata_json"]),
+                "created_at": r["created_at"],
+            }
+            for r in rows
+        ]
+
+
+def insert_health_outcome(
+    user_id: str,
+    outcome_type: str,
+    value: float,
+    unit: str,
+    baseline_value: Optional[float] = None,
+    change_from_baseline: Optional[float] = None,
+    clinical_significance: str = "neutral",
+    measurement_context: Optional[Dict[str, Any]] = None,
+) -> int:
+    with get_db_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO health_outcome (
+                user_id, outcome_type, value, unit, baseline_value, change_from_baseline, clinical_significance, measurement_context_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                outcome_type,
+                float(value),
+                unit,
+                float(baseline_value) if baseline_value is not None else None,
+                float(change_from_baseline) if change_from_baseline is not None else None,
+                clinical_significance,
+                json.dumps(measurement_context or {}),
+            ),
+        )
+        return int(cur.lastrowid)
+
+
+def get_health_outcomes(user_id: Optional[str] = None, outcome_type: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    with get_db_conn() as conn:
+        query = "SELECT * FROM health_outcome WHERE 1=1"
+        params: List[Any] = []
+        if user_id:
+            query += " AND user_id = ?"
+            params.append(user_id)
+        if outcome_type:
+            query += " AND outcome_type = ?"
+            params.append(outcome_type)
+        query += " ORDER BY datetime(created_at) DESC, id DESC LIMIT ?"
+        params.append(int(limit))
+
+        rows = conn.execute(query, params).fetchall()
+        return [
+            {
+                "id": int(r["id"]),
+                "user_id": r["user_id"],
+                "outcome_type": r["outcome_type"],
+                "value": float(r["value"]),
+                "unit": r["unit"],
+                "baseline_value": float(r["baseline_value"]) if r["baseline_value"] is not None else None,
+                "change_from_baseline": float(r["change_from_baseline"]) if r["change_from_baseline"] is not None else None,
+                "clinical_significance": r["clinical_significance"],
+                "measurement_context": json.loads(r["measurement_context_json"]),
+                "created_at": r["created_at"],
+            }
+            for r in rows
+        ]
+
+
+# ==============================================================================
+# Persistent Helpers: Agent Sessions
+# ==============================================================================
+def upsert_agent_session(user_id: str, conversation_history: List[Dict[str, Any]], user_profile: Dict[str, Any]) -> None:
+    with get_db_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO agent_session (user_id, conversation_history_json, user_profile_json, updated_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id) DO UPDATE SET
+                conversation_history_json = excluded.conversation_history_json,
+                user_profile_json = excluded.user_profile_json,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (user_id, json.dumps(conversation_history), json.dumps(user_profile)),
+        )
+
+
+def get_agent_session(user_id: str) -> Optional[Dict[str, Any]]:
+    with get_db_conn() as conn:
+        row = conn.execute(
+            "SELECT conversation_history_json, user_profile_json, updated_at FROM agent_session WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+        if not row:
+            return None
+        return {
+            "conversation_history": json.loads(row["conversation_history_json"]),
+            "user_profile": json.loads(row["user_profile_json"]),
+            "updated_at": row["updated_at"],
+        }
+

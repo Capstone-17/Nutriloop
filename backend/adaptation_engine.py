@@ -10,6 +10,8 @@ from enum import Enum
 from datetime import datetime, timedelta
 import json
 
+from backend import db
+
 
 class DeviationSeverity(str, Enum):
     """Severity levels for meal deviations"""
@@ -293,10 +295,22 @@ class AdaptationEngine:
             notes=notes
         )
         
-        # Store meal log
+        # Store meal log in memory and DB
         if user_id not in self.meal_history:
             self.meal_history[user_id] = []
         self.meal_history[user_id].append(meal_log)
+        
+        try:
+            db.insert_meal_log(
+                user_id=user_id,
+                planned_calories=planned_calories,
+                consumed_calories=consumed_calories,
+                deviation_flag=overall_deviation,
+                deviation_percent=calorie_percent,
+                notes=notes,
+            )
+        except Exception:
+            pass
         
         # Analyze consecutive deviations
         recent_meals = self.meal_history[user_id][-10:]  # Last 10 meals
@@ -313,6 +327,22 @@ class AdaptationEngine:
             if user_id not in self.active_adaptations:
                 self.active_adaptations[user_id] = []
             self.active_adaptations[user_id].extend(adaptation_actions)
+
+            for act in adaptation_actions:
+                try:
+                    db.insert_adaptation_action(
+                        user_id=user_id,
+                        action_id=act.action_id,
+                        trigger_type=act.trigger_type,
+                        action_type=act.action_type,
+                        parameters=act.parameters,
+                        priority=act.priority,
+                        reason=act.reason,
+                        executed=act.executed,
+                        result=act.result,
+                    )
+                except Exception:
+                    pass
         
         # Generate alerts if needed
         if overall_severity in [DeviationSeverity.HIGH, DeviationSeverity.CRITICAL] or consecutive_pattern:
@@ -323,8 +353,14 @@ class AdaptationEngine:
             if user_id not in self.alert_history:
                 self.alert_history[user_id] = []
             self.alert_history[user_id].append(alert)
+
+            try:
+                db.insert_alert(user_id=user_id, severity=alert.severity.value, message=alert.message)
+            except Exception:
+                pass
         
         return meal_log
+
     
     def _determine_deviation_type(
         self,
@@ -587,8 +623,21 @@ class AdaptationEngine:
         if user_id not in self.user_patterns:
             self.user_patterns[user_id] = []
         self.user_patterns[user_id].extend(patterns)
+
+        for pat in patterns:
+            try:
+                db.upsert_user_pattern(
+                    user_id=user_id,
+                    pattern_type=pat.pattern_type,
+                    pattern_data=pat.pattern_data,
+                    confidence=pat.confidence,
+                    sample_size=pat.sample_size,
+                )
+            except Exception:
+                pass
         
         return patterns
+
     
     def _learn_timing_pattern(
         self,

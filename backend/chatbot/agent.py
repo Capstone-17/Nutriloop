@@ -295,17 +295,28 @@ def run_agent(
         steps = step + 1
         try:
             assistant_content = _ollama_chat(messages)
-        except httpx.ConnectError:
-            log.error("Cannot connect to Ollama at %s", OLLAMA_BASE_URL)
-            final_reply = (
-                "I'm unable to process your request right now (model service unavailable). "
-                "Please try again in a moment."
-            )
+        except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPError) as exc:
+            log.warning("Ollama connection failed (%s); degrading to deterministic AgenticMealPlanner.", exc)
+            try:
+                from backend.agent_engine import meal_planner
+                from backend.schemas import UserProfile
+                u_prof = UserProfile(
+                    user_id=user_id,
+                    disease=disease or "ckd",
+                    risk_level="moderate",
+                    calorie_target=1800,
+                )
+                agent_resp = meal_planner.process_user_query(message, user_id, u_prof)
+                final_reply = f"[Clinical Decision Support Mode] {agent_resp.content}"
+                tool_calls_made.append("deterministic_clinical_fallback")
+            except Exception as inner_exc:
+                log.error("Deterministic agent fallback failed: %s", inner_exc)
+                final_reply = (
+                    "I'm currently operating in offline mode. For chronic disease diet planning, "
+                    "please refer to your calibrated macronutrient targets or consult your supervising physician."
+                )
             break
-        except httpx.HTTPStatusError as exc:
-            log.error("Ollama returned HTTP %s", exc.response.status_code)
-            final_reply = "I encountered an error processing your request.  Please try again."
-            break
+
 
         log.debug("[agent step=%d] raw response: %s", step, assistant_content[:200])
 

@@ -20,7 +20,12 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.calibration import CalibratedClassifierCV
-from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
+from sklearn.ensemble import (
+    HistGradientBoostingClassifier,
+    RandomForestClassifier,
+    StackingClassifier,
+    VotingClassifier,
+)
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
@@ -38,6 +43,11 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 
+try:
+    from xgboost import XGBClassifier
+except ImportError:
+    XGBClassifier = None
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s",
@@ -53,7 +63,7 @@ RANDOM_STATE = 42
 
 def get_candidate_models(disease: str) -> Dict[str, Any]:
     """Return model candidate specifications for grid exploration."""
-    return {
+    candidates = {
         "RandomForest_balanced": RandomForestClassifier(
             n_estimators=200,
             max_depth=8,
@@ -87,6 +97,32 @@ def get_candidate_models(disease: str) -> Dict[str, Any]:
         ),
         "GaussianNB": GaussianNB(),
     }
+
+    # Stacking Ensemble
+    estimators = [
+        ("rf", RandomForestClassifier(n_estimators=100, max_depth=6, class_weight="balanced", random_state=RANDOM_STATE)),
+        ("hgb", HistGradientBoostingClassifier(max_iter=100, max_depth=4, random_state=RANDOM_STATE)),
+        ("lr", LogisticRegression(C=1.0, class_weight="balanced", max_iter=1000, random_state=RANDOM_STATE)),
+    ]
+    candidates["StackingEnsemble"] = StackingClassifier(
+        estimators=estimators,
+        final_estimator=LogisticRegression(C=1.0, random_state=RANDOM_STATE),
+        cv=5,
+        n_jobs=-1,
+    )
+
+    if XGBClassifier is not None:
+        candidates["XGBoost"] = XGBClassifier(
+            n_estimators=150,
+            max_depth=4,
+            learning_rate=0.05,
+            scale_pos_weight=1.5,
+            random_state=RANDOM_STATE,
+            eval_metric="logloss",
+        )
+
+    return candidates
+
 
 
 def evaluate_predictions(y_true: np.ndarray, y_prob: np.ndarray, threshold: float = 0.5) -> Dict[str, float]:

@@ -313,8 +313,7 @@ class MedicalKnowledgeBase:
         self.guidelines["indian_context"] = indian_guidelines
     
     def _load_drug_interactions(self):
-        """Load drug-food interaction data"""
-        
+        """Load comprehensive evidence-based drug-food interaction database"""
         interactions = [
             DrugFoodInteraction(
                 interaction_id="WARFARIN_VITAMIN_K",
@@ -324,33 +323,93 @@ class MedicalKnowledgeBase:
                 interaction_type="decrease_effect",
                 severity="moderate",
                 mechanism="Vitamin K promotes clotting factor synthesis, antagonizing warfarin effect",
-                clinical_significance="Sudden changes in vitamin K intake can significantly affect INR levels",
-                management="Maintain consistent vitamin K intake; avoid major fluctuations in leafy green consumption",
-                alternatives=["Other vegetables lower in vitamin K", "Consistent portion sizes"]
+                clinical_significance="Sudden changes in vitamin K intake can significantly alter INR levels",
+                management="Maintain consistent daily vitamin K intake; avoid abrupt changes in leafy green consumption",
+                alternatives=["Lower vitamin K vegetables (cucumber, carrots)", "Consistent portion sizes"]
             ),
             DrugFoodInteraction(
                 interaction_id="ACE_INHIBITORS_POTASSIUM",
                 drug_name="ACE Inhibitors",
                 drug_category="antihypertensive",
-                food_components=["potassium_high", "bananas", "oranges", "potatoes", "tomatoes"],
+                food_components=["potassium_high", "bananas", "oranges", "potatoes", "tomatoes", "salt_substitutes"],
                 interaction_type="adverse_reaction",
                 severity="severe",
-                mechanism="ACE inhibitors reduce potassium excretion, leading to hyperkalemia",
-                clinical_significance="High potassium intake can cause dangerous hyperkalemia",
-                management="Monitor potassium levels; limit high-potassium foods if levels are elevated",
-                alternatives=["Lower potassium fruits and vegetables", "Regular blood potassium monitoring"]
+                mechanism="ACE inhibitors reduce aldosterone secretion, impairing renal potassium excretion",
+                clinical_significance="Excessive dietary potassium or potassium chloride salt substitutes causes life-threatening hyperkalemia",
+                management="Avoid potassium-based salt substitutes; monitor serum potassium regularly",
+                alternatives=["Apples, berries, cabbage, cucumbers", "Herbs and citrus for seasoning"]
+            ),
+            DrugFoodInteraction(
+                interaction_id="ARBS_POTASSIUM",
+                drug_name="ARBs",
+                drug_category="antihypertensive",
+                food_components=["potassium_high", "bananas", "potatoes", "salt_substitutes", "coconut_water"],
+                interaction_type="adverse_reaction",
+                severity="severe",
+                mechanism="Angiotensin receptor blockers reduce renal potassium clearance",
+                clinical_significance="Risk of severe hyperkalemia when combined with high-potassium diet or potassium supplements",
+                management="Cap daily potassium intake at prescribed limits; avoid potassium-enriched salt substitutes",
+                alternatives=["Low potassium fruits (apples, grapes, pears)", "Natural spices (garlic, cumin)"]
+            ),
+            DrugFoodInteraction(
+                interaction_id="SGLT2I_CARB_RESTRICTION",
+                drug_name="SGLT2 Inhibitors",
+                drug_category="antidiabetic",
+                food_components=["very_low_carb", "keto_diet", "fasting", "alcohol"],
+                interaction_type="adverse_reaction",
+                severity="severe",
+                mechanism="SGLT2 inhibitors shift metabolism toward lipolysis; severe carbohydrate restriction triggers euglycemic DKA",
+                clinical_significance="High risk of Euglycemic Diabetic Ketoacidosis (euDKA) and volume depletion",
+                management="Maintain minimum daily carbohydrate intake (>=100g/d); ensure aggressive hydration",
+                alternatives=["Complex whole grains (oats, barley)", "Adequate daily water intake (>2L/d)"]
+            ),
+            DrugFoodInteraction(
+                interaction_id="GLP1_GASTRIC_DELAY",
+                drug_name="GLP-1 Receptor Agonists",
+                drug_category="antidiabetic",
+                food_components=["high_fat_meals", "large_portions", "carbonated_beverages"],
+                interaction_type="adverse_reaction",
+                severity="moderate",
+                mechanism="GLP-1 RAs delay gastric emptying, exacerbating nausea and gastrointestinal distress with heavy fatty meals",
+                clinical_significance="Severe bloating, nausea, vomiting, and delayed medication absorption",
+                management="Eat smaller, frequent meals; limit greasy and ultra-processed high-fat foods",
+                alternatives=["Steamed legumes, light soups, lean proteins", "Slow eating pace"]
+            ),
+            DrugFoodInteraction(
+                interaction_id="BETA_BLOCKERS_POTASSIUM",
+                drug_name="Beta-Blockers",
+                drug_category="antihypertensive",
+                food_components=["high_potassium", "papaya", "salt_substitutes"],
+                interaction_type="adverse_reaction",
+                severity="moderate",
+                mechanism="Beta-adrenergic blockade impairs cellular potassium uptake and masks hypoglycemic warning signs",
+                clinical_significance="Masks tachycardia and tremors during hypoglycemia; mild hyperkalemia tendency",
+                management="Monitor blood glucose carefully; recognize neuroglycopenic hypoglycemia symptoms (sweating, confusion)",
+                alternatives=["Consistent meal timing", "Balanced potassium intake"]
+            ),
+            DrugFoodInteraction(
+                interaction_id="CCB_GRAPEFRUIT",
+                drug_name="Calcium Channel Blockers",
+                drug_category="antihypertensive",
+                food_components=["grapefruit", "grapefruit_juice", "seville_oranges"],
+                interaction_type="increase_effect",
+                severity="severe",
+                mechanism="Grapefruit furanocoumarins irreversibly inhibit intestinal CYP3A4, causing massive drug bioavailability spikes",
+                clinical_significance="Severe hypotension, profound bradycardia, peripheral edema, and dizziness",
+                management="Strictly avoid grapefruit and grapefruit juice while taking dihydropyridine/non-dihydropyridine CCBs",
+                alternatives=["Sweet oranges, lemons, limes, berries", "Apples and melons"]
             ),
             DrugFoodInteraction(
                 interaction_id="DIURETICS_SODIUM",
                 drug_name="Diuretics",
                 drug_category="antihypertensive",
-                food_components=["sodium_high", "processed_foods", "canned_foods", "pickles"],
+                food_components=["sodium_high", "processed_foods", "canned_foods", "pickles", "licorice"],
                 interaction_type="decrease_effect",
                 severity="moderate",
-                mechanism="High sodium intake counteracts the fluid-reducing effects of diuretics",
-                clinical_significance="High sodium can reduce medication effectiveness and worsen hypertension",
-                management="Limit sodium intake to <1500 mg/day; avoid processed and high-sodium foods",
-                alternatives=["Fresh foods", "Low-sodium alternatives", "Herbs and spices for flavor"]
+                mechanism="High sodium intake counteracts the natriuretic and antihypertensive efficacy of diuretics",
+                clinical_significance="Blunts blood pressure reduction and promotes fluid retention",
+                management="Limit sodium intake to <1,500 mg/day; avoid black licorice (glycyrrhizin wastes potassium)",
+                alternatives=["Fresh vegetables", "Low-sodium herbs and spices"]
             ),
             DrugFoodInteraction(
                 interaction_id="INSULIN_CARBOHYDRATES",
@@ -359,34 +418,34 @@ class MedicalKnowledgeBase:
                 food_components=["carbohydrates", "sugars", "starches", "fruits", "grains"],
                 interaction_type="increase_effect",
                 severity="moderate",
-                mechanism="Carbohydrates increase blood glucose, requiring insulin for metabolism",
-                clinical_significance="Carbohydrate amount directly affects insulin dosing requirements",
-                management="Match insulin dose to carbohydrate intake; consistent meal timing important",
-                alternatives=["Consistent carbohydrate intake", "Carbohydrate counting", "Regular meal timing"]
+                mechanism="Carbohydrates increase postprandial blood glucose, dictating bolus insulin dosing",
+                clinical_significance="Mismatch between insulin dose and carbohydrate intake causes severe hypoglycemia or hyperglycemia",
+                management="Carbohydrate counting; consistent timing and distribution of complex carbs across meals",
+                alternatives=["Low glycemic index carbohydrates", "Fiber-rich whole foods"]
             ),
             DrugFoodInteraction(
                 interaction_id="METFORMIN_ALCOHOL",
                 drug_name="Metformin",
                 drug_category="antidiabetic",
-                food_components=["alcohol"],
+                food_components=["alcohol", "acute_fasting"],
                 interaction_type="adverse_reaction",
                 severity="severe",
-                mechanism="Alcohol increases risk of lactic acidosis when combined with metformin",
-                clinical_significance="Rare but potentially fatal complication",
-                management="Limit alcohol intake; avoid binge drinking; monitor for lactic acidosis symptoms",
-                alternatives=["Non-alcoholic beverages", "Moderate alcohol consumption if approved by physician"]
+                mechanism="Alcohol inhibits hepatic gluconeogenesis and lactate clearance, potentiating lactic acidosis",
+                clinical_significance="Potentially fatal lactic acidosis; prolonged hypoglycemia",
+                management="Avoid binge drinking and fasting with alcohol; take metformin with meals to reduce GI irritation",
+                alternatives=["Non-alcoholic beverages", "Ensure meals precede any alcohol consumption"]
             ),
             DrugFoodInteraction(
                 interaction_id="DIGOXIN_POTASSIUM",
                 drug_name="Digoxin",
                 drug_category="cardiac_glycoside",
-                food_components=["potassium_low", "diuretics", "vomiting", "diarrhea"],
+                food_components=["potassium_low", "high_fiber_meals"],
                 interaction_type="adverse_reaction",
                 severity="severe",
-                mechanism="Low potassium levels increase digoxin toxicity risk",
-                clinical_significance="Hypokalemia can lead to life-threatening arrhythmias",
-                management="Maintain normal potassium levels; monitor electrolytes regularly",
-                alternatives=["Potassium supplements if prescribed", "Regular electrolyte monitoring"]
+                mechanism="Hypokalemia sensitizes myocardial Na+/K+ ATPase, triggering digoxin toxicity",
+                clinical_significance="Life-threatening cardiac arrhythmias and visual disturbances",
+                management="Maintain serum potassium in 4.0-5.0 mEq/L range; space high-fiber meals 2 hours from digoxin dose",
+                alternatives=["Electrolyte monitoring", "Regular dietary potassium maintenance"]
             ),
             DrugFoodInteraction(
                 interaction_id="STATINS_GRAPEFRUIT",
@@ -395,19 +454,105 @@ class MedicalKnowledgeBase:
                 food_components=["grapefruit", "grapefruit_juice"],
                 interaction_type="increase_effect",
                 severity="moderate",
-                mechanism="Grapefruit inhibits CYP3A4, increasing statin blood levels",
-                clinical_significance="Increased risk of side effects including muscle damage",
-                management="Avoid grapefruit and grapefruit juice while taking certain statins",
-                alternatives=["Other fruits", "Check specific statin guidelines"]
-            )
+                mechanism="Grapefruit inhibits CYP3A4 metabolism of atorvastatin and simvastatin",
+                clinical_significance="Increased systemic statin exposure, elevating risk of myopathy and rhabdomyolysis",
+                management="Avoid grapefruit or switch to non-CYP3A4 metabolized statins (rosuvastatin, pravastatin)",
+                alternatives=["Apples, strawberries, blueberries", "Pears and peaches"]
+            ),
+            DrugFoodInteraction(
+                interaction_id="POTASSIUM_BINDERS_MEAL_SPACING",
+                drug_name="Potassium Binders",
+                drug_category="electrolyte_manager",
+                food_components=["oral_medications", "dairy", "multivitamins"],
+                interaction_type="absorption_inhibitor",
+                severity="moderate",
+                mechanism="Cation exchange resins (Patiromer, Lokelma) bind concomitantly administered oral drugs in the GI tract",
+                clinical_significance="Decreased absorption and efficacy of essential maintenance medications",
+                management="Separate potassium binders by at least 2 to 3 hours before or after other oral medications",
+                alternatives=["Structured medication scheduling", "Take binders with consistent meal routine"]
+            ),
+            DrugFoodInteraction(
+                interaction_id="PHOSPHATE_BINDERS_TIMING",
+                drug_name="Phosphate Binders",
+                drug_category="mineral_metabolism",
+                food_components=["phosphorus_rich", "dairy", "nuts", "poultry", "meats"],
+                interaction_type="increase_effect",
+                severity="moderate",
+                mechanism="Sevelamer and Calcium Acetate bind dietary phosphorus directly in the gut lumen to prevent absorption",
+                clinical_significance="Ineffective if taken on an empty stomach or long after meals",
+                management="Must be taken with the first bites of meals or snacks containing phosphorus",
+                alternatives=["Low-phosphorus food choices", "Strict meal-time administration"]
+            ),
         ]
-        
-        # Organize by drug name
+
+        # Aliases and drug class mapping
+        drug_aliases = {
+            # ACE Inhibitors
+            "lisinopril": "ACE Inhibitors",
+            "ramipril": "ACE Inhibitors",
+            "enalapril": "ACE Inhibitors",
+            "captopril": "ACE Inhibitors",
+            # ARBs
+            "losartan": "ARBs",
+            "valsartan": "ARBs",
+            "telmisartan": "ARBs",
+            "candesartan": "ARBs",
+            # SGLT2i
+            "empagliflozin": "SGLT2 Inhibitors",
+            "dapagliflozin": "SGLT2 Inhibitors",
+            "canagliflozin": "SGLT2 Inhibitors",
+            "jardiance": "SGLT2 Inhibitors",
+            "farxiga": "SGLT2 Inhibitors",
+            # GLP-1 RAs
+            "semaglutide": "GLP-1 Receptor Agonists",
+            "liraglutide": "GLP-1 Receptor Agonists",
+            "tirzepatide": "GLP-1 Receptor Agonists",
+            "ozempic": "GLP-1 Receptor Agonists",
+            "mounjaro": "GLP-1 Receptor Agonists",
+            # Beta Blockers
+            "metoprolol": "Beta-Blockers",
+            "atenolol": "Beta-Blockers",
+            "carvedilol": "Beta-Blockers",
+            "bisoprolol": "Beta-Blockers",
+            # CCBs
+            "amlodipine": "Calcium Channel Blockers",
+            "diltiazem": "Calcium Channel Blockers",
+            "nifedipine": "Calcium Channel Blockers",
+            "norvasc": "Calcium Channel Blockers",
+            # Diuretics
+            "furosemide": "Diuretics",
+            "hydrochlorothiazide": "Diuretics",
+            "lasix": "Diuretics",
+            "torsemide": "Diuretics",
+            # Statins
+            "atorvastatin": "Statins",
+            "simvastatin": "Statins",
+            "rosuvastatin": "Statins",
+            "lipitor": "Statins",
+            # Binders
+            "patiromer": "Potassium Binders",
+            "lokelma": "Potassium Binders",
+            "veltassa": "Potassium Binders",
+            "sevelamer": "Phosphate Binders",
+            "renvela": "Phosphate Binders",
+            "phoslo": "Phosphate Binders",
+            # Anticoagulants & Others
+            "coumadin": "Warfarin",
+            "glucophage": "Metformin",
+            "lanoxin": "Digoxin",
+        }
+
         for interaction in interactions:
             drug_lower = interaction.drug_name.lower()
             if drug_lower not in self.drug_interactions:
                 self.drug_interactions[drug_lower] = []
             self.drug_interactions[drug_lower].append(interaction)
+
+        for alias, parent in drug_aliases.items():
+            parent_lower = parent.lower()
+            if parent_lower in self.drug_interactions:
+                self.drug_interactions[alias] = self.drug_interactions[parent_lower]
+
     
     def _load_nutrient_interactions(self):
         """Load nutrient-nutrient interaction data"""

@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 import json
 from collections import defaultdict
 
+from backend import db
+
 
 class FeedbackType(Enum):
     """Types of user feedback"""
@@ -149,11 +151,26 @@ class FeedbackCollector:
         if user_id not in self.feedback_history:
             self.feedback_history[user_id] = []
         self.feedback_history[user_id].append(feedback)
+
+        try:
+            db.insert_feedback_record(
+                user_id=user_id,
+                feedback_type=feedback.feedback_type.value,
+                source=feedback.source.value,
+                rating=feedback.rating,
+                text_feedback=feedback.text_feedback,
+                meal_id=feedback.meal_id,
+                recommendation_id=feedback.recommendation_id,
+                metadata=feedback.metadata,
+            )
+        except Exception:
+            pass
         
         # Update aggregates
         self._update_aggregates(user_id, feedback)
         
         return feedback
+
     
     def _update_aggregates(self, user_id: str, feedback: UserFeedback):
         """Update feedback aggregates for a user"""
@@ -326,8 +343,23 @@ class OutcomeTracker:
         if user_id not in self.outcome_history:
             self.outcome_history[user_id] = []
         self.outcome_history[user_id].append(outcome)
+
+        try:
+            db.insert_health_outcome(
+                user_id=user_id,
+                outcome_type=outcome.outcome_type.value,
+                value=outcome.value,
+                unit=outcome.unit,
+                baseline_value=outcome.baseline_value,
+                change_from_baseline=outcome.change_from_baseline,
+                clinical_significance=outcome.clinical_significance,
+                measurement_context=outcome.measurement_context,
+            )
+        except Exception:
+            pass
         
         return outcome
+
     
     def _assess_clinical_significance(
         self,

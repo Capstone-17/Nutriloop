@@ -11,6 +11,8 @@ from enum import Enum
 from datetime import datetime, timedelta
 import random
 
+from backend import db
+
 
 class AgentIntent(Enum):
     """Types of user intents the agent can handle"""
@@ -638,6 +640,13 @@ class AgenticMealPlanner:
         # Analyze intent
         intent = self.analyze_intent(user_message, user_id)
         self.conversation_history[user_id][-1]["intent"] = intent.value
+
+        try:
+            profile_dict = user_profile.model_dump() if hasattr(user_profile, "model_dump") else user_profile.__dict__
+            db.upsert_agent_session(user_id, self.conversation_history[user_id], profile_dict)
+        except Exception:
+            pass
+
         
         # Generate response based on intent
         if intent == AgentIntent.MEAL_PLAN_REQUEST:
@@ -1008,5 +1017,6 @@ What would you like help with today?
         )
 
 
-# Global agent instance
+# Global agent instances
 agent_engine = AgenticMealPlanner()
+meal_planner = agent_engine

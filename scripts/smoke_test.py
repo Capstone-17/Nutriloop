@@ -142,7 +142,7 @@ def run_all_tests():
             json={"user_id": "test_user", "message": "What should I eat for breakfast?"},
         ),
         200,
-        "POST /chatbot/chat",
+        "POST /chatbot/chat (with zero-downtime offline fallback)",
     )
     assert_status(
         client.post(
@@ -163,10 +163,32 @@ def run_all_tests():
         "POST /agent/chat",
     )
 
+    # 9. Comorbidity & Multi-Disease Planning
+    comorbid_res = client.post(
+        "/recommend-plan",
+        json={
+            "user_id": "test_user",
+            "diseases": ["ckd", "hypertension"],
+            "risk_score": 0.85,
+            "profile": {"calories_target": 1900},
+        },
+    )
+    assert_status(comorbid_res, 200, "POST /recommend-plan (Comorbidity: CKD + HTN)")
+    comorbid_data = comorbid_res.json()
+    assert comorbid_data["potassium_limit_mg"] <= 2000, "Renal potassium safety override failed"
+    assert comorbid_data["sodium_limit_mg"] <= 1500, "DASH sodium restriction failed"
+    print("  [PASS] Comorbidity Clinical Priority Rule Verified: Potassium <= 2000mg & Sodium <= 1500mg")
+
+    # 10. Expanded Pharmacopeia
+    assert_status(client.get("/medical/drug-interactions/empagliflozin"), 200, "GET /medical/drug-interactions/empagliflozin")
+    assert_status(client.get("/medical/drug-interactions/amlodipine"), 200, "GET /medical/drug-interactions/amlodipine")
+    assert_status(client.get("/medical/drug-interactions/losartan"), 200, "GET /medical/drug-interactions/losartan")
+
     print("=" * 70)
-    print("  SUCCESS: ALL 21 REST ENDPOINTS PASSED WITH HTTP 200 STATUS!")
+    print("  SUCCESS: ALL 21 REST ENDPOINTS + COMORBIDITY SUITE PASSED WITH HTTP 200!")
     print("=" * 70 + "\n")
 
 
 if __name__ == "__main__":
     run_all_tests()
+

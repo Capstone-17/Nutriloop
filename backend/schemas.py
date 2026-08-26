@@ -6,6 +6,15 @@ from pydantic import BaseModel, Field
 
 
 DiseaseType = Literal["ckd", "hypertension", "diabetes"]
+ComorbidDiseaseType = Literal[
+    "ckd",
+    "hypertension",
+    "diabetes",
+    "ckd_hypertension",
+    "diabetes_hypertension",
+    "ckd_diabetes",
+    "ckd_diabetes_hypertension",
+]
 SexType = Literal["male", "female"]
 
 
@@ -31,7 +40,7 @@ class PredictRiskRequest(BaseModel):
 
 
 class PredictRiskResponse(BaseModel):
-    disease: DiseaseType
+    disease: str
     predicted_class: int
     risk_score: float
     risk_level: Literal["low", "moderate", "high"]
@@ -51,12 +60,16 @@ class CKDRawInput(BaseModel):
     systolic_bp_mmhg: Optional[float] = Field(default=None, ge=70.0, le=260.0)
     diastolic_bp_mmhg: Optional[float] = Field(default=None, ge=40.0, le=160.0)
     fasting_glucose_mg_dl: Optional[float] = Field(default=None, ge=40.0, le=450.0)
+    serum_creatinine_mg_dl: Optional[float] = Field(default=None, ge=0.1, le=25.0)
+    blood_urea_mg_dl: Optional[float] = Field(default=None, ge=1.0, le=400.0)
+    hemoglobin_g_dl: Optional[float] = Field(default=None, ge=3.0, le=25.0)
+    urine_albumin_dipstick: Optional[int] = Field(default=None, ge=0, le=5)
 
 
 class HypertensionRawInput(BaseModel):
     age_years: int = Field(ge=18, le=100)
     sex: SexType
-    education_level: int = Field(default=5, ge=1, le=9)
+    education_level: int = Field(default=2, ge=1, le=9)
     current_smoker: bool = False
     cigarettes_per_day: float = Field(default=0.0, ge=0.0, le=100.0)
     prior_stroke: bool = False
@@ -65,6 +78,9 @@ class HypertensionRawInput(BaseModel):
     systolic_bp_mmhg: Optional[float] = Field(default=None, ge=70.0, le=260.0)
     diastolic_bp_mmhg: Optional[float] = Field(default=None, ge=40.0, le=160.0)
     fasting_glucose_mg_dl: Optional[float] = Field(default=None, ge=40.0, le=450.0)
+    total_cholesterol_mg_dl: Optional[float] = Field(default=None, ge=50.0, le=600.0)
+    heart_rate_bpm: Optional[float] = Field(default=None, ge=30.0, le=220.0)
+    blood_pressure_meds: bool = False
 
 
 class DiabetesRawInput(BaseModel):
@@ -76,12 +92,17 @@ class DiabetesRawInput(BaseModel):
     systolic_bp_mmhg: Optional[float] = Field(default=None, ge=70.0, le=260.0)
     diastolic_bp_mmhg: Optional[float] = Field(default=None, ge=40.0, le=160.0)
     fasting_glucose_mg_dl: Optional[float] = Field(default=None, ge=40.0, le=450.0)
+    fasting_insulin_uIU_ml: Optional[float] = Field(default=None, ge=1.0, le=500.0)
+    hba1c_pct: Optional[float] = Field(default=None, ge=3.0, le=20.0)
+    skin_thickness_mm: Optional[float] = Field(default=None, ge=1.0, le=100.0)
+    diabetes_pedigree: Optional[float] = Field(default=None, ge=0.0, le=3.0)
 
 
 class PredictRiskRawRequest(BaseModel):
     disease: DiseaseType
     raw_inputs: Dict[str, Any] = Field(default_factory=dict)
     user_id: Optional[str] = None
+
 
 
 class PredictRiskRawResponse(PredictRiskResponse):
@@ -132,14 +153,17 @@ class RiskExplanationLogListResponse(BaseModel):
 
 class RecommendPlanRequest(BaseModel):
     user_id: str
-    disease: DiseaseType
+    disease: Optional[str] = "ckd"
+    diseases: Optional[List[str]] = None
     profile: Dict[str, Any] = Field(default_factory=dict)
-    risk_score: float = Field(ge=0.0, le=1.0)
+    risk_score: float = Field(default=0.5, ge=0.0, le=1.0)
+    risk_scores: Optional[Dict[str, float]] = None
 
 
 class RecommendPlanResponse(BaseModel):
     user_id: str
-    disease: DiseaseType
+    disease: str
+    diseases: List[str] = Field(default_factory=list)
     calories_target: int
     protein_target_g: int
     carb_target_g: int
@@ -172,7 +196,8 @@ class LogMealResponse(BaseModel):
 
 
 class RiskReportRequest(BaseModel):
-    disease: DiseaseType
+    disease: Optional[str] = "ckd"
+    diseases: Optional[List[str]] = None
     features: Dict[str, Any] = Field(default_factory=dict)
     profile: Dict[str, Any] = Field(default_factory=dict)
     user_id: Optional[str] = None
@@ -180,7 +205,8 @@ class RiskReportRequest(BaseModel):
 
 
 class RiskReportResponse(BaseModel):
-    disease: DiseaseType
+    disease: str
+    diseases: List[str] = Field(default_factory=list)
     predicted_class: int
     risk_score: float
     risk_level: Literal["low", "moderate", "high"]
@@ -194,7 +220,8 @@ class RiskReportResponse(BaseModel):
 
 
 class RiskReportRawRequest(BaseModel):
-    disease: DiseaseType
+    disease: Optional[str] = "ckd"
+    diseases: Optional[List[str]] = None
     raw_inputs: Dict[str, Any] = Field(default_factory=dict)
     profile: Dict[str, Any] = Field(default_factory=dict)
     user_id: Optional[str] = None
@@ -210,7 +237,8 @@ class RiskReportRawResponse(RiskReportResponse):
 class ChatbotRequest(BaseModel):
     user_id: str
     message: str = Field(min_length=1, max_length=4000)
-    disease: Optional[DiseaseType] = None
+    disease: Optional[str] = None
+    diseases: Optional[List[str]] = None
     conversation_history: List[Dict[str, str]] = Field(default_factory=list)
 
 
@@ -226,8 +254,9 @@ class ChatbotResponse(BaseModel):
 
 class UserProfile(BaseModel):
     user_id: str
-    disease: DiseaseType
-    risk_level: Literal["low", "moderate", "high"]
+    disease: str = "ckd"
+    diseases: List[str] = Field(default_factory=list)
+    risk_level: Literal["low", "moderate", "high"] = "moderate"
     dietary_preferences: List[str] = Field(default_factory=list)
     allergies: List[str] = Field(default_factory=list)
     medications: List[str] = Field(default_factory=list)
@@ -257,11 +286,13 @@ class AgentResponse(BaseModel):
 
 class SafetyValidationRequest(BaseModel):
     user_id: str
-    disease: DiseaseType
+    disease: Optional[str] = "ckd"
+    diseases: Optional[List[str]] = None
     meal_data: Dict[str, float]
     risk_level: Literal["low", "moderate", "high"] = "moderate"
     user_medications: List[str] = Field(default_factory=list)
     validation_type: Literal["meal", "daily_plan"] = "meal"
+
 
 
 class SafetyValidationResponse(BaseModel):

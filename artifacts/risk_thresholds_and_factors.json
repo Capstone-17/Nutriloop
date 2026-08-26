@@ -273,59 +273,84 @@
     ]
   },
   "diabetes": {
-    "model_name": "KNeighborsClassifier",
+    "model_name": "HistGradientBoostingClassifier",
     "thresholds": {
-      "moderate": 0.36,
-      "high": 0.786203449524639
+      "moderate": 0.45,
+      "high": 0.8331075216866415
     },
     "metrics": {
-      "accuracy": 0.7077922077922078,
-      "macro_f1": 0.6918767507002801,
-      "precision_pos": 0.5692307692307692,
-      "recall_pos": 0.6851851851851852,
-      "specificity": 0.72,
-      "roc_auc": 0.7691666666666666,
-      "pr_auc": 0.6280441616624841,
-      "brier_score": 0.19807368279081072
+      "accuracy": 0.7467532467532467,
+      "macro_f1": 0.7293985131786438,
+      "precision_pos": 0.6229508196721312,
+      "recall_pos": 0.7037037037037037,
+      "specificity": 0.77,
+      "roc_auc": 0.8074074074074075,
+      "pr_auc": 0.6357527217582511,
+      "brier_score": 0.1759524546603573
     },
     "top_factors": [
       {
-        "feature": "BMI",
-        "importance": 0.027272727272727247,
-        "relative_importance": 0.20999999838300007
-      },
-      {
         "feature": "BMI_glucose_ratio",
-        "importance": 0.023376623376623364,
-        "relative_importance": 0.17999999861400012
+        "importance": 0.011038961038961015,
+        "relative_importance": 0.2881355856995127
       },
       {
-        "feature": "BMI_glucose",
-        "importance": 0.022727272727272707,
-        "relative_importance": 0.17499999865250007
+        "feature": "age_glucose",
+        "importance": 0.009740259740259726,
+        "relative_importance": 0.2542372814995702
       },
       {
-        "feature": "Glucose",
-        "importance": 0.022727272727272707,
-        "relative_importance": 0.17499999865250007
-      },
-      {
-        "feature": "DiabetesPedigreeFunction",
-        "importance": 0.015584415584415557,
-        "relative_importance": 0.11999999907599994
+        "feature": "Metabolic_Burden",
+        "importance": 0.007142857142857106,
+        "relative_importance": 0.18644067309968412
       },
       {
         "feature": "Age",
-        "importance": 0.014935064935064902,
-        "relative_importance": 0.11499999911449989
+        "importance": 0.003896103896103864,
+        "relative_importance": 0.10169491259982738
+      },
+      {
+        "feature": "BP_BMI_risk",
+        "importance": 0.002597402597402576,
+        "relative_importance": 0.06779660839988493
+      },
+      {
+        "feature": "Log_Insulin_Glucose",
+        "importance": 0.002597402597402565,
+        "relative_importance": 0.06779660839988463
+      },
+      {
+        "feature": "BMI_glucose",
+        "importance": 0.0006493506493506329,
+        "relative_importance": 0.01694915209997094
+      },
+      {
+        "feature": "insulin_glucose_ratio",
+        "importance": 0.0006493506493506329,
+        "relative_importance": 0.01694915209997094
+      },
+      {
+        "feature": "DiabetesPedigreeFunction",
+        "importance": 0.0,
+        "relative_importance": 0.0
+      },
+      {
+        "feature": "BMI",
+        "importance": 0.0,
+        "relative_importance": 0.0
       },
       {
         "feature": "Insulin",
-        "importance": 0.0032467532467532314,
-        "relative_importance": 0.024999999807499913
+        "importance": 0.0,
+        "relative_importance": 0.0
       },
       {
         "feature": "SkinThickness",
+        "importance": 0.0,
+        "relative_importance": 0.0
+      },
+      {
+        "feature": "Glucose",
         "importance": 0.0,
         "relative_importance": 0.0
       },
@@ -335,17 +360,17 @@
         "relative_importance": 0.0
       },
       {
+        "feature": "Age_Glucose_Interaction",
+        "importance": 0.0,
+        "relative_importance": 0.0
+      },
+      {
         "feature": "Pregnancies",
         "importance": 0.0,
         "relative_importance": 0.0
       },
       {
-        "feature": "age_glucose",
-        "importance": 0.0,
-        "relative_importance": 0.0
-      },
-      {
-        "feature": "insulin_glucose_ratio",
+        "feature": "HOMA_IR_proxy",
         "importance": 0.0,
         "relative_importance": 0.0
       }

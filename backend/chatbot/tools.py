@@ -179,6 +179,28 @@ def get_diet_plan(user_id: str) -> Dict[str, Any]:
     return plan
 
 
+import difflib
+
+CULINARY_SYNONYMS: Dict[str, List[str]] = {
+    "daal": ["dal", "lentil", "pulse", "sambhar"],
+    "dal": ["daal", "lentil", "pulse", "sambhar"],
+    "roti": ["chapati", "phulka", "flatbread", "wheat"],
+    "chapati": ["roti", "phulka", "flatbread"],
+    "paneer": ["cottage cheese", "cheese"],
+    "sabzi": ["vegetable", "mixed vegetable", "curry"],
+    "subji": ["vegetable", "mixed vegetable", "curry"],
+    "dahi": ["curd", "yogurt"],
+    "curd": ["dahi", "yogurt"],
+    "chawal": ["rice", "boiled rice"],
+    "khichdi": ["rice", "lentil", "khichri"],
+    "palak": ["spinach"],
+    "gobi": ["cauliflower", "cabbage"],
+    "aloo": ["potato"],
+    "bhindi": ["okra", "lady finger"],
+    "matar": ["peas", "green peas"],
+}
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Tool 3 — search_food_kb
 # ──────────────────────────────────────────────────────────────────────────────
@@ -190,23 +212,13 @@ def search_food_kb(
     top_n: int = 6,
 ) -> Dict[str, Any]:
     """
-    RAG lookup against the Unified Food Knowledge Base.
-
-    1. Pre-filter food_name by `query` substring (case-insensitive).
-       If no matches, fall back to full KB.
-    2. Apply `exclude` as substring exclusions (e.g., ["dairy", "milk"]
-       for a no-dairy constraint).
-    3. Score with the existing disease-aware nutrient-calibration scorer
-       (backend.reporting.recommend_foods internals).
-    4. Return top_n results.
-
-    This grounds all food-nutrient numbers in the real KB instead of
-    letting the LLM hallucinate nutrition values.
+    RAG lookup against the Unified Food Knowledge Base with culinary synonyms
+    and fuzzy string matching.
     """
     df = food_kb.df
 
     if df.empty:
-        return {"error": "Food knowledge base is not loaded.  Check the CSV path."}
+        return {"error": "Food knowledge base is not loaded. Check the CSV path."}
 
     # Retrieve a mock diet plan dict for scoring (use disease defaults)
     plan_defaults = {
@@ -224,12 +236,26 @@ def search_food_kb(
 
     work = df.copy()
 
-    # Pre-filter by query substring
+    # Pre-filter by query substring, culinary synonyms, and fuzzy matching
     if query:
-        mask = work["food_name"].str.contains(query, case=False, na=False)
-        filtered_by_query = work[mask]
-        if not filtered_by_query.empty:
-            work = filtered_by_query
+        q_clean = query.strip().lower()
+        search_terms = [q_clean]
+        for word in q_clean.split():
+            if word in CULINARY_SYNONYMS:
+                search_terms.extend(CULINARY_SYNONYMS[word])
+
+        pattern = "|".join([re.escape(t) for t in search_terms if t])
+        mask = work["food_name"].str.contains(pattern, case=False, na=False)
+        filtered = work[mask]
+
+        if not filtered.empty:
+            work = filtered
+        else:
+            # Fuzzy match fallback
+            all_names = work["food_name"].dropna().unique().tolist()
+            fuzzy_matches = difflib.get_close_matches(q_clean, all_names, n=15, cutoff=0.5)
+            if fuzzy_matches:
+                work = work[work["food_name"].isin(fuzzy_matches)]
 
     # Apply exclusion list (dietary restrictions)
     if exclude:
@@ -238,6 +264,7 @@ def search_food_kb(
             if "food_category" in work.columns:
                 excl_mask &= ~work["food_category"].str.contains(excl, case=False, na=False)
             work = work[excl_mask]
+
 
     if work.empty:
         return {"results": [], "note": "No matching foods found after applying filters."}

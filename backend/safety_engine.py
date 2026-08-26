@@ -89,13 +89,38 @@ class MedicalGuidelines:
     
     @classmethod
     def get_constraints(cls, disease: str) -> Dict[str, Dict[str, Any]]:
-        """Get constraints for a specific disease"""
+        """Get constraints for a specific disease or merged comorbidity profile"""
+        d_lower = disease.lower().strip()
         disease_map = {
             "ckd": cls.CKD_CONSTRAINTS,
             "diabetes": cls.DIABETES_CONSTRAINTS,
             "hypertension": cls.HYPERTENSION_CONSTRAINTS,
         }
-        return disease_map.get(disease.lower(), {})
+        if d_lower in disease_map:
+            return disease_map[d_lower]
+
+        # Comorbidity constraint intersection
+        diseases = [d for d in ["ckd", "hypertension", "diabetes"] if d in d_lower]
+        if not diseases:
+            return cls.CKD_CONSTRAINTS
+
+        merged: Dict[str, Dict[str, Any]] = {}
+        for d in diseases:
+            for nutrient, limits in disease_map[d].items():
+                if nutrient not in merged:
+                    merged[nutrient] = limits.copy()
+                else:
+                    # Strictest maximum
+                    if "max" in limits and "max" in merged[nutrient]:
+                        # Potassium exception: if CKD is present, use CKD potassium limit
+                        if nutrient == "potassium_mg" and "ckd" in diseases:
+                            merged[nutrient]["max"] = cls.CKD_CONSTRAINTS["potassium_mg"]["max"]
+                            merged[nutrient]["critical"] = cls.CKD_CONSTRAINTS["potassium_mg"]["critical"]
+                        else:
+                            merged[nutrient]["max"] = min(merged[nutrient]["max"], limits["max"])
+                    if "critical" in limits and "critical" in merged[nutrient]:
+                        merged[nutrient]["critical"] = min(merged[nutrient]["critical"], limits["critical"])
+        return merged
 
 
 class SafetyEngine:
@@ -107,14 +132,39 @@ class SafetyEngine:
         self.emergency_thresholds = self._load_emergency_thresholds()
     
     def _load_medication_interactions(self) -> Dict[str, List[str]]:
-        """Load medication-food interaction rules"""
+        """Load medication-food interaction rules for 18+ medications"""
         return {
-            "warfarin": ["vitamin_k", "leafy_greens", "cranberry"],
-            "ace_inhibitors": ["potassium_high"],
-            "diuretics": ["sodium_high", "potassium_high"],
-            "insulin": ["carbohydrates", "alcohol"],
+            "warfarin": ["vitamin_k", "leafy_greens", "spinach", "broccoli"],
+            "coumadin": ["vitamin_k", "leafy_greens", "spinach", "broccoli"],
+            "ace_inhibitors": ["potassium_high", "salt_substitutes", "bananas"],
+            "lisinopril": ["potassium_high", "salt_substitutes", "bananas"],
+            "ramipril": ["potassium_high", "salt_substitutes"],
+            "arbs": ["potassium_high", "salt_substitutes"],
+            "losartan": ["potassium_high", "salt_substitutes"],
+            "valsartan": ["potassium_high", "salt_substitutes"],
+            "sglt2_inhibitors": ["very_low_carb", "keto", "alcohol"],
+            "empagliflozin": ["very_low_carb", "keto", "alcohol"],
+            "dapagliflozin": ["very_low_carb", "keto", "alcohol"],
+            "jardiance": ["very_low_carb", "keto", "alcohol"],
+            "glp1_ras": ["high_fat_meals", "large_portions"],
+            "semaglutide": ["high_fat_meals", "large_portions"],
+            "ozempic": ["high_fat_meals", "large_portions"],
+            "beta_blockers": ["high_potassium", "salt_substitutes"],
+            "metoprolol": ["high_potassium", "salt_substitutes"],
+            "calcium_channel_blockers": ["grapefruit", "grapefruit_juice"],
+            "amlodipine": ["grapefruit", "grapefruit_juice"],
+            "diuretics": ["sodium_high", "licorice"],
+            "furosemide": ["sodium_high", "licorice"],
+            "lasix": ["sodium_high", "licorice"],
+            "insulin": ["carbohydrates", "alcohol", "sugars"],
             "metformin": ["alcohol"],
-            "digoxin": ["potassium_low", "magnesium_low"],
+            "digoxin": ["potassium_low", "high_fiber_meals"],
+            "statins": ["grapefruit", "grapefruit_juice"],
+            "atorvastatin": ["grapefruit", "grapefruit_juice"],
+            "potassium_binders": ["oral_medications"],
+            "lokelma": ["oral_medications"],
+            "phosphate_binders": ["fasting_administration"],
+            "sevelamer": ["fasting_administration"],
         }
     
     def _load_emergency_thresholds(self) -> Dict[str, Dict[str, float]]:
@@ -125,6 +175,7 @@ class SafetyEngine:
             "blood_glucose_mg_dl": {"critical_low": 70, "critical_high": 400},
             "blood_pressure_systolic": {"critical_high": 180},
         }
+
     
     def validate_meal(
         self,

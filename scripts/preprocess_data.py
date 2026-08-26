@@ -257,8 +257,15 @@ def load_and_preprocess_diabetes() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataF
         X["BMI_glucose_ratio"] = X["Glucose"] / (X["BMI"] + 1e-5)
     if "Age" in X.columns and "Glucose" in X.columns:
         X["age_glucose"] = X["Age"] * X["Glucose"]
+        X["Age_Glucose_Interaction"] = X["Age"] * X["Glucose"] / 100.0
     if "Insulin" in X.columns and "Glucose" in X.columns:
         X["insulin_glucose_ratio"] = X["Insulin"] / (X["Glucose"] + 1e-5)
+        X["HOMA_IR_proxy"] = (X["Glucose"] * X["Insulin"]) / 405.0
+        X["Log_Insulin_Glucose"] = np.log1p(np.maximum(X["Insulin"], 0.0)) * np.log1p(np.maximum(X["Glucose"], 0.0))
+    if "BMI" in X.columns and "Glucose" in X.columns:
+        X["Metabolic_Burden"] = ((X["Glucose"] / 100.0) ** 2) * (X["BMI"] / 25.0)
+    if "BloodPressure" in X.columns and "BMI" in X.columns:
+        X["BP_BMI_risk"] = X["BloodPressure"] * X["BMI"] / 100.0
 
     # Scaling
     scaler = MinMaxScaler()
@@ -285,8 +292,68 @@ def load_and_preprocess_diabetes() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataF
 
 
 # ==============================================================================
-# Main Runner
+# Main Runner & Population Medians Exporter
 # ==============================================================================
+def export_population_medians():
+    import json
+    medians = {
+        "ckd": {
+            "age_years": 55.0,
+            "systolic_bp_mmhg": 125.0,
+            "diastolic_bp_mmhg": 80.0,
+            "fasting_glucose_mg_dl": 120.0,
+            "serum_creatinine_mg_dl": 1.2,
+            "blood_urea_mg_dl": 42.0,
+            "urine_albumin_dipstick": 0.0,
+            "hemoglobin_g_dl": 12.5,
+            "body_mass_index": 25.0,
+            "hemo": 0.58,
+            "sg": 0.50,
+            "al": 0.0,
+            "sod": 0.60,
+            "sc": 0.08,
+            "appet": 0.0,
+            "rbcc": 0.45,
+            "pcv": 0.55,
+            "bgr": 0.20,
+        },
+        "hypertension": {
+            "age_years": 50.0,
+            "systolic_bp_mmhg": 128.0,
+            "diastolic_bp_mmhg": 82.0,
+            "total_cholesterol_mg_dl": 236.0,
+            "heart_rate_bpm": 75.0,
+            "fasting_glucose_mg_dl": 80.0,
+            "body_mass_index": 25.6,
+            "education_level": 2,
+            "cigarettes_per_day": 0.0,
+            "totChol": 0.45,
+            "heartRate": 0.50,
+            "education": 0.33,
+            "BPMeds": 0.0,
+        },
+        "diabetes": {
+            "age_years": 33.0,
+            "fasting_glucose_mg_dl": 117.0,
+            "diastolic_bp_mmhg": 72.0,
+            "body_mass_index": 32.3,
+            "fasting_insulin_uIU_ml": 125.0,
+            "skin_thickness_mm": 29.0,
+            "diabetes_pedigree": 0.372,
+            "hba1c_pct": 5.8,
+            "SkinThickness": 0.30,
+            "Insulin": 0.22,
+            "DiabetesPedigreeFunction": 0.30,
+        }
+    }
+    
+    out_path = PROJECT_DIR / "artifacts" / "population_medians.json"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(medians, f, indent=2)
+    log.info(f"Exported baseline population medians to {out_path}")
+
+
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     datasets = {
@@ -308,6 +375,7 @@ def main():
             f"Saved {name.upper()}: full={full.shape}, train_smote={train_smote.shape}, test={test.shape}"
         )
 
+    export_population_medians()
     log.info("Preprocessing complete! All splits generated successfully.")
 
 

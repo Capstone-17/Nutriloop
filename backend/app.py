@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query
 from datetime import datetime, timezone
 from pathlib import Path
@@ -72,9 +73,17 @@ from backend.medical_knowledge import medical_knowledge_base
 from backend.chatbot.agent import run_agent
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    registry.load()
+    yield
+
+
 app = FastAPI(
     title="A Deep Learning and Generative AI-Driven Diet Recommendation System for Personalized Chronic Disease Management",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 
@@ -143,12 +152,6 @@ def _count_generated_charts() -> int:
     if not fig_dir.exists():
         return 0
     return len(list(fig_dir.glob("*.png")))
-
-
-@app.on_event("startup")
-def startup() -> None:
-    init_db()
-    registry.load()
 
 
 @app.get("/health")
@@ -371,21 +374,31 @@ def risk_explanations(
 
 @app.post("/recommend-plan", response_model=RecommendPlanResponse)
 def recommend_plan(req: RecommendPlanRequest) -> RecommendPlanResponse:
-    profile_cfg = registry.get_risk_profile(req.disease)
+    disease_key = req.disease or ("_".join(req.diseases) if req.diseases else "ckd")
+    clean_diseases = req.diseases or [disease_key]
+    profile_cfg = registry.get_risk_profile(clean_diseases[0] if clean_diseases[0] in ["ckd", "hypertension", "diabetes"] else "ckd")
     thresholds = profile_cfg.get("thresholds", {})
     calibration_context = build_calibration_context(
-        disease=req.disease,
+        disease=disease_key,
         risk_score=req.risk_score,
         thresholds=thresholds,
         top_factors=profile_cfg.get("top_factors", []),
         transformed_features={},
     )
-    plan = build_plan(req.disease, req.risk_score, req.profile, thresholds, calibration_context)
-    insert_diet_plan(req.user_id, req.disease, plan)
+    plan = build_plan(
+        disease=disease_key,
+        risk_score=req.risk_score,
+        profile=req.profile,
+        thresholds=thresholds,
+        calibration_context=calibration_context,
+        diseases=req.diseases,
+    )
+    insert_diet_plan(req.user_id, disease_key, plan)
 
     return RecommendPlanResponse(
         user_id=req.user_id,
-        disease=req.disease,
+        disease=disease_key,
+        diseases=clean_diseases,
         **plan,
     )
 
@@ -406,11 +419,12 @@ def log_meal(req: LogMealRequest) -> LogMealResponse:
     alert_message = None
 
     if result["deviation_flag"]:
+        severity = "moderate" if result["deviation_percent"] < 25.0 else "high"
         alert_message = (
             f"Meal deviation detected: {result['deviation_percent']}% "
-            f"({result['severity']} severity)."
+            f"({severity} severity)."
         )
-        insert_alert(req.user_id, result["severity"], alert_message)
+        insert_alert(req.user_id, severity, alert_message)
         alert_created = True
 
     return LogMealResponse(
@@ -421,6 +435,7 @@ def log_meal(req: LogMealRequest) -> LogMealResponse:
         alert_created=alert_created,
         alert_message=alert_message,
     )
+
 
 
 @app.post("/risk-report", response_model=RiskReportResponse)

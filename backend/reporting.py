@@ -83,7 +83,12 @@ def _disease_rules(disease: str) -> Dict[str, Any]:
 
 def _score_foods(df: pd.DataFrame, disease: str, risk_level: str, plan: Dict[str, Any]) -> pd.DataFrame:
     work = df.copy()
-    rules = _disease_rules(disease)
+    d_clean = disease.lower()
+    has_ckd = "ckd" in d_clean
+    has_htn = "hypertension" in d_clean
+    has_diabetes = "diabetes" in d_clean
+
+    rules = _disease_rules("ckd" if has_ckd else ("hypertension" if has_htn else "diabetes"))
     weights = rules.get("weights", {})
 
     sodium_limit = float(plan.get("sodium_limit_mg", 2000))
@@ -100,25 +105,25 @@ def _score_foods(df: pd.DataFrame, disease: str, risk_level: str, plan: Dict[str
         work["score"] += (1.0 - (work["sodium_mg"].fillna(sodium_limit) / max(sodium_limit, 1.0))).clip(0, 1) * sodium_w
 
     if "potassium_mg" in work.columns:
-        pot_weight = float(weights.get("potassium_low_better", 0.35 if disease == "ckd" else 0.2))
+        pot_weight = float(weights.get("potassium_low_better", 0.35 if has_ckd else 0.2))
         work["score"] += (1.0 - (work["potassium_mg"].fillna(potassium_limit) / max(potassium_limit, 1.0))).clip(0, 1) * pot_weight
 
     if "energy_kcal" in work.columns:
         energy_target = max(80.0, calories_target / 8.0)
         work["score"] += (1.0 - (work["energy_kcal"].fillna(energy_target) / energy_target)).abs().clip(0, 1) * 0.1
 
-    if disease == "diabetes" and "sugars_free_g" in work.columns:
+    if has_diabetes and "sugars_free_g" in work.columns:
         sugar_w = float(weights.get("sugar_low_better", 0.30))
         work["score"] += (1.0 - (work["sugars_free_g"].fillna(sugar_limit) / max(sugar_limit, 1.0))).clip(0, 1) * sugar_w
         if "carbs_g" in work.columns:
             carbs_w = float(weights.get("carbs_low_better", 0.15))
             work["score"] += (1.0 - (work["carbs_g"].fillna(plan.get("carb_target_g", 50)) / max(float(plan.get("carb_target_g", 50)), 1.0))).clip(0, 1) * carbs_w
 
-    if disease == "hypertension" and "fiber_g" in work.columns:
+    if has_htn and "fiber_g" in work.columns:
         fiber_w = float(weights.get("fiber_high_better", 0.20))
         work["score"] += (work["fiber_g"].fillna(0.0) / max(fiber_target, 1.0)).clip(0, 1) * fiber_w
 
-    if disease == "ckd" and "phosphorus_mg" in work.columns:
+    if has_ckd and "phosphorus_mg" in work.columns:
         phos_w = float(weights.get("phosphorus_low_better", 0.30))
         work["score"] += (1.0 - (work["phosphorus_mg"].fillna(phosphorus_limit) / max(phosphorus_limit, 1.0))).clip(0, 1) * phos_w
 
@@ -127,6 +132,7 @@ def _score_foods(df: pd.DataFrame, disease: str, risk_level: str, plan: Dict[str
         work["score"] += work["data_completeness"].fillna(0.0).clip(0, 1) * comp_w
 
     return work
+
 
 
 def recommend_foods(disease: str, risk_level: str, plan: Dict[str, Any], top_n: int = 8) -> List[Dict[str, Any]]:
