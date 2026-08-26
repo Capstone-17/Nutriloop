@@ -1,0 +1,105 @@
+{
+  "generated_at": "2026-08-26T08:17:33.073059+00:00",
+  "source_dataset": "unified_food_kb.csv",
+  "total_food_items": 7110,
+  "diseases": {
+    "ckd": {
+      "primary_guideline": "KDOQI Clinical Practice Guideline for Nutrition in CKD",
+      "scoring_weights": {
+        "sodium_mg": {
+          "weight": 0.3,
+          "direction": "minimize"
+        },
+        "potassium_mg": {
+          "weight": 0.3,
+          "direction": "minimize"
+        },
+        "phosphorus_mg": {
+          "weight": 0.25,
+          "direction": "minimize"
+        },
+        "protein_g": {
+          "weight": 0.15,
+          "direction": "moderate"
+        }
+      },
+      "score_distribution": {
+        "mean": 0.49992967651195497,
+        "p50": 0.5026916315049226,
+        "p90": 0.6676599859353024,
+        "max": 0.7037834036568213
+      },
+      "recommended_categories": [
+        "Vegetables",
+        "Cereals & Millets",
+        "Fruits (low K)"
+      ]
+    },
+    "hypertension": {
+      "primary_guideline": "DASH (Dietary Approaches to Stop Hypertension) Eating Plan",
+      "scoring_weights": {
+        "sodium_mg": {
+          "weight": 0.45,
+          "direction": "minimize"
+        },
+        "potassium_mg": {
+          "weight": 0.3,
+          "direction": "maximize"
+        },
+        "fiber_g": {
+          "weight": 0.15,
+          "direction": "maximize"
+        },
+        "energy_kcal": {
+          "weight": 0.1,
+          "direction": "moderate"
+        }
+      },
+      "score_distribution": {
+        "mean": 0.4999929676511955,
+        "p50": 0.5096395921237693,
+        "p90": 0.6831283403656822,
+        "max": 0.9051090014064698
+      },
+      "recommended_categories": [
+        "Vegetables",
+        "Legumes & Pulses",
+        "Fruits",
+        "Low-fat Dairy"
+      ]
+    },
+    "diabetes": {
+      "primary_guideline": "American Diabetes Association (ADA) Standards of Medical Care in Diabetes",
+      "scoring_weights": {
+        "sugars_free_g": {
+          "weight": 0.4,
+          "direction": "minimize"
+        },
+        "carbs_g": {
+          "weight": 0.25,
+          "direction": "controlled"
+        },
+        "fiber_g": {
+          "weight": 0.25,
+          "direction": "maximize"
+        },
+        "sodium_mg": {
+          "weight": 0.1,
+          "direction": "minimize"
+        }
+      },
+      "score_distribution": {
+        "mean": 0.4999648382559775,
+        "p50": 0.5083192686357243,
+        "p90": 0.7227805907172996,
+        "max": 0.9249226441631505
+      },
+      "recommended_categories": [
+        "Non-starchy Vegetables",
+        "Legumes",
+        "Whole Grains",
+        "Nuts & Seeds"
+      ]
+    }
+  }
+}

@@ -1,0 +1,21 @@
+[
+  "male",
+  "age",
+  "education",
+  "currentSmoker",
+  "cigsPerDay",
+  "BPMeds",
+  "prevalentStroke",
+  "diabetes",
+  "totChol",
+  "sysBP",
+  "diaBP",
+  "BMI",
+  "heartRate",
+  "glucose",
+  "pulse_pressure",
+  "MAP",
+  "BP_ratio",
+  "age_BMI",
+  "chol_BP_risk"
+]

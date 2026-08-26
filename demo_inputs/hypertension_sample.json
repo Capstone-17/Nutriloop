@@ -1,0 +1,16 @@
+{
+  "disease": "hypertension",
+  "raw_inputs": {
+    "age_years": 63,
+    "sex": "male",
+    "education_level": 2,
+    "current_smoker": true,
+    "cigarettes_per_day": 15,
+    "prior_stroke": false,
+    "body_mass_index": 31.2,
+    "diagnosed_diabetes": true,
+    "systolic_bp_mmhg": 154.0,
+    "diastolic_bp_mmhg": 96.0,
+    "fasting_glucose_mg_dl": 140.0
+  }
+}

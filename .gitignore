@@ -1,0 +1,54 @@
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Tooling and IDE caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.vscode/
+.idea/
+
+# Local virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# OS and filesystem noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# SQLite databases & runtime persistence
+*.db
+*.sqlite
+*.sqlite3
+app_data.db
+
+# Logs and runtime artifacts
+*.log
+tmp/
+temp/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Large binary archives and raw data dumps
+*.zip
+*.tar.gz
+*.rar
+*.7z
+*.XPT
+*.xpt
+*.sas7bdat
+
+# Packaging and distribution
+build/
+dist/
+*.egg-info/
+node_modules/

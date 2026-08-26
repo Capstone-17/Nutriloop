@@ -1,0 +1,13 @@
+{
+  "disease": "ckd",
+  "raw_inputs": {
+    "age_years": 56,
+    "sex": "female",
+    "body_mass_index": 27.4,
+    "diagnosed_diabetes": true,
+    "diagnosed_hypertension": true,
+    "systolic_bp_mmhg": 142.0,
+    "diastolic_bp_mmhg": 88.0,
+    "fasting_glucose_mg_dl": 132.0
+  }
+}

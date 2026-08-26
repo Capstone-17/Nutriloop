@@ -1,0 +1,21 @@
+# Core Web & API Framework
+fastapi
+uvicorn
+pydantic
+httpx
+requests
+
+# Data Processing & Numerical Computing
+numpy
+pandas
+scipy
+
+# Machine Learning & Modeling
+scikit-learn
+imbalanced-learn
+xgboost
+joblib
+
+# Datasets & Visualization
+ucimlrepo
+matplotlib
