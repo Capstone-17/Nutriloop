@@ -1,4 +1,4 @@
-# AI-Powered Clinical Risk Prediction & Personalized Medical Nutrition Engine
+# A Deep Learning and Generative AI-Driven Diet Recommendation System for Personalized Chronic Disease Management
 
 > **Production Release: `Latest_Update`**  
 > A self-contained, enterprise-grade AI healthcare platform combining calibrated predictive risk models, guideline-based medical nutrition planning (KDOQI, ADA, DASH), continuous dietary adaptation, multi-agent goal planning, and a local clinical safety chatbot.

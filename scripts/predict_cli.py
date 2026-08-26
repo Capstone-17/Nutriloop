@@ -24,7 +24,9 @@ from backend.rules import build_calibration_context, classify_risk_level
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Clinical Risk & Diet Prediction CLI")
+    parser = argparse.ArgumentParser(
+        description="A Deep Learning and Generative AI-Driven Diet Recommendation System for Personalized Chronic Disease Management"
+    )
     parser.add_argument("--disease", type=str, choices=["ckd", "hypertension", "diabetes"], help="Target disease")
     parser.add_argument("--input", type=str, help="Path to JSON file with direct features")
     parser.add_argument("--raw-input", type=str, help="Path to JSON file with conversational raw inputs")

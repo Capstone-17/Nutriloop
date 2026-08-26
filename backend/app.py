@@ -72,7 +72,10 @@ from backend.medical_knowledge import medical_knowledge_base
 from backend.chatbot.agent import run_agent
 
 
-app = FastAPI(title="Diet-Risk Backend", version="0.1.0")
+app = FastAPI(
+    title="A Deep Learning and Generative AI-Driven Diet Recommendation System for Personalized Chronic Disease Management",
+    version="0.1.0",
+)
 
 
 def _read_project_model_metrics() -> List[dict]:
