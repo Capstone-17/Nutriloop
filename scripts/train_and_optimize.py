@@ -61,22 +61,22 @@ ARTIFACTS_DIR = PROJECT_DIR / "artifacts"
 RANDOM_STATE = 42
 
 
-def get_candidate_models(disease: str) -> Dict[str, Any]:
-    """Return model candidate specifications for grid exploration."""
+def get_candidate_models(disease: str, n_samples: int = 1000) -> Dict[str, Any]:
+    """Return model candidate specifications for grid exploration with scale awareness."""
     candidates = {
-        "RandomForest_balanced": RandomForestClassifier(
-            n_estimators=200,
-            max_depth=8,
-            min_samples_leaf=3,
-            class_weight="balanced",
-            random_state=RANDOM_STATE,
-            n_jobs=-1,
-        ),
         "HistGradientBoosting": HistGradientBoostingClassifier(
             max_iter=150,
             max_depth=6,
-            min_samples_leaf=5,
+            min_samples_leaf=10 if n_samples > 5000 else 5,
             random_state=RANDOM_STATE,
+        ),
+        "RandomForest_balanced": RandomForestClassifier(
+            n_estimators=150 if n_samples > 5000 else 200,
+            max_depth=8,
+            min_samples_leaf=5 if n_samples > 5000 else 3,
+            class_weight="balanced",
+            random_state=RANDOM_STATE,
+            n_jobs=-1,
         ),
         "LogisticRegression_balanced": LogisticRegression(
             C=1.0,
@@ -84,32 +84,33 @@ def get_candidate_models(disease: str) -> Dict[str, Any]:
             max_iter=1000,
             random_state=RANDOM_STATE,
         ),
-        "SVC_rbf": SVC(
+        "GaussianNB": GaussianNB(),
+    }
+
+    # Include distance/kernel models only when dataset size allows fast computation
+    if n_samples <= 5000:
+        candidates["SVC_rbf"] = SVC(
             C=2.0,
             kernel="rbf",
             probability=True,
             class_weight="balanced",
             random_state=RANDOM_STATE,
-        ),
-        "KNeighbors": KNeighborsClassifier(
+        )
+        candidates["KNeighbors"] = KNeighborsClassifier(
             n_neighbors=5,
             weights="distance",
-        ),
-        "GaussianNB": GaussianNB(),
-    }
-
-    # Stacking Ensemble
-    estimators = [
-        ("rf", RandomForestClassifier(n_estimators=100, max_depth=6, class_weight="balanced", random_state=RANDOM_STATE)),
-        ("hgb", HistGradientBoostingClassifier(max_iter=100, max_depth=4, random_state=RANDOM_STATE)),
-        ("lr", LogisticRegression(C=1.0, class_weight="balanced", max_iter=1000, random_state=RANDOM_STATE)),
-    ]
-    candidates["StackingEnsemble"] = StackingClassifier(
-        estimators=estimators,
-        final_estimator=LogisticRegression(C=1.0, random_state=RANDOM_STATE),
-        cv=5,
-        n_jobs=-1,
-    )
+        )
+        estimators = [
+            ("rf", RandomForestClassifier(n_estimators=100, max_depth=6, class_weight="balanced", random_state=RANDOM_STATE)),
+            ("hgb", HistGradientBoostingClassifier(max_iter=100, max_depth=4, random_state=RANDOM_STATE)),
+            ("lr", LogisticRegression(C=1.0, class_weight="balanced", max_iter=1000, random_state=RANDOM_STATE)),
+        ]
+        candidates["StackingEnsemble"] = StackingClassifier(
+            estimators=estimators,
+            final_estimator=LogisticRegression(C=1.0, random_state=RANDOM_STATE),
+            cv=5,
+            n_jobs=-1,
+        )
 
     if XGBClassifier is not None:
         candidates["XGBoost"] = XGBClassifier(
@@ -202,7 +203,7 @@ def train_disease(disease: str) -> Tuple[Any, List[str], Dict[str, Any], Dict[st
     X_test = test_df[feature_names].values
     y_test = test_df[target_col].values.astype(int)
 
-    candidates = get_candidate_models(disease)
+    candidates = get_candidate_models(disease, n_samples=len(X_train))
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
 
     best_name = ""
@@ -213,7 +214,6 @@ def train_disease(disease: str) -> Tuple[Any, List[str], Dict[str, Any], Dict[st
     for name, model in candidates.items():
         cv_f1s = []
         for train_idx, val_idx in cv.split(X_train, y_train):
-            m = joblib.load(joblib.dump(model)[0]) if False else None
             from sklearn.base import clone
             m = clone(model)
             m.fit(X_train[train_idx], y_train[train_idx])
@@ -260,9 +260,11 @@ def train_disease(disease: str) -> Tuple[Any, List[str], Dict[str, Any], Dict[st
     log.info(f"    Brier Score: {test_metrics['brier_score']:.4f}")
     log.info(f"    Thresholds:  Moderate={mod_th:.4f}, High={high_th:.4f}")
 
-    # Compute Feature Importances
+    # Compute Feature Importances on sample
     try:
-        r = permutation_importance(final_model, X_test, y_test, n_repeats=10, random_state=RANDOM_STATE)
+        sample_size = min(1500, len(X_test))
+        perm_idx = np.random.RandomState(RANDOM_STATE).choice(len(X_test), sample_size, replace=False)
+        r = permutation_importance(final_model, X_test[perm_idx], y_test[perm_idx], n_repeats=5, random_state=RANDOM_STATE)
         importances = r.importances_mean
         importances = np.maximum(importances, 0.0)
     except Exception:

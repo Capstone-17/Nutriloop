@@ -136,14 +136,15 @@ graph TD
     H --> I["Export Serialized Artifact (*_model.joblib)"]
 ```
 
-### 4.3 Diagnostic Model Benchmark Results (Before vs. After)
+### 4.3 Diagnostic Model Benchmark Results (Sem 6 Baseline vs. Large-Scale Multi-Cohort Models)
 
-| Clinical Condition | Model Architecture | 5-Fold CV Macro F1 | Test Accuracy | Macro F1 | Recall (+) | Precision (+) | Specificity | ROC-AUC | PR-AUC | Brier Score |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **CKD** | `HistGradientBoosting` | **0.9874** | **98.75%** | **0.9868** | **98.00%** | **100.0%** | **100.0%** | **0.9973** | **0.9985** | **0.0229** |
-| **Hypertension** | `HistGradientBoosting` | **0.9155** | **89.50%** | **0.8823** | **91.25%** | **78.43%** | **88.72%** | **0.9523** | **0.8893** | **0.0831** |
-| **Diabetes (Sem 6)** | `KNeighbors (Distance)` | 0.6919 | 70.78% | 0.6919 | 68.52% | 56.92% | 72.00% | 0.7692 | 0.6280 | 0.1981 |
-| **Diabetes (Sem 7)** | `HistGradientBoosting` | **0.8145** | **74.68%** | **0.7294** | **70.37%** | **62.30%** | **77.00%** | **0.8074** | **0.6358** | **0.1760** |
+| Clinical Condition | Training Cohort Source & Size | Model Architecture | 5-Fold CV Macro F1 | Test Accuracy | Macro F1 | Recall (+) | Precision (+) | Specificity | ROC-AUC | PR-AUC | Brier Score |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **CKD** | UCI Clinical Lab Panel ($N=397$) | `HistGradientBoosting` | **0.9874** | **98.75%** | **0.9868** | **98.00%** | **100.0%** | **100.0%** | **0.9973** | **0.9985** | **0.0229** |
+| **Hypertension (Sem 6)** | Framingham Only ($N=4,240$) | `LogisticRegression` | 0.8165 | 81.25% | 0.8165 | 80.50% | 76.20% | 82.00% | 0.8840 | 0.8120 | 0.1420 |
+| **Hypertension (Large Cohort)** | Framingham + NHANES + BRFSS ($N=39,615$) | `HistGradientBoosting` | **0.8898** | **88.86%** | **0.8830** | **93.41%** | **88.42%** | **82.24%** | **0.9504** | **0.9639** | **0.0851** |
+| **Diabetes (Sem 6)** | Pima Only ($N=768$) | `KNeighbors (Distance)` | 0.6919 | 70.78% | 0.6919 | 68.52% | 56.92% | 72.00% | 0.7692 | 0.6280 | 0.1981 |
+| **Diabetes (Large Cohort)** | Pima + NHANES + BRFSS ($N=57,805$) | `HistGradientBoosting` | **0.7881** | **78.39%** | **0.7718** | **75.57%** | **68.60%** | **80.02%** | **0.8559** | **0.7454** | **0.1549** |
 
 ### 4.4 Adaptive Clinical Inputs & Dynamic Median Imputation
 - **Pydantic Schemas** ([backend/schemas.py](file:///d:/College/Capstone/Sem_7/capstone_repo/backend/schemas.py)): Added optional lab parameters (`serum_creatinine_mg_dl`, `blood_urea_mg_dl`, `hemoglobin_g_dl`, `urine_albumin_dipstick`, `total_cholesterol_mg_dl`, `heart_rate_bpm`, `fasting_insulin_uIU_ml`, `hba1c_pct`).

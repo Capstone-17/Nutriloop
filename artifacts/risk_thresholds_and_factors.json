@@ -18,51 +18,61 @@
     "top_factors": [
       {
         "feature": "hemo",
-        "importance": 0.13624999999999998,
-        "relative_importance": 0.47807017376115757
+        "importance": 0.11999999999999997,
+        "relative_importance": 0.47058823344867384
       },
       {
         "feature": "sg",
-        "importance": 0.08124999999999999,
-        "relative_importance": 0.285087718297938
+        "importance": 0.057499999999999975,
+        "relative_importance": 0.22549019519415617
       },
       {
         "feature": "al",
-        "importance": 0.013749999999999962,
-        "relative_importance": 0.04824561386580477
-      },
-      {
-        "feature": "sod",
-        "importance": 0.012499999999999956,
-        "relative_importance": 0.04385964896891339
+        "importance": 0.017500000000000005,
+        "relative_importance": 0.06862745071126497
       },
       {
         "feature": "sc",
-        "importance": 0.009999999999999986,
-        "relative_importance": 0.03508771917513079
+        "importance": 0.014999999999999968,
+        "relative_importance": 0.05882352918108412
       },
       {
         "feature": "appet",
-        "importance": 0.009999999999999976,
-        "relative_importance": 0.035087719175130754
+        "importance": 0.014999999999999968,
+        "relative_importance": 0.05882352918108412
+      },
+      {
+        "feature": "sod",
+        "importance": 0.007499999999999974,
+        "relative_importance": 0.029411764590542018
       },
       {
         "feature": "rbcc",
-        "importance": 0.00874999999999997,
-        "relative_importance": 0.030701754278239377
+        "importance": 0.007499999999999974,
+        "relative_importance": 0.029411764590542018
       },
       {
         "feature": "pcv",
-        "importance": 0.007499999999999984,
-        "relative_importance": 0.02631578938134807
+        "importance": 0.004999999999999982,
+        "relative_importance": 0.019607843060361344
       },
       {
-        "feature": "bgr",
-        "importance": 0.00499999999999996,
-        "relative_importance": 0.01754385958756528
+        "feature": "creatinine_urea_ratio",
+        "importance": 0.004999999999999982,
+        "relative_importance": 0.019607843060361344
       },
       {
-        "feature": "pc",
+        "feature": "dm",
+        "importance": 0.002499999999999991,
+        "relative_importance": 0.009803921530180672
+      },
+      {
+        "feature": "htn",
+        "importance": 0.002499999999999991,
+        "relative_importance": 0.009803921530180672
+      },
+      {
+        "feature": "rbc",
         "importance": 0.0,
         "relative_importance": 0.0
       },
@@ -72,22 +82,7 @@
         "relative_importance": 0.0
       },
       {
-        "feature": "su",
-        "importance": 0.0,
-        "relative_importance": 0.0
-      },
-      {
-        "feature": "age",
-        "importance": 0.0,
-        "relative_importance": 0.0
-      },
-      {
-        "feature": "ba",
-        "importance": 0.0,
-        "relative_importance": 0.0
-      },
-      {
-        "feature": "rbc",
+        "feature": "pc",
         "importance": 0.0,
         "relative_importance": 0.0
       },
@@ -97,7 +92,22 @@
         "relative_importance": 0.0
       },
       {
+        "feature": "age",
+        "importance": 0.0,
+        "relative_importance": 0.0
+      },
+      {
         "feature": "pot",
+        "importance": 0.0,
+        "relative_importance": 0.0
+      },
+      {
+        "feature": "ba",
+        "importance": 0.0,
+        "relative_importance": 0.0
+      },
+      {
+        "feature": "bgr",
         "importance": 0.0,
         "relative_importance": 0.0
       },
@@ -107,7 +117,7 @@
         "relative_importance": 0.0
       },
       {
-        "feature": "htn",
+        "feature": "su",
         "importance": 0.0,
         "relative_importance": 0.0
       },
@@ -117,17 +127,12 @@
         "relative_importance": 0.0
       },
       {
-        "feature": "dm",
+        "feature": "pe",
         "importance": 0.0,
         "relative_importance": 0.0
       },
       {
         "feature": "cad",
-        "importance": 0.0,
-        "relative_importance": 0.0
-      },
-      {
-        "feature": "pe",
         "importance": 0.0,
         "relative_importance": 0.0
       },
@@ -150,123 +155,118 @@
         "feature": "glucose_diabetes",
         "importance": 0.0,
         "relative_importance": 0.0
-      },
-      {
-        "feature": "creatinine_urea_ratio",
-        "importance": 0.0,
-        "relative_importance": 0.0
       }
     ]
   },
   "hypertension": {
     "model_name": "HistGradientBoostingClassifier",
     "thresholds": {
-      "moderate": 0.4,
+      "moderate": 0.39,
       "high": 0.9
     },
     "metrics": {
-      "accuracy": 0.8950471698113207,
-      "macro_f1": 0.8823072592680382,
-      "precision_pos": 0.7843137254901961,
-      "recall_pos": 0.9125475285171103,
-      "specificity": 0.8871794871794871,
-      "roc_auc": 0.9522862435409964,
-      "pr_auc": 0.8892927601770572,
-      "brier_score": 0.08307107250223074
+      "accuracy": 0.8885523160419033,
+      "macro_f1": 0.8830133123355096,
+      "precision_pos": 0.884180790960452,
+      "recall_pos": 0.9341291835429546,
+      "specificity": 0.8224009900990099,
+      "roc_auc": 0.9503921890137212,
+      "pr_auc": 0.9639459414750526,
+      "brier_score": 0.08513664085435522
     },
     "top_factors": [
       {
-        "feature": "sysBP",
-        "importance": 0.09139150943396222,
-        "relative_importance": 0.5272108813124178
-      },
-      {
-        "feature": "diaBP",
-        "importance": 0.030542452830188648,
-        "relative_importance": 0.17619047517408531
-      },
-      {
-        "feature": "MAP",
-        "importance": 0.017806603773584874,
-        "relative_importance": 0.10272108784280642
-      },
-      {
-        "feature": "BPMeds",
-        "importance": 0.01462264150943392,
-        "relative_importance": 0.08435374100998665
-      },
-      {
-        "feature": "male",
-        "importance": 0.004481132075471661,
-        "relative_importance": 0.02585033998693125
-      },
-      {
-        "feature": "heartRate",
-        "importance": 0.0033018867924527796,
-        "relative_importance": 0.01904761893773868
-      },
-      {
-        "feature": "diabetes",
-        "importance": 0.002358490566037674,
-        "relative_importance": 0.013605442098384624
-      },
-      {
-        "feature": "BMI",
-        "importance": 0.0020047169811320265,
-        "relative_importance": 0.01156462578362695
-      },
-      {
-        "feature": "chol_BP_risk",
-        "importance": 0.0016509433962263898,
-        "relative_importance": 0.00952380946886934
-      },
-      {
-        "feature": "prevalentStroke",
-        "importance": 0.001179245283018826,
-        "relative_importance": 0.006802721049192249
+        "feature": "age",
+        "importance": 0.10080000000000004,
+        "relative_importance": 0.21176470543746884
       },
       {
         "feature": "cigsPerDay",
-        "importance": 0.0010613207547169434,
-        "relative_importance": 0.0061224489442730234
+        "importance": 0.08093333333333338,
+        "relative_importance": 0.17002801084727992
       },
       {
-        "feature": "currentSmoker",
-        "importance": 0.0009433962264150497,
-        "relative_importance": 0.005442176839353735
+        "feature": "male",
+        "importance": 0.08040000000000007,
+        "relative_importance": 0.16890756267036214
       },
       {
-        "feature": "pulse_pressure",
-        "importance": 0.0009433962264150497,
-        "relative_importance": 0.005442176839353735
+        "feature": "BPMeds",
+        "importance": 0.07293333333333338,
+        "relative_importance": 0.15322128819351255
+      },
+      {
+        "feature": "MAP",
+        "importance": 0.041066666666666696,
+        "relative_importance": 0.08627450962267252
+      },
+      {
+        "feature": "sysBP",
+        "importance": 0.04040000000000003,
+        "relative_importance": 0.08487394940152525
       },
       {
         "feature": "age_BMI",
-        "importance": 0.000589622641509402,
-        "relative_importance": 0.0034013605245960606
+        "importance": 0.01866666666666672,
+        "relative_importance": 0.039215686192123955
+      },
+      {
+        "feature": "pulse_pressure",
+        "importance": 0.014533333333333376,
+        "relative_importance": 0.030532212821010797
       },
       {
         "feature": "totChol",
-        "importance": 0.0004716981132075193,
-        "relative_importance": 0.0027210884196768354
+        "importance": 0.009466666666666734,
+        "relative_importance": 0.01988795514029152
       },
       {
-        "feature": "education",
-        "importance": 0.0,
-        "relative_importance": 0.0
+        "feature": "diaBP",
+        "importance": 0.0040000000000000036,
+        "relative_importance": 0.008403361326883688
       },
       {
         "feature": "glucose",
-        "importance": 0.0,
-        "relative_importance": 0.0
+        "importance": 0.0029333333333333655,
+        "relative_importance": 0.0061624649730481
       },
       {
-        "feature": "age",
-        "importance": 0.0,
-        "relative_importance": 0.0
+        "feature": "BMI",
+        "importance": 0.0025333333333333874,
+        "relative_importance": 0.005322128840359778
+      },
+      {
+        "feature": "education",
+        "importance": 0.0025333333333333653,
+        "relative_importance": 0.005322128840359732
+      },
+      {
+        "feature": "diabetes",
+        "importance": 0.0020000000000000686,
+        "relative_importance": 0.004201680663441985
       },
       {
         "feature": "BP_ratio",
+        "importance": 0.0018666666666667052,
+        "relative_importance": 0.003921568619212465
+      },
+      {
+        "feature": "chol_BP_risk",
+        "importance": 0.00040000000000006697,
+        "relative_importance": 0.0008403361326885087
+      },
+      {
+        "feature": "heartRate",
+        "importance": 0.00040000000000004474,
+        "relative_importance": 0.0008403361326884621
+      },
+      {
+        "feature": "prevalentStroke",
+        "importance": 0.00013333333333336305,
+        "relative_importance": 0.00028011204422951844
+      },
+      {
+        "feature": "currentSmoker",
         "importance": 0.0,
         "relative_importance": 0.0
       }
@@ -275,67 +275,72 @@
   "diabetes": {
     "model_name": "HistGradientBoostingClassifier",
     "thresholds": {
-      "moderate": 0.45,
-      "high": 0.8331075216866415
+      "moderate": 0.5900000000000001,
+      "high": 0.8238224342781915
     },
     "metrics": {
-      "accuracy": 0.7467532467532467,
-      "macro_f1": 0.7293985131786438,
-      "precision_pos": 0.6229508196721312,
-      "recall_pos": 0.7037037037037037,
-      "specificity": 0.77,
-      "roc_auc": 0.8074074074074075,
-      "pr_auc": 0.6357527217582511,
-      "brier_score": 0.1759524546603573
+      "accuracy": 0.7839287258887639,
+      "macro_f1": 0.7717835982713088,
+      "precision_pos": 0.685971685971686,
+      "recall_pos": 0.755671077504726,
+      "specificity": 0.8002455996725337,
+      "roc_auc": 0.8559065244602779,
+      "pr_auc": 0.7453640485421053,
+      "brier_score": 0.15494944116908071
     },
     "top_factors": [
       {
-        "feature": "BMI_glucose_ratio",
-        "importance": 0.011038961038961015,
-        "relative_importance": 0.2881355856995127
-      },
-      {
         "feature": "age_glucose",
-        "importance": 0.009740259740259726,
-        "relative_importance": 0.2542372814995702
-      },
-      {
-        "feature": "Metabolic_Burden",
-        "importance": 0.007142857142857106,
-        "relative_importance": 0.18644067309968412
-      },
-      {
-        "feature": "Age",
-        "importance": 0.003896103896103864,
-        "relative_importance": 0.10169491259982738
-      },
-      {
-        "feature": "BP_BMI_risk",
-        "importance": 0.002597402597402576,
-        "relative_importance": 0.06779660839988493
-      },
-      {
-        "feature": "Log_Insulin_Glucose",
-        "importance": 0.002597402597402565,
-        "relative_importance": 0.06779660839988463
-      },
-      {
-        "feature": "BMI_glucose",
-        "importance": 0.0006493506493506329,
-        "relative_importance": 0.01694915209997094
-      },
-      {
-        "feature": "insulin_glucose_ratio",
-        "importance": 0.0006493506493506329,
-        "relative_importance": 0.01694915209997094
-      },
-      {
-        "feature": "DiabetesPedigreeFunction",
-        "importance": 0.0,
-        "relative_importance": 0.0
+        "importance": 0.18626666666666666,
+        "relative_importance": 0.6902173887467237
       },
       {
         "feature": "BMI",
+        "importance": 0.028800000000000027,
+        "relative_importance": 0.10671936719348064
+      },
+      {
+        "feature": "BloodPressure",
+        "importance": 0.018533333333333357,
+        "relative_importance": 0.06867588907358246
+      },
+      {
+        "feature": "Metabolic_Burden",
+        "importance": 0.017333333333333333,
+        "relative_importance": 0.06422924877385403
+      },
+      {
+        "feature": "Age",
+        "importance": 0.005600000000000005,
+        "relative_importance": 0.020750988065399014
+      },
+      {
+        "feature": "BMI_glucose",
+        "importance": 0.0033333333333333435,
+        "relative_importance": 0.012351778610356582
+      },
+      {
+        "feature": "Glucose",
+        "importance": 0.0032000000000000474,
+        "relative_importance": 0.011857707465942459
+      },
+      {
+        "feature": "BP_BMI_risk",
+        "importance": 0.0032000000000000028,
+        "relative_importance": 0.011857707465942292
+      },
+      {
+        "feature": "BMI_glucose_ratio",
+        "importance": 0.0025333333333333653,
+        "relative_importance": 0.009387351743871092
+      },
+      {
+        "feature": "insulin_glucose_ratio",
+        "importance": 0.0010666666666667047,
+        "relative_importance": 0.003952569155314235
+      },
+      {
+        "feature": "Pregnancies",
         "importance": 0.0,
         "relative_importance": 0.0
       },
@@ -345,17 +350,7 @@
         "relative_importance": 0.0
       },
       {
-        "feature": "SkinThickness",
-        "importance": 0.0,
-        "relative_importance": 0.0
-      },
-      {
-        "feature": "Glucose",
-        "importance": 0.0,
-        "relative_importance": 0.0
-      },
-      {
-        "feature": "BloodPressure",
+        "feature": "DiabetesPedigreeFunction",
         "importance": 0.0,
         "relative_importance": 0.0
       },
@@ -365,12 +360,17 @@
         "relative_importance": 0.0
       },
       {
-        "feature": "Pregnancies",
+        "feature": "HOMA_IR_proxy",
         "importance": 0.0,
         "relative_importance": 0.0
       },
       {
-        "feature": "HOMA_IR_proxy",
+        "feature": "SkinThickness",
+        "importance": 0.0,
+        "relative_importance": 0.0
+      },
+      {
+        "feature": "Log_Insulin_Glucose",
         "importance": 0.0,
         "relative_importance": 0.0
       }

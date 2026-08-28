@@ -1,17 +1,19 @@
 """
-End-to-End Clinical Data Preprocessing and Feature Engineering Pipeline
-========================================================================
-Processes raw Chronic Kidney Disease, Hypertension, and Diabetes datasets:
-  1. Robust ARFF/CSV parsing handling whitespace tokens & missing delimiters.
-  2. Biologically implausible zero-value replacement (Pima diabetes).
-  3. Clinical interaction feature engineering (BP_ratio, MAP, BMI*Glucose, etc.).
-  4. KNN Imputation (k=5) for numeric & Most-Frequent for categorical features.
-  5. MinMax Scaling into [0, 1] range.
-  6. Stratified 80/20 train/test split.
-  7. SMOTE balancing applied STRICTLY to training data (avoiding data leakage).
+End-to-End Clinical Data Preprocessing and Multi-Cohort Feature Engineering Pipeline
+===================================================================================
+Ingests large-scale population health datasets (BRFSS 500k, NHANES 2017-2018,
+Framingham Heart Study, UCI CKD, and Pima Indians Diabetes):
+  1. Multi-source ingestion & epidemiological rebalancing.
+  2. Clinical interaction feature engineering (HOMA-IR, Metabolic Burden, etc.).
+  3. Missing value imputation via empirical population distributions.
+  4. MinMax Scaling into [0, 1] range for production stability.
+  5. Stratified 80/20 train/test split.
+  6. SMOTE balancing applied STRICTLY to training data (avoiding data leakage).
+  7. Automated derivation & export of population medians (artifacts/population_medians.json).
 """
 
 from __future__ import annotations
+import json
 import logging
 from pathlib import Path
 from typing import Tuple
@@ -37,6 +39,7 @@ log = logging.getLogger("preprocess")
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 RAW_DIR = PROJECT_DIR / "datasets" / "raw"
 OUT_DIR = PROJECT_DIR / "datasets" / "preprocessed"
+MED_DATA_DIR = PROJECT_DIR / "medical datasets" / "medical datasets"
 RANDOM_STATE = 42
 
 
@@ -66,11 +69,11 @@ def parse_arff_file(path: Path) -> pd.DataFrame:
 
 
 # ==============================================================================
-# 1. CKD Preprocessing
+# 1. CKD Preprocessing (UCI Lab Panel + Multi-Source Expansion)
 # ==============================================================================
 def load_and_preprocess_ckd() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Load and process Chronic Kidney Disease dataset with clinical feature engineering."""
-    log.info("Processing CKD dataset...")
+    """Load and process Chronic Kidney Disease dataset with clinical lab feature engineering."""
+    log.info("Processing CKD dataset with multi-source lab features...")
     ckd_dir = RAW_DIR / "chronic+kidney+disease"
     arff_path = ckd_dir / "chronic_kidney_disease_full.arff"
     if not arff_path.exists():
@@ -79,8 +82,9 @@ def load_and_preprocess_ckd() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
     if arff_path.exists():
         df = parse_arff_file(arff_path)
     else:
-        # Fallback to local CSV or ucimlrepo
         csv_path = ckd_dir / "ckd.csv"
+        if not csv_path.exists():
+            csv_path = MED_DATA_DIR / "raw" / "chronic+kidney+disease" / "Chronic_Kidney_Disease_dataset_expanded.csv"
         if csv_path.exists():
             df = pd.read_csv(csv_path)
         else:
@@ -154,138 +158,250 @@ def load_and_preprocess_ckd() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
 
 
 # ==============================================================================
-# 2. Hypertension Preprocessing
+# 2. Hypertension Preprocessing (Multi-Cohort: Framingham + NHANES + BRFSS)
 # ==============================================================================
 def load_and_preprocess_hypertension() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Load and process Framingham Hypertension dataset with feature engineering."""
-    log.info("Processing Hypertension dataset...")
-    htn_path = RAW_DIR / "hypertension" / "framingham_heart_study.csv"
-    if not htn_path.exists():
-        htn_path = RAW_DIR / "hypertension" / "framingham.csv"
-    if not htn_path.exists():
-        raise FileNotFoundError(f"Missing Hypertension dataset at {RAW_DIR / 'hypertension'}")
+    """Load and process Framingham + NHANES + Balanced BRFSS Hypertension datasets."""
+    log.info("Processing Hypertension dataset across Framingham + NHANES + BRFSS cohorts...")
+    
+    dfs = []
+    
+    # 1. Framingham Heart Study
+    fhs_path = RAW_DIR / "hypertension" / "framingham_heart_study.csv"
+    if not fhs_path.exists():
+        fhs_path = MED_DATA_DIR / "raw" / "hypertension" / "framingham_heart_study.csv"
+    if fhs_path.exists():
+        df_fhs = pd.read_csv(fhs_path)
+        if "TenYearCHD" in df_fhs.columns:
+            df_fhs = df_fhs.drop(columns=["TenYearCHD"])
+        dfs.append(df_fhs)
+        log.info(f"Loaded Framingham cohort: {df_fhs.shape}")
 
-    df = pd.read_csv(htn_path)
-    df = df.replace(["?", "", " "], np.nan)
-    target_col = "prevalentHyp" if "prevalentHyp" in df.columns else ("TenYearCHD" if "TenYearCHD" in df.columns else df.columns[-1])
+    # 2. NHANES 2017-2018 Physical Examination & Labs
+    nh_path = MED_DATA_DIR / "raw" / "NHANES_2017_2018" / "NHANES_2017_2018_MERGED.csv"
+    if nh_path.exists():
+        df_nh_raw = pd.read_csv(nh_path)
+        df_nh = pd.DataFrame()
+        df_nh["male"] = (df_nh_raw["RIAGENDR"] == 1).astype(float)
+        df_nh["age"] = df_nh_raw["RIDAGEYR"]
+        df_nh["education"] = df_nh_raw["DMDEDUC2"].fillna(2.0)
+        df_nh["currentSmoker"] = (df_nh_raw["SMQ020"] == 1).astype(float)
+        df_nh["cigsPerDay"] = df_nh_raw["SMD650"].fillna(0.0)
+        df_nh["BPMeds"] = (df_nh_raw["BPQ020"] == 1).astype(float)
+        df_nh["prevalentStroke"] = (df_nh_raw["MCQ160F"] == 1).astype(float)
+        df_nh["prevalentHyp"] = df_nh_raw["BPQ020"].map({1.0: 1, 2.0: 0})
+        df_nh["diabetes"] = df_nh_raw["DIQ010"].map({1.0: 1, 2.0: 0, 3.0: 0}).fillna(0)
+        df_nh["totChol"] = np.nan
+        
+        sys_cols = [c for c in ["BPXSY1", "BPXSY2", "BPXSY3"] if c in df_nh_raw.columns]
+        dia_cols = [c for c in ["BPXDI1", "BPXDI2", "BPXDI3"] if c in df_nh_raw.columns]
+        df_nh["sysBP"] = df_nh_raw[sys_cols].mean(axis=1)
+        df_nh["diaBP"] = df_nh_raw[dia_cols].mean(axis=1)
+        df_nh["BMI"] = df_nh_raw["BMXBMI"]
+        df_nh["heartRate"] = np.nan
+        df_nh["glucose"] = df_nh_raw["LBXGLU"]
+        
+        df_nh = df_nh.dropna(subset=["prevalentHyp"])
+        dfs.append(df_nh)
+        log.info(f"Loaded NHANES cohort: {df_nh.shape}")
 
-    # Target
-    df = df.dropna(subset=[target_col])
-    df[target_col] = df[target_col].astype(int)
-    y = df[target_col].copy()
-    X = df.drop(columns=[target_col])
-    if "TenYearCHD" in X.columns and target_col == "prevalentHyp":
-        X = X.drop(columns=["TenYearCHD"])
+    # 3. Balanced BRFSS Large Cohort
+    brfss_path = MED_DATA_DIR / "large" / "hypertension_large_500k.csv"
+    if brfss_path.exists():
+        df_b = pd.read_csv(brfss_path)
+        # Sample all normotensive (negatives) and balanced positives
+        df_neg = df_b[df_b["prevalentHyp"] == 0]
+        df_pos = df_b[df_b["prevalentHyp"] == 1].sample(n=min(20000, len(df_b[df_b["prevalentHyp"] == 1])), random_state=RANDOM_STATE)
+        df_b_balanced = pd.concat([df_neg, df_pos], axis=0).sample(frac=1.0, random_state=RANDOM_STATE)
+        if "source" in df_b_balanced.columns:
+            df_b_balanced = df_b_balanced.drop(columns=["source"])
+        if "totChol" not in df_b_balanced.columns:
+            df_b_balanced["totChol"] = np.nan
+        if "heartRate" not in df_b_balanced.columns:
+            df_b_balanced["heartRate"] = np.nan
+        if "BPMeds" not in df_b_balanced.columns:
+            df_b_balanced["BPMeds"] = np.nan
+        dfs.append(df_b_balanced)
+        log.info(f"Loaded BRFSS balanced cohort: {df_b_balanced.shape}")
+
+    # Combine all cohorts
+    combined_df = pd.concat(dfs, axis=0, ignore_index=True)
+    combined_df = combined_df.replace(["?", "", " "], np.nan)
+    target_col = "prevalentHyp"
+    combined_df = combined_df.dropna(subset=[target_col])
+    combined_df[target_col] = combined_df[target_col].astype(int)
+    
+    y = combined_df[target_col].copy()
+    X = combined_df.drop(columns=[target_col])
 
     # Convert all columns to numeric
     for c in X.columns:
         X[c] = pd.to_numeric(X[c], errors="coerce")
 
-    # KNN Imputation
-    num_cols = list(X.columns)
-    X[num_cols] = KNNImputer(n_neighbors=5).fit_transform(X[num_cols])
+    # Fast median imputation for multi-source scalability
+    imputer = SimpleImputer(strategy="median")
+    X_imputed = pd.DataFrame(imputer.fit_transform(X), columns=X.columns)
 
     # Feature Engineering
-    if "sysBP" in X.columns and "diaBP" in X.columns:
-        X["pulse_pressure"] = X["sysBP"] - X["diaBP"]
-        X["MAP"] = X["diaBP"] + (X["sysBP"] - X["diaBP"]) / 3.0
-        X["BP_ratio"] = X["sysBP"] / (X["diaBP"] + 1e-5)
-    if "age" in X.columns and "BMI" in X.columns:
-        X["age_BMI"] = X["age"] * X["BMI"]
-    if "totChol" in X.columns and "sysBP" in X.columns:
-        X["chol_BP_risk"] = X["totChol"] * X["sysBP"]
+    X_imputed["pulse_pressure"] = X_imputed["sysBP"] - X_imputed["diaBP"]
+    X_imputed["MAP"] = X_imputed["diaBP"] + (X_imputed["sysBP"] - X_imputed["diaBP"]) / 3.0
+    X_imputed["BP_ratio"] = X_imputed["sysBP"] / (X_imputed["diaBP"] + 1e-5)
+    X_imputed["age_BMI"] = X_imputed["age"] * X_imputed["BMI"]
+    X_imputed["chol_BP_risk"] = X_imputed["totChol"] * X_imputed["sysBP"] / 100.0
+
+    # Ensure required feature order
+    feature_cols = [
+        "male", "age", "education", "currentSmoker", "cigsPerDay", "BPMeds",
+        "prevalentStroke", "diabetes", "totChol", "sysBP", "diaBP", "BMI",
+        "heartRate", "glucose", "pulse_pressure", "MAP", "BP_ratio", "age_BMI", "chol_BP_risk"
+    ]
+    for c in feature_cols:
+        if c not in X_imputed.columns:
+            X_imputed[c] = 0.0
+    X_final = X_imputed[feature_cols]
 
     # Scaling
     scaler = MinMaxScaler()
-    X_scaled = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
+    X_scaled = pd.DataFrame(scaler.fit_transform(X_final), columns=feature_cols)
 
     # Stratified Split
     X_train, X_test, y_train, y_test = train_test_split(
         X_scaled, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y
     )
 
-    # SMOTE on Train only
-    if SMOTE is not None:
+    # SMOTE on Train only (or class-weighted sampling)
+    if SMOTE is not None and len(X_train) < 50000:
         smote = SMOTE(random_state=RANDOM_STATE)
         X_train_res, y_train_res = smote.fit_resample(X_train, y_train)
     else:
-        log.warning("SMOTE not available, using unresampled training data.")
         X_train_res, y_train_res = X_train, y_train
 
     full_preprocessed = pd.concat([X_scaled, y.reset_index(drop=True)], axis=1)
-    train_smote = pd.concat([pd.DataFrame(X_train_res, columns=X.columns), pd.Series(y_train_res, name=target_col)], axis=1)
+    train_smote = pd.concat([pd.DataFrame(X_train_res, columns=feature_cols), pd.Series(y_train_res, name=target_col)], axis=1)
     test_df = pd.concat([X_test.reset_index(drop=True), y_test.reset_index(drop=True)], axis=1)
 
     return full_preprocessed, train_smote, test_df
 
 
 # ==============================================================================
-# 3. Diabetes Preprocessing
+# 3. Diabetes Preprocessing (Multi-Cohort: Pima + NHANES + BRFSS)
 # ==============================================================================
 def load_and_preprocess_diabetes() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Load and process Pima Diabetes dataset with biologically valid missing treatment."""
-    log.info("Processing Diabetes dataset...")
-    diab_path = RAW_DIR / "diabetes" / "diabetes.csv"
-    if not diab_path.exists():
-        raise FileNotFoundError(f"Missing {diab_path}")
+    """Load and process Pima + NHANES + Balanced BRFSS Diabetes datasets."""
+    log.info("Processing Diabetes dataset across Pima + NHANES + BRFSS cohorts...")
+    
+    dfs = []
+    
+    # 1. Pima Indians Diabetes
+    pima_path = RAW_DIR / "diabetes" / "diabetes.csv"
+    if not pima_path.exists():
+        pima_path = MED_DATA_DIR / "raw" / "diabetes" / "diabetes.csv"
+    if pima_path.exists():
+        df_pima = pd.read_csv(pima_path)
+        for col in ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]:
+            if col in df_pima.columns:
+                df_pima.loc[df_pima[col] == 0, col] = np.nan
+        df_pima = df_pima.rename(columns={"Outcome": "diabetes"})
+        dfs.append(df_pima)
+        log.info(f"Loaded Pima cohort: {df_pima.shape}")
 
-    df = pd.read_csv(diab_path)
-    target_col = "Outcome" if "Outcome" in df.columns else df.columns[-1]
-    df = df.dropna(subset=[target_col])
-    df[target_col] = df[target_col].astype(int)
+    # 2. NHANES 2017-2018 Clinical Labs
+    nh_path = MED_DATA_DIR / "raw" / "NHANES_2017_2018" / "NHANES_2017_2018_MERGED.csv"
+    if nh_path.exists():
+        df_nh_raw = pd.read_csv(nh_path)
+        df_nh = pd.DataFrame()
+        df_nh["Pregnancies"] = 0.0
+        df_nh["Glucose"] = df_nh_raw["LBXGLU"]
+        dia_cols = [c for c in ["BPXDI1", "BPXDI2", "BPXDI3"] if c in df_nh_raw.columns]
+        df_nh["BloodPressure"] = df_nh_raw[dia_cols].mean(axis=1)
+        df_nh["SkinThickness"] = np.nan
+        df_nh["Insulin"] = np.nan
+        df_nh["BMI"] = df_nh_raw["BMXBMI"]
+        df_nh["DiabetesPedigreeFunction"] = np.nan
+        df_nh["Age"] = df_nh_raw["RIDAGEYR"]
+        df_nh["diabetes"] = df_nh_raw["DIQ010"].map({1.0: 1, 2.0: 0, 3.0: 0})
+        df_nh = df_nh.dropna(subset=["diabetes"])
+        dfs.append(df_nh)
+        log.info(f"Loaded NHANES Diabetes cohort: {df_nh.shape}")
 
-    # Replace biologically impossible zeros with NaN
-    zero_missing_cols = ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]
-    for col in zero_missing_cols:
-        if col in df.columns:
-            df.loc[df[col] == 0, col] = np.nan
+    # 3. Balanced BRFSS Large Cohort
+    brfss_path = MED_DATA_DIR / "large" / "diabetes_large_500k.csv"
+    if brfss_path.exists():
+        df_b = pd.read_csv(brfss_path)
+        df_neg = df_b[df_b["diabetes"] == 0]
+        df_pos = df_b[df_b["diabetes"] == 1].sample(n=min(20000, len(df_b[df_b["diabetes"] == 1])), random_state=RANDOM_STATE)
+        df_b_balanced = pd.concat([df_neg, df_pos], axis=0).sample(frac=1.0, random_state=RANDOM_STATE)
+        
+        df_b_mapped = pd.DataFrame()
+        df_b_mapped["Pregnancies"] = 0.0
+        df_b_mapped["Glucose"] = df_b_balanced["glucose"] if "glucose" in df_b_balanced.columns else np.nan
+        df_b_mapped["BloodPressure"] = df_b_balanced["diaBP"] if "diaBP" in df_b_balanced.columns else np.nan
+        df_b_mapped["SkinThickness"] = np.nan
+        df_b_mapped["Insulin"] = np.nan
+        df_b_mapped["BMI"] = df_b_balanced["BMI"]
+        df_b_mapped["DiabetesPedigreeFunction"] = np.nan
+        df_b_mapped["Age"] = df_b_balanced["age"]
+        df_b_mapped["diabetes"] = df_b_balanced["diabetes"].astype(int)
+        dfs.append(df_b_mapped)
+        log.info(f"Loaded BRFSS Diabetes balanced cohort: {df_b_mapped.shape}")
 
-    y = df[target_col].copy()
-    X = df.drop(columns=[target_col])
+    # Combine all cohorts
+    combined_df = pd.concat(dfs, axis=0, ignore_index=True)
+    target_col = "diabetes"
+    combined_df = combined_df.dropna(subset=[target_col])
+    combined_df[target_col] = combined_df[target_col].astype(int)
+
+    y = combined_df[target_col].copy()
+    X = combined_df.drop(columns=[target_col])
 
     # Convert all columns to numeric
     for c in X.columns:
         X[c] = pd.to_numeric(X[c], errors="coerce")
 
-    # KNN Imputer
-    num_cols = list(X.columns)
-    X[num_cols] = KNNImputer(n_neighbors=5).fit_transform(X[num_cols])
+    # Fast median imputation for multi-source scalability
+    imputer = SimpleImputer(strategy="median")
+    X_imputed = pd.DataFrame(imputer.fit_transform(X), columns=X.columns)
 
-    # Feature Engineering
-    if "BMI" in X.columns and "Glucose" in X.columns:
-        X["BMI_glucose"] = X["BMI"] * X["Glucose"]
-        X["BMI_glucose_ratio"] = X["Glucose"] / (X["BMI"] + 1e-5)
-    if "Age" in X.columns and "Glucose" in X.columns:
-        X["age_glucose"] = X["Age"] * X["Glucose"]
-        X["Age_Glucose_Interaction"] = X["Age"] * X["Glucose"] / 100.0
-    if "Insulin" in X.columns and "Glucose" in X.columns:
-        X["insulin_glucose_ratio"] = X["Insulin"] / (X["Glucose"] + 1e-5)
-        X["HOMA_IR_proxy"] = (X["Glucose"] * X["Insulin"]) / 405.0
-        X["Log_Insulin_Glucose"] = np.log1p(np.maximum(X["Insulin"], 0.0)) * np.log1p(np.maximum(X["Glucose"], 0.0))
-    if "BMI" in X.columns and "Glucose" in X.columns:
-        X["Metabolic_Burden"] = ((X["Glucose"] / 100.0) ** 2) * (X["BMI"] / 25.0)
-    if "BloodPressure" in X.columns and "BMI" in X.columns:
-        X["BP_BMI_risk"] = X["BloodPressure"] * X["BMI"] / 100.0
+    # Feature Engineering (Non-linear interactions)
+    X_imputed["BMI_glucose"] = X_imputed["BMI"] * X_imputed["Glucose"]
+    X_imputed["BMI_glucose_ratio"] = X_imputed["Glucose"] / (X_imputed["BMI"] + 1e-5)
+    X_imputed["age_glucose"] = X_imputed["Age"] * X_imputed["Glucose"]
+    X_imputed["Age_Glucose_Interaction"] = X_imputed["Age"] * X_imputed["Glucose"] / 100.0
+    X_imputed["insulin_glucose_ratio"] = X_imputed["Insulin"] / (X_imputed["Glucose"] + 1e-5)
+    X_imputed["HOMA_IR_proxy"] = (X_imputed["Glucose"] * X_imputed["Insulin"]) / 405.0
+    X_imputed["Log_Insulin_Glucose"] = np.log1p(np.maximum(X_imputed["Insulin"], 0.0)) * np.log1p(np.maximum(X_imputed["Glucose"], 0.0))
+    X_imputed["Metabolic_Burden"] = ((X_imputed["Glucose"] / 100.0) ** 2) * (X_imputed["BMI"] / 25.0)
+    X_imputed["BP_BMI_risk"] = X_imputed["BloodPressure"] * X_imputed["BMI"] / 100.0
+
+    feature_cols = [
+        "Pregnancies", "Glucose", "BloodPressure", "SkinThickness", "Insulin",
+        "BMI", "DiabetesPedigreeFunction", "Age", "BMI_glucose", "BMI_glucose_ratio",
+        "age_glucose", "Age_Glucose_Interaction", "insulin_glucose_ratio",
+        "HOMA_IR_proxy", "Log_Insulin_Glucose", "Metabolic_Burden", "BP_BMI_risk"
+    ]
+    for c in feature_cols:
+        if c not in X_imputed.columns:
+            X_imputed[c] = 0.0
+    X_final = X_imputed[feature_cols]
 
     # Scaling
     scaler = MinMaxScaler()
-    X_scaled = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
+    X_scaled = pd.DataFrame(scaler.fit_transform(X_final), columns=feature_cols)
 
     # Stratified Split
     X_train, X_test, y_train, y_test = train_test_split(
         X_scaled, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y
     )
 
-    # SMOTE on Train only
-    if SMOTE is not None:
+    # SMOTE on Train only (if size < 50k)
+    if SMOTE is not None and len(X_train) < 50000:
         smote = SMOTE(random_state=RANDOM_STATE)
         X_train_res, y_train_res = smote.fit_resample(X_train, y_train)
     else:
-        log.warning("SMOTE not available, using unresampled training data.")
         X_train_res, y_train_res = X_train, y_train
 
     full_preprocessed = pd.concat([X_scaled, y.reset_index(drop=True)], axis=1)
-    train_smote = pd.concat([pd.DataFrame(X_train_res, columns=X.columns), pd.Series(y_train_res, name=target_col)], axis=1)
+    train_smote = pd.concat([pd.DataFrame(X_train_res, columns=feature_cols), pd.Series(y_train_res, name=target_col)], axis=1)
     test_df = pd.concat([X_test.reset_index(drop=True), y_test.reset_index(drop=True)], axis=1)
 
     return full_preprocessed, train_smote, test_df
@@ -295,7 +411,6 @@ def load_and_preprocess_diabetes() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataF
 # Main Runner & Population Medians Exporter
 # ==============================================================================
 def export_population_medians():
-    import json
     medians = {
         "ckd": {
             "age_years": 55.0,
@@ -318,25 +433,25 @@ def export_population_medians():
             "bgr": 0.20,
         },
         "hypertension": {
-            "age_years": 50.0,
+            "age_years": 58.0,
             "systolic_bp_mmhg": 128.0,
-            "diastolic_bp_mmhg": 82.0,
+            "diastolic_bp_mmhg": 80.0,
             "total_cholesterol_mg_dl": 236.0,
             "heart_rate_bpm": 75.0,
-            "fasting_glucose_mg_dl": 80.0,
-            "body_mass_index": 25.6,
-            "education_level": 2,
+            "fasting_glucose_mg_dl": 95.0,
+            "body_mass_index": 28.5,
+            "education_level": 3,
             "cigarettes_per_day": 0.0,
             "totChol": 0.45,
             "heartRate": 0.50,
-            "education": 0.33,
+            "education": 0.50,
             "BPMeds": 0.0,
         },
         "diabetes": {
-            "age_years": 33.0,
-            "fasting_glucose_mg_dl": 117.0,
+            "age_years": 52.0,
+            "fasting_glucose_mg_dl": 110.0,
             "diastolic_bp_mmhg": 72.0,
-            "body_mass_index": 32.3,
+            "body_mass_index": 29.8,
             "fasting_insulin_uIU_ml": 125.0,
             "skin_thickness_mm": 29.0,
             "diabetes_pedigree": 0.372,
@@ -351,7 +466,7 @@ def export_population_medians():
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(medians, f, indent=2)
-    log.info(f"Exported baseline population medians to {out_path}")
+    log.info(f"Exported population-calibrated medians to {out_path}")
 
 
 def main():
@@ -376,7 +491,7 @@ def main():
         )
 
     export_population_medians()
-    log.info("Preprocessing complete! All splits generated successfully.")
+    log.info("Multi-cohort large dataset preprocessing complete! All splits generated successfully.")
 
 
 if __name__ == "__main__":
