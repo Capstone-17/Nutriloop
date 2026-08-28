@@ -2,8 +2,10 @@
 Interactive & Scriptable Clinical Risk Prediction CLI Tool
 ===========================================================
 Usage:
+  python predict_cli.py demo_inputs/comorbid_ckd_htn.json
+  python predict_cli.py --file demo_inputs/diabetes_with_labs.json
   python predict_cli.py --disease ckd --interactive
-  python predict_cli.py --raw-input ../demo_inputs/ckd_sample.json
+  python predict_cli.py --raw-input demo_inputs/ckd_sample.json
   python predict_cli.py --disease hypertension --show-template
 """
 
@@ -19,7 +21,7 @@ if str(PROJECT_DIR) not in sys.path:
 
 from backend.model_registry import registry
 from backend.raw_input import get_raw_field_metadata, get_raw_template, map_raw_payload
-from backend.reporting import build_explanation_text, build_risk_report
+from backend.reporting import build_risk_report
 from backend.rules import build_calibration_context, classify_risk_level
 
 
@@ -27,8 +29,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="A Deep Learning and Generative AI-Driven Diet Recommendation System for Personalized Chronic Disease Management"
     )
+    parser.add_argument("file_positional", nargs="?", type=str, help="Optional path to payload JSON file")
+    parser.add_argument("--file", type=str, help="Path to input payload JSON file")
     parser.add_argument("--disease", type=str, choices=["ckd", "hypertension", "diabetes"], help="Target disease")
-    parser.add_argument("--input", type=str, help="Path to JSON file with direct features")
+    parser.add_argument("--input", type=str, help="Path to JSON file with direct scaled features")
     parser.add_argument("--raw-input", type=str, help="Path to JSON file with conversational raw inputs")
     parser.add_argument("--show-template", action="store_true", help="Display questionnaire template for disease")
     parser.add_argument("--interactive", action="store_true", help="Launch interactive terminal questionnaire")
@@ -98,6 +102,9 @@ def main():
     features = None
     disease = args.disease
 
+    # Check for file inputs from various flag options
+    target_file = args.file_positional or args.file or args.raw_input or args.input
+
     if args.interactive:
         if not disease:
             print("Select disease:")
@@ -109,29 +116,38 @@ def main():
             disease = mapping.get(choice, "ckd")
         raw_inputs = interactive_wizard(disease)
 
-    elif args.raw_input:
-        with open(args.raw_input, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        disease = data.get("disease", disease)
-        raw_inputs = data.get("raw_inputs", data)
+    elif target_file:
+        file_path = Path(target_file)
+        if not file_path.exists():
+            print(f"Error: File '{target_file}' not found.")
+            sys.exit(1)
 
-    elif args.input:
-        with open(args.input, "r", encoding="utf-8") as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
+
         disease = data.get("disease", disease)
-        features = data.get("features", data)
+        if "raw_inputs" in data:
+            raw_inputs = data["raw_inputs"]
+        elif "features" in data:
+            features = data["features"]
+        else:
+            raw_inputs = data
 
     else:
-        print("Error: Specify --interactive, --raw-input <file>, --input <file>, or --show-template")
+        print("Error: Specify a JSON payload file (e.g. `python scripts/predict_cli.py demo_inputs/comorbid_ckd_htn.json`), --file, --interactive, or --show-template")
         sys.exit(1)
 
     if not disease:
-        print("Error: Unable to determine disease.")
+        print("Error: Unable to determine disease from file or flags. Specify --disease [ckd|hypertension|diabetes]")
         sys.exit(1)
 
     if raw_inputs:
         mapping_result = map_raw_payload(disease, raw_inputs)
         features = mapping_result.transformed_features
+        if mapping_result.validation_warnings:
+            print("\nClinical Mapping Warnings:")
+            for w in mapping_result.validation_warnings:
+                print(f"  [!] {w}")
 
     # Run Prediction
     pred_class, risk_score, model_name, thresholds, top_factors = registry.predict_risk(disease, features)
@@ -141,14 +157,14 @@ def main():
     print("\n" + "=" * 70)
     print(f"       CLINICAL RISK ASSESSMENT REPORT: {disease.upper()}")
     print("=" * 70)
-    print(f"Model Employed:      {model_name}")
+    print(f"Model Employed:        {model_name}")
     print(f"Calculated Risk Score: {risk_score:.4f} ({risk_level.upper()} RISK)")
     strictness = calib.get("strictness_multiplier", 1.0) if isinstance(calib, dict) else getattr(calib, "strictness_multiplier", 1.0)
-    print(f"Strictness Factor:   {strictness:.2f}x")
+    print(f"Strictness Factor:     {strictness:.2f}x")
 
     print("\nTop Contributing Risk Factors:")
     for f in top_factors[:5]:
-        print(f"  • {f['feature']:25s} | Importance: {f['relative_importance'] * 100:.1f}%")
+        print(f"  - {f['feature']:25s} | Relative Impact: {f['relative_importance'] * 100:.1f}%")
 
     if args.recommend_diet:
         report = build_risk_report(
@@ -166,13 +182,13 @@ def main():
         print("\n" + "-" * 70)
         print("  PERSONALIZED DIETARY TARGETS & MEDICAL NUTRITION GUIDELINES")
         print("-" * 70)
-        print(f"Daily Calories:      {plan['calories_target']} kcal")
-        print(f"Protein Target:      {plan['protein_target_g']} g")
-        print(f"Carbohydrate Target: {plan['carb_target_g']} g")
-        print(f"Dietary Fat Limit:   {plan['fat_target_g']} g")
-        print(f"Sodium Upper Limit:  {plan['sodium_limit_mg']} mg")
-        print(f"Potassium Guidance:  {plan['potassium_limit_mg']} mg")
-        print(f"Fiber Goal:          {plan['fiber_target_g']} g")
+        print(f"Daily Calories:        {plan['calories_target']} kcal")
+        print(f"Protein Target:        {plan['protein_target_g']} g")
+        print(f"Carbohydrate Target:   {plan['carb_target_g']} g")
+        print(f"Dietary Fat Limit:     {plan['fat_target_g']} g")
+        print(f"Sodium Upper Limit:    {plan['sodium_limit_mg']} mg")
+        print(f"Potassium Guidance:    {plan['potassium_limit_mg']} mg")
+        print(f"Fiber Goal:            {plan['fiber_target_g']} g")
 
         print("\nClinical Dietary Priorities:")
         for focus in plan["diet_focus"]:
