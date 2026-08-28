@@ -72,13 +72,13 @@
 
 ## Model Performance Benchmarks
 
-All models are trained with non-linear interaction features, SMOTE re-sampling on training folds, Platt probability calibration via `CalibratedClassifierCV(method='sigmoid')`, and tuned decision thresholds.
+All models are trained with non-linear interaction features, multi-cohort demographic and examination datasets ($N=97,000+$ total patients across cohorts), Platt probability calibration via `CalibratedClassifierCV(method='sigmoid')`, and tuned decision thresholds.
 
-| Clinical Condition | Model Architecture | 5-Fold CV Macro F1 | Test Accuracy | Macro F1 | Recall (+) | Specificity | PR-AUC | ROC-AUC | Brier Score |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Chronic Kidney Disease (CKD)** | `HistGradientBoosting` | **0.9874** | **98.75%** | **0.9868** | **98.00%** | **100.0%** | **0.9985** | **0.9973** | **0.0229** |
-| **Hypertension (HTN)** | `HistGradientBoosting` | **0.9155** | **89.50%** | **0.8823** | **91.25%** | **88.72%** | **0.8893** | **0.9523** | **0.0831** |
-| **Type 2 Diabetes (T2DM)** | `HistGradientBoosting` | **0.8145** | **74.68%** | **0.7294** | **70.37%** | **77.00%** | **0.6358** | **0.8074** | **0.1760** |
+| Clinical Condition | Training Cohort Source & Size | Model Architecture | 5-Fold CV Macro F1 | Test Accuracy | Macro F1 | Recall (+) | Specificity | PR-AUC | ROC-AUC | Brier Score |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Chronic Kidney Disease (CKD)** | UCI Clinical Lab Panel ($N=397$) | `HistGradientBoosting` | **0.9874** | **98.75%** | **0.9868** | **98.00%** | **100.0%** | **0.9985** | **0.9973** | **0.0229** |
+| **Hypertension (HTN)** | Framingham + NHANES + BRFSS ($N=39,615$) | `HistGradientBoosting` | **0.8898** | **88.86%** | **0.8830** | **93.41%** | **82.24%** | **0.9639** | **0.9504** | **0.0851** |
+| **Type 2 Diabetes (T2DM)** | Pima + NHANES + BRFSS ($N=57,805$) | `HistGradientBoosting` | **0.7881** | **78.39%** | **0.7718** | **75.57%** | **80.02%** | **0.7454** | **0.8559** | **0.1549** |
 
 ---
 
