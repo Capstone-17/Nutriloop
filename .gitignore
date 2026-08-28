@@ -52,5 +52,4 @@ build/
 dist/
 *.egg-info/
 node_modules/
-medical datasets/
 med_dataset/

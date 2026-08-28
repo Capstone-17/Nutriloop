@@ -17,8 +17,7 @@
 - [Interactive CLI Tool](#interactive-cli-tool)
 - [REST API Reference (21 Endpoints)](#rest-api-reference-21-endpoints)
 - [Database Persistence & Concurrency](#database-persistence--concurrency)
-- [Frontend & Deployment Documentation](#frontend--deployment-documentation)
-- [License & Medical Disclaimer](#license--medical-disclaimer)
+- [Medical Disclaimer](#medical-disclaimer)
 
 ---
 
@@ -174,12 +173,17 @@ Latest_Update/
 │   ├── predict_cli.py             # Interactive terminal wizard & JSON predictor
 │   └── smoke_test.py              # Automated 21-endpoint & comorbidity test suite
 ├── demo_inputs/
-│   ├── ckd_sample.json            # Sample clinical payload for CKD
-│   ├── hypertension_sample.json   # Sample clinical payload for Hypertension
-│   └── diabetes_sample.json       # Sample clinical payload for Diabetes
-├── frontend.md                    # Frontend UI/UX, dashboard, & chart architecture spec
-├── deployment.md                  # Docker Compose, CI/CD, & production deployment spec
+│   ├── healthy_baseline.json      # Healthy control profile (Low Risk)
+│   ├── hypertension_sample.json   # Moderate hypertension profile
+│   ├── hypertension_with_lipids.json # Stage 2 hypertension with lipid panel (High Risk)
+│   ├── diabetes_sample.json       # Diabetes questionnaire profile (High Risk)
+│   ├── diabetes_with_labs.json    # Diabetes with complete lab panel (HbA1c, Insulin)
+│   ├── ckd_sample.json            # CKD questionnaire profile
+│   ├── early_stage_ckd.json       # Stage 2 early CKD with microalbuminuria
+│   └── comorbid_ckd_htn.json      # Multi-morbid CKD + HTN clinical profile
+├── med_dataset/                   # Cleaned clinical datasets (BRFSS, NHANES, Framingham, UCI)
 ├── requirements.txt               # Lean production dependencies
+├── NEW_CHANGES.md                 # Complete architectural evolution & before vs after matrix
 └── README.md                      # Comprehensive project documentation
 ```
 
@@ -227,11 +231,13 @@ python scripts/smoke_test.py
 python scripts/predict_cli.py --interactive
 ```
 
-### Run Prediction from Demo JSON
+### Run Prediction from Demo JSON Payloads
 ```powershell
-python scripts/predict_cli.py --raw-input demo_inputs/ckd_sample.json
-python scripts/predict_cli.py --raw-input demo_inputs/hypertension_sample.json
-python scripts/predict_cli.py --raw-input demo_inputs/diabetes_sample.json
+# Single-command evaluation across clinical demo files
+python scripts/predict_cli.py demo_inputs/comorbid_ckd_htn.json
+python scripts/predict_cli.py demo_inputs/diabetes_with_labs.json
+python scripts/predict_cli.py demo_inputs/hypertension_with_lipids.json
+python scripts/predict_cli.py demo_inputs/healthy_baseline.json
 ```
 
 ---
@@ -283,13 +289,6 @@ The backend persists application state to `app_data.db` utilizing SQLite Write-A
 - **`PRAGMA journal_mode=WAL;`**: Permits concurrent readers and writers without database locking errors.
 - **`PRAGMA busy_timeout=30000;`**: 30-second busy handler guaranteeing safe multi-worker scaling (`uvicorn --workers 4`).
 - **Context Managers (`with get_db_conn() as conn:`)**: Guarantees automatic commit and connection teardown.
-
----
-
-## Frontend & Deployment Documentation
-
-- **Frontend & UI Specification**: See [frontend.md](file:///d:/College/Capstone/Sem_7/capstone_repo/frontend.md) for full dashboard component hierarchy, interactive Recharts/Chart.js layouts, multi-disease radar visualizations, and patient meal logging interfaces.
-- **DevOps & Production Deployment**: See [deployment.md](file:///d:/College/Capstone/Sem_7/capstone_repo/deployment.md) for containerization specs (`Dockerfile`, `docker-compose.yml` with Ollama), GitHub Actions CI/CD pipelines, and Nginx reverse proxy configurations.
 
 ---
 
