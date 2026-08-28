@@ -108,7 +108,7 @@ A line-by-line audit against all Semester 6 deliverables ([`17_Phase2_ESA_Report
 ### 4.1 Non-Linear Feature Engineering Formulas
 In [scripts/preprocess_data.py](file:///d:/College/Capstone/Sem_7/capstone_repo/scripts/preprocess_data.py), five pathophysiological interaction features were engineered for Type 2 Diabetes:
 
-$$\text{HOMA\_IR\_proxy} = \frac{\text{Glucose (mg/dL)} \times \text{Insulin (\mu IU/mL)}}{405.0}$$
+$$\text{HOMA\_IR\_proxy} = \frac{\text{Glucose (mg/dL)} \times \text{Insulin (uIU/mL)}}{405.0}$$
 
 $$\text{Metabolic\_Burden} = \left(\frac{\text{Glucose}}{100.0}\right)^2 \times \left(\frac{\text{BMI}}{25.0}\right)$$
 
