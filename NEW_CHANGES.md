@@ -52,7 +52,7 @@ This document serves as the **definitive audit trail**:
 
 ## 2. Semester 6 (ISA-1, ISA-2, ESA) Audit & Completion Verification
 
-A line-by-line audit against all Semester 6 deliverables ([`17_Phase2_ESA_Report.docx`](file:///D:/College/Capstone/Sem_6/17_Phase2_ESA_Report.docx), [`17_Phase2_ESA_PPT.pptx`](file:///D:/College/Capstone/Sem_6/17_Phase2_ESA_PPT.pptx), [`Review_1/`](file:///D:/College/Capstone/Sem_6/Review_1), and [`Review_2/`](file:///D:/College/Capstone/Sem_6/Review_2)) confirms **100% fulfillment**:
+A line-by-line audit against all Semester 6 deliverables (ISA-1 Review, ISA-2 Review, and the final Phase 2 ESA Report and Presentation) confirms **100% fulfillment**:
 
 ### 2.1 Review 1 (ISA-1) Requirements vs. Implementation
 - **Requirement 1 (Multi-Disease Scope)**: Focus on Type 2 Diabetes Mellitus (T2DM), Chronic Kidney Disease (CKD), and Hypertension (HTN).  
@@ -60,7 +60,8 @@ A line-by-line audit against all Semester 6 deliverables ([`17_Phase2_ESA_Report
 - **Requirement 2 (Nutrition Reference KB)**: Integration of Indian Food Composition Tables (IFCT 2017, ICMR-NIN, 542 items), OpenFoodFacts India (6,568 items), and Indian Recipe Dataset (6,871 recipes).  
   *Status:* **100% Fulfilled.** Standardized into [datasets/unified_food_kb.csv](file:///d:/College/Capstone/Sem_7/capstone_repo/datasets/unified_food_kb.csv) (7,110 curated items with 28 standardized macro/micronutrients).
 - **Requirement 3 (Architectural Diagrams)**: Generation of Master Class, ER, Use-Case, Sequence, System Flow, and External Interfaces diagrams.  
-  *Status:* **100% Fulfilled.** Persisted in `Sem_6/Review_1/Diagrams/` and fully realized in the backend service layer.
+  *Status:* **100% Fulfilled.** Codified and fully realized across the database and backend service layers.
+
 
 ### 2.2 Review 2 (ISA-2) Requirements vs. Implementation
 - **Requirement 1 (Clinical Guidelines Integration)**: Association with ADA (Diabetes), KDIGO/KDOQI (Kidney Disease), WHO/DASH (Hypertension), and ICMR-NIN.  
