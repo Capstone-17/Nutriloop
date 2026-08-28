@@ -39,7 +39,7 @@ log = logging.getLogger("preprocess")
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 RAW_DIR = PROJECT_DIR / "datasets" / "raw"
 OUT_DIR = PROJECT_DIR / "datasets" / "preprocessed"
-MED_DATA_DIR = PROJECT_DIR / "medical datasets" / "medical datasets"
+MED_DATA_DIR = PROJECT_DIR / "med_dataset"
 RANDOM_STATE = 42
 
 
