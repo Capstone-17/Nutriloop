@@ -1,0 +1,20 @@
+{
+  "disease": "hypertension",
+  "raw_inputs": {
+    "age_years": 28,
+    "sex": "female",
+    "education_level": 4,
+    "current_smoker": false,
+    "cigarettes_per_day": 0,
+    "prior_stroke": false,
+    "body_mass_index": 22.4,
+    "diagnosed_diabetes": false,
+    "systolic_bp_mmhg": 116.0,
+    "diastolic_bp_mmhg": 74.0,
+    "fasting_glucose_mg_dl": 84.0,
+    "total_cholesterol_mg_dl": 175.0,
+    "heart_rate_bpm": 68.0,
+    "blood_pressure_meds": false
+  },
+  "clinical_context": "Healthy normotensive young adult with optimal BMI, normal lipids, and non-smoking history (Low Risk Control)."
+}

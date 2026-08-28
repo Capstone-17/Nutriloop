@@ -1,0 +1,20 @@
+{
+  "disease": "hypertension",
+  "raw_inputs": {
+    "age_years": 65,
+    "sex": "male",
+    "education_level": 3,
+    "current_smoker": true,
+    "cigarettes_per_day": 15,
+    "prior_stroke": false,
+    "body_mass_index": 31.5,
+    "diagnosed_diabetes": true,
+    "systolic_bp_mmhg": 164.0,
+    "diastolic_bp_mmhg": 98.0,
+    "fasting_glucose_mg_dl": 138.0,
+    "total_cholesterol_mg_dl": 268.0,
+    "heart_rate_bpm": 82.0,
+    "blood_pressure_meds": true
+  },
+  "clinical_context": "Stage 2 Hypertension with dyslipidemia, heavy smoking history, and high pulse pressure."
+}

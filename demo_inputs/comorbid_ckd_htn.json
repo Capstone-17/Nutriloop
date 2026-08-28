@@ -1,0 +1,18 @@
+{
+  "disease": "ckd",
+  "raw_inputs": {
+    "age_years": 62,
+    "sex": "male",
+    "body_mass_index": 29.4,
+    "diagnosed_diabetes": true,
+    "diagnosed_hypertension": true,
+    "systolic_bp_mmhg": 152.0,
+    "diastolic_bp_mmhg": 94.0,
+    "fasting_glucose_mg_dl": 145.0,
+    "serum_creatinine_mg_dl": 2.1,
+    "blood_urea_mg_dl": 58.0,
+    "urine_albumin_dipstick": 2.0,
+    "hemoglobin_g_dl": 11.2
+  },
+  "clinical_context": "Stage 3 Chronic Kidney Disease with co-existing Diabetic Nephropathy and Hypertension."
+}

@@ -1,0 +1,18 @@
+{
+  "disease": "ckd",
+  "raw_inputs": {
+    "age_years": 48,
+    "sex": "female",
+    "body_mass_index": 26.2,
+    "diagnosed_diabetes": false,
+    "diagnosed_hypertension": true,
+    "systolic_bp_mmhg": 134.0,
+    "diastolic_bp_mmhg": 84.0,
+    "fasting_glucose_mg_dl": 105.0,
+    "serum_creatinine_mg_dl": 1.3,
+    "blood_urea_mg_dl": 38.0,
+    "urine_albumin_dipstick": 1.0,
+    "hemoglobin_g_dl": 13.0
+  },
+  "clinical_context": "Stage 2 Early Chronic Kidney Disease with trace microalbuminuria and borderline hypertension."
+}
