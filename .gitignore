@@ -52,4 +52,5 @@ build/
 dist/
 *.egg-info/
 node_modules/
-med_dataset/
+datasets/preprocessed/
+datasets/raw/

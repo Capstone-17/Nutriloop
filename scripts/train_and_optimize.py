@@ -38,7 +38,7 @@ from sklearn.metrics import (
     roc_auc_score,
     auc,
 )
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
@@ -61,6 +61,10 @@ ARTIFACTS_DIR = PROJECT_DIR / "artifacts"
 RANDOM_STATE = 42
 
 
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import make_pipeline
+
+
 def get_candidate_models(disease: str, n_samples: int = 1000) -> Dict[str, Any]:
     """Return model candidate specifications for grid exploration with scale awareness."""
     candidates = {
@@ -70,21 +74,30 @@ def get_candidate_models(disease: str, n_samples: int = 1000) -> Dict[str, Any]:
             min_samples_leaf=10 if n_samples > 5000 else 5,
             random_state=RANDOM_STATE,
         ),
-        "RandomForest_balanced": RandomForestClassifier(
-            n_estimators=150 if n_samples > 5000 else 200,
-            max_depth=8,
-            min_samples_leaf=5 if n_samples > 5000 else 3,
-            class_weight="balanced",
-            random_state=RANDOM_STATE,
-            n_jobs=-1,
+        "RandomForest_balanced": make_pipeline(
+            SimpleImputer(strategy="median"),
+            RandomForestClassifier(
+                n_estimators=150 if n_samples > 5000 else 200,
+                max_depth=8,
+                min_samples_leaf=5 if n_samples > 5000 else 3,
+                class_weight="balanced",
+                random_state=RANDOM_STATE,
+                n_jobs=-1,
+            ),
         ),
-        "LogisticRegression_balanced": LogisticRegression(
-            C=1.0,
-            class_weight="balanced",
-            max_iter=1000,
-            random_state=RANDOM_STATE,
+        "LogisticRegression_balanced": make_pipeline(
+            SimpleImputer(strategy="median"),
+            LogisticRegression(
+                C=1.0,
+                class_weight="balanced",
+                max_iter=1000,
+                random_state=RANDOM_STATE,
+            ),
         ),
-        "GaussianNB": GaussianNB(),
+        "GaussianNB": make_pipeline(
+            SimpleImputer(strategy="median"),
+            GaussianNB(),
+        ),
     }
 
     # Include distance/kernel models only when dataset size allows fast computation
@@ -210,26 +223,45 @@ def train_disease(disease: str) -> Tuple[Any, List[str], Dict[str, Any], Dict[st
     best_cv_score = -1.0
     best_model_obj = None
 
+    # Subsample for CV candidate tournament if large dataset to ensure fast search
+    if len(X_train) > 15000:
+        cv_idx, _ = train_test_split(
+            np.arange(len(X_train)),
+            train_size=15000,
+            stratify=y_train,
+            random_state=RANDOM_STATE,
+        )
+        X_cv, y_cv = X_train[cv_idx], y_train[cv_idx]
+    else:
+        X_cv, y_cv = X_train, y_train
+
     # Cross-validation search
+    cv_scores = {}
     for name, model in candidates.items():
         cv_f1s = []
-        for train_idx, val_idx in cv.split(X_train, y_train):
+        for train_idx, val_idx in cv.split(X_cv, y_cv):
             from sklearn.base import clone
             m = clone(model)
-            m.fit(X_train[train_idx], y_train[train_idx])
-            y_val_pred = m.predict(X_train[val_idx])
-            cv_f1s.append(f1_score(y_train[val_idx], y_val_pred, average="macro", zero_division=0))
+            m.fit(X_cv[train_idx], y_cv[train_idx])
+            y_val_pred = m.predict(X_cv[val_idx])
+            cv_f1s.append(f1_score(y_cv[val_idx], y_val_pred, average="macro", zero_division=0))
 
         mean_f1 = float(np.mean(cv_f1s))
+        cv_scores[name] = mean_f1
         log.info(f"  Candidate {name:30s} | 5-Fold CV Macro F1: {mean_f1:.4f}")
-        if mean_f1 > best_cv_score:
-            best_cv_score = mean_f1
-            best_name = name
-            best_model_obj = model
 
+    best_name = max(cv_scores, key=cv_scores.get)
+    best_cv_score = cv_scores[best_name]
+    # Prioritize HistGradientBoosting for production CDS (O(N) histogram binning, native NaN support)
+    if "HistGradientBoosting" in cv_scores and (best_cv_score - cv_scores["HistGradientBoosting"]) <= 0.015:
+        best_name = "HistGradientBoosting"
+        best_cv_score = cv_scores["HistGradientBoosting"]
+
+    best_model_obj = candidates[best_name]
     log.info(f"--> Selected Best Candidate for {disease.upper()}: {best_name} (CV F1: {best_cv_score:.4f})")
 
-    # Fit best model on entire training split
+    # Fit best model on entire 240,000 training split
+    log.info(f"Fitting {best_name} on entire {len(X_train):,} training records...")
     best_model_obj.fit(X_train, y_train)
 
     # Calibrate probability predictions

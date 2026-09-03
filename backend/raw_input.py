@@ -270,26 +270,35 @@ def _map_hypertension(raw_inputs: Dict[str, Any]) -> RawMappingResult:
     heart_rate = payload.heart_rate_bpm or meds.get("heart_rate_bpm", 75.0)
     bp_meds = _binary(payload.blood_pressure_meds)
 
+    s_age = _minmax(payload.age_years, 18, 80)
+    s_sys = _minmax(sys_bp, 80, 295)
+    s_dia = _minmax(dia_bp, 40, 145)
+    s_bmi = _minmax(bmi, 15, 60)
+    s_chol = _minmax(tot_chol, 100, 600)
+    s_heart = _minmax(heart_rate, 40, 150)
+    s_glucose = _minmax(glucose, 40, 395)
+    s_cigs = _minmax(cigarettes, 0, 70)
+
     features = {
         "male": _sex_to_male(payload.sex),
-        "age": _minmax(payload.age_years, 18, 80),
+        "age": s_age,
         "education": _minmax(payload.education_level or 2, 1, 4),
         "currentSmoker": _binary(payload.current_smoker),
-        "cigsPerDay": _minmax(cigarettes, 0, 70),
+        "cigsPerDay": s_cigs,
         "BPMeds": bp_meds,
         "prevalentStroke": _binary(payload.prior_stroke),
         "diabetes": _binary(payload.diagnosed_diabetes),
-        "totChol": _minmax(tot_chol, 100, 600),
-        "sysBP": _minmax(sys_bp, 80, 295),
-        "diaBP": _minmax(dia_bp, 40, 145),
-        "BMI": _minmax(bmi, 15, 60),
-        "heartRate": _minmax(heart_rate, 40, 150),
-        "glucose": _minmax(glucose, 40, 395),
-        "pulse_pressure": sys_bp - dia_bp,
-        "MAP": dia_bp + (sys_bp - dia_bp) / 3.0,
-        "BP_ratio": sys_bp / (dia_bp + 1e-5),
-        "age_BMI": payload.age_years * bmi,
-        "chol_BP_risk": tot_chol * sys_bp / 100.0,
+        "totChol": s_chol,
+        "sysBP": s_sys,
+        "diaBP": s_dia,
+        "BMI": s_bmi,
+        "heartRate": s_heart,
+        "glucose": s_glucose,
+        "pulse_pressure": _minmax(sys_bp - dia_bp, 0, 100),
+        "MAP": _minmax(dia_bp + (sys_bp - dia_bp) / 3.0, 40, 180),
+        "BP_ratio": _minmax(sys_bp / (dia_bp + 1e-5), 0.5, 3.0),
+        "age_BMI": s_age * s_bmi,
+        "chol_BP_risk": s_chol * s_sys,
     }
     return RawMappingResult("hypertension", payload.model_dump(), features, [])
 
@@ -308,23 +317,31 @@ def _map_diabetes(raw_inputs: Dict[str, Any]) -> RawMappingResult:
     skin = payload.skin_thickness_mm or meds.get("skin_thickness_mm", 29.0)
     pedigree = payload.diabetes_pedigree or meds.get("diabetes_pedigree", 0.372)
 
+    s_glucose = _minmax(glucose, 44, 199)
+    s_bp = _minmax(dia_bp, 24, 122)
+    s_skin = _minmax(skin, 7, 99)
+    s_insulin = _minmax(insulin, 14, 846)
+    s_bmi = _minmax(bmi, 18, 67)
+    s_pedigree = _minmax(pedigree, 0.07, 2.42)
+    s_age = _minmax(payload.age_years, 21, 81)
+
     features = {
         "Pregnancies": 0.0,
-        "Glucose": _minmax(glucose, 44, 199),
-        "BloodPressure": _minmax(dia_bp, 24, 122),
-        "SkinThickness": _minmax(skin, 7, 99),
-        "Insulin": _minmax(insulin, 14, 846),
-        "BMI": _minmax(bmi, 18, 67),
-        "DiabetesPedigreeFunction": _minmax(pedigree, 0.07, 2.42),
-        "Age": _minmax(payload.age_years, 21, 81),
-        "BMI_glucose": bmi * glucose,
-        "BMI_glucose_ratio": glucose / (bmi + 1e-5),
-        "age_glucose": payload.age_years * glucose,
-        "Age_Glucose_Interaction": payload.age_years * glucose / 100.0,
-        "insulin_glucose_ratio": insulin / (glucose + 1e-5),
-        "HOMA_IR_proxy": (glucose * insulin) / 405.0,
-        "Log_Insulin_Glucose": np.log1p(max(insulin, 0.0)) * np.log1p(max(glucose, 0.0)),
-        "Metabolic_Burden": ((glucose / 100.0) ** 2) * (bmi / 25.0),
-        "BP_BMI_risk": dia_bp * bmi / 100.0,
+        "Glucose": s_glucose,
+        "BloodPressure": s_bp,
+        "SkinThickness": s_skin,
+        "Insulin": s_insulin,
+        "BMI": s_bmi,
+        "DiabetesPedigreeFunction": s_pedigree,
+        "Age": s_age,
+        "BMI_glucose": s_bmi * s_glucose,
+        "BMI_glucose_ratio": s_glucose / (s_bmi + 1e-5),
+        "age_glucose": s_age * s_glucose,
+        "Age_Glucose_Interaction": s_age * s_glucose,
+        "insulin_glucose_ratio": s_insulin / (s_glucose + 1e-5),
+        "HOMA_IR_proxy": s_glucose * s_insulin,
+        "Log_Insulin_Glucose": np.log1p(s_insulin) * np.log1p(s_glucose),
+        "Metabolic_Burden": (s_glucose ** 2) * s_bmi,
+        "BP_BMI_risk": s_bp * s_bmi,
     }
     return RawMappingResult("diabetes", payload.model_dump(), features, [])
