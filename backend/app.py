@@ -62,6 +62,8 @@ from backend.schemas import (
     MedicalGuidelineResponse,
     DrugInteractionRequest,
     DrugInteractionResponse,
+    WeeklyDietPlanRequest,
+    WeeklyDietPlanResponse,
 )
 
 # Agentic AI imports
@@ -71,6 +73,7 @@ from backend.adaptation_engine import adaptation_engine
 from backend.feedback_learning import feedback_collector, outcome_tracker, learning_engine, FeedbackType, FeedbackSource, OutcomeType
 from backend.medical_knowledge import medical_knowledge_base
 from backend.chatbot.agent import run_agent
+from backend.weekly_diet_engine import weekly_diet_engine
 
 
 @asynccontextmanager
@@ -848,3 +851,34 @@ def get_learning_summary() -> Dict[str, Any]:
         return learning_engine.get_learning_summary()
     except Exception as ex:
         raise HTTPException(status_code=500, detail=str(ex)) from ex
+
+
+@app.post("/recommend-weekly-plan", response_model=WeeklyDietPlanResponse)
+def recommend_weekly_plan(req: WeeklyDietPlanRequest) -> WeeklyDietPlanResponse:
+    """
+    Generate a personalized 7-day, 5-interval medical nutrition plan based on:
+    - Patient's latest test reports (creatinine, HbA1c, glucose, BP, lipid panel, or summary text)
+    - Native place / regional culinary traditions (South Indian, North Indian, Gujarati, Bengali, etc.)
+    - Individual dietary preferences, interests, allergies, dislikes, and cooking skill
+    - Active medications cross-referenced against 18+ drug pharmacopeia
+    """
+    try:
+        plan = weekly_diet_engine.generate_weekly_plan(req)
+        if req.user_id:
+            insert_diet_plan(
+                user_id=req.user_id,
+                disease="_".join([c.replace(" ", "_") for c in plan.detected_conditions]),
+                plan={
+                    "calories_target": plan.clinical_targets.get("calories_kcal", 2000),
+                    "protein_target_g": plan.clinical_targets.get("protein_g", 60.0),
+                    "carb_target_g": plan.clinical_targets.get("carbohydrate_g", 200.0),
+                    "fat_target_g": plan.clinical_targets.get("fat_g", 60.0),
+                    "sodium_limit_mg": plan.clinical_targets.get("sodium_limit_mg", 1500.0),
+                    "potassium_limit_mg": plan.clinical_targets.get("potassium_guidance_mg", 2000.0),
+                    "recommendation_note": plan.clinical_notes,
+                }
+            )
+        return plan
+    except Exception as ex:
+        raise HTTPException(status_code=500, detail=str(ex)) from ex
+

@@ -16,5 +16,15 @@
     "heart_rate_bpm": 68.0,
     "blood_pressure_meds": false
   },
-  "clinical_context": "Healthy normotensive young adult with optimal BMI, normal lipids, and non-smoking history (Low Risk Control)."
+  "clinical_context": "Healthy normotensive young adult with optimal BMI, normal lipids, and non-smoking history (Low Risk Control).",
+  "preferences": {
+    "native_place_region": "Continental",
+    "dietary_type": "vegetarian",
+    "allergies": [],
+    "interests_and_likes": ["oatmeal", "quinoa", "berries", "smoothies", "fresh vegetables", "asparagus", "green tea"],
+    "dislikes": ["processed food", "excessive oil", "sugary drinks"],
+    "cooking_skill": "advanced",
+    "time_constraints_mins": 20,
+    "active_medications": []
+  }
 }

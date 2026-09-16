@@ -338,9 +338,9 @@ The conversational agent in [backend/chatbot/agent.py](file:///d:/College/Capsto
 
 ---
 
-## 10. Comprehensive REST API Reference (21 Endpoints)
+## 10. Comprehensive REST API Reference (22 Endpoints)
 
-FastAPI serves 21 endpoints documented via Swagger UI (`/docs`) and ReDoc (`/redoc`):
+FastAPI serves 22 endpoints documented via Swagger UI (`/docs`) and ReDoc (`/redoc`):
 
 ### Health, Models & Risk Inference
 | Method | Route | Description |
@@ -354,6 +354,7 @@ FastAPI serves 21 endpoints documented via Swagger UI (`/docs`) and ReDoc (`/red
 | `POST` | `/risk-report` | Full diagnostic report with diet plan targets and food recommendations from pre-scaled inputs. |
 | `POST` | `/risk-report-raw` | Full diagnostic report, diet plan, and food recommendations from raw questionnaire answers. |
 | `POST` | `/recommend-plan` | Solves single-condition or multi-disease comorbidity plans applying precedence rules. |
+| `POST` | `/recommend-weekly-plan` | Generates 7-day, 5-interval personalized meal plan from latest test reports & native region. |
 | `POST` | `/log-meal` | Records meal calories and issues immediate deviation alerts if $\ge 15\%$ off target. |
 | `GET` | `/risk-explanations` | Paginated query interface for historical audit records with user and disease filters. |
 

@@ -37,6 +37,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--show-template", action="store_true", help="Display questionnaire template for disease")
     parser.add_argument("--interactive", action="store_true", help="Launch interactive terminal questionnaire")
     parser.add_argument("--recommend-diet", action="store_true", default=True, help="Include dietary recommendations")
+    parser.add_argument("--weekly-diet", action="store_true", help="Generate 7-day, 5-interval personalized regional weekly meal plan")
     return parser.parse_args()
 
 
@@ -86,6 +87,94 @@ def interactive_wizard(disease: str) -> dict:
     return raw_inputs
 
 
+def render_weekly_diet_plan(data: dict):
+    from backend.weekly_diet_engine import (
+        weekly_diet_engine,
+        WeeklyDietPlanRequest,
+        LatestTestReportInput,
+        PatientPreferencesInput,
+    )
+
+    raw = data.get("raw_inputs", {})
+    reports_dict = data.get("test_reports") or {}
+    if not reports_dict and raw:
+        reports_dict = {
+            "systolic_bp_mmhg": raw.get("systolic_bp_mmhg"),
+            "diastolic_bp_mmhg": raw.get("diastolic_bp_mmhg"),
+            "fasting_glucose_mg_dl": raw.get("fasting_glucose_mg_dl"),
+            "hba1c_pct": raw.get("hba1c_pct"),
+            "serum_creatinine_mg_dl": raw.get("serum_creatinine_mg_dl"),
+            "blood_urea_mg_dl": raw.get("blood_urea_mg_dl"),
+            "urine_albumin_dipstick": raw.get("urine_albumin_dipstick"),
+            "total_cholesterol_mg_dl": raw.get("total_cholesterol_mg_dl"),
+            "report_summary_text": data.get("clinical_context"),
+        }
+
+    test_reports = LatestTestReportInput(**reports_dict)
+    preferences = PatientPreferencesInput(**data.get("preferences", {}))
+    
+    age = data.get("age_years") or raw.get("age_years", 50)
+    sex = data.get("sex") or raw.get("sex", "male")
+    bmi = data.get("body_mass_index") or raw.get("body_mass_index", 25.0)
+
+    req = WeeklyDietPlanRequest(
+        user_id=data.get("user_id", "patient"),
+        age_years=age,
+        sex=sex,
+        body_mass_index=bmi,
+        test_reports=test_reports,
+        preferences=preferences,
+    )
+    res = weekly_diet_engine.generate_weekly_plan(req)
+
+    print("\n" + "=" * 78)
+    print("      7-DAY PERSONALIZED REGIONAL MEDICAL NUTRITION PLAN")
+    print("=" * 78)
+    print(f"Patient ID:            {res.user_id}")
+    print(f"Demographics:          Age {res.patient_summary['age_years']}, {res.patient_summary['sex'].capitalize()} | BMI: {res.patient_summary['body_mass_index']}")
+    print(f"Native Region:         {res.patient_summary['native_region']} ({res.patient_summary['dietary_type'].capitalize()})")
+    print(f"Detected Conditions:   {', '.join(res.detected_conditions)}")
+    print(f"Caloric Target:        {res.clinical_targets['calories_kcal']} kcal/day")
+    print(f"Sodium Upper Limit:    {res.clinical_targets['sodium_limit_mg']} mg/day")
+    print(f"Potassium Guidance:    {res.clinical_targets['potassium_guidance_mg']} mg/day")
+    print(f"Protein Target:        {res.clinical_targets['protein_g']} g/day")
+
+    if res.medication_alerts:
+        print("\n" + "!" * 78)
+        print("  CRITICAL PHARMACOPEIA & MEDICATION ALERTS:")
+        for alert in res.medication_alerts:
+            print(f"  [!] {alert}")
+        print("!" * 78)
+
+    for day in res.days:
+        print("\n" + "-" * 78)
+        print(f"  DAY {day.day_number}: {day.day_name.upper()}")
+        print(f"  Daily Totals: {day.daily_total_nutrients['calories']} kcal | "
+              f"Protein: {day.daily_total_nutrients['protein_g']}g | "
+              f"Sodium: {day.daily_total_nutrients['sodium_mg']}mg | "
+              f"Potassium: {day.daily_total_nutrients['potassium_mg']}mg | "
+              f"Fiber: {day.daily_total_nutrients['fiber_g']}g")
+        print("-" * 78)
+
+        for interval in day.intervals:
+            print(f"\n  [{interval.time_window}] {interval.interval_name.upper()}: {interval.meal_title}")
+            for item in interval.items:
+                print(f"    * {item.item_name} ({item.portion})")
+            print(f"    -> Nutrients: {interval.total_nutrients['calories']} kcal, "
+                  f"P: {interval.total_nutrients['protein_g']}g, "
+                  f"Na: {interval.total_nutrients['sodium_mg']}mg, "
+                  f"K: {interval.total_nutrients['potassium_mg']}mg")
+            print(f"    -> Clinical Note: {interval.clinical_justification}")
+            print(f"    -> Prep Tip: {interval.prep_tips}")
+
+    print("\n" + "=" * 78)
+    print("  WEEKLY GROCERY CHECKLIST (Top Items):")
+    print("=" * 78)
+    for i, g in enumerate(res.grocery_checklist, start=1):
+        print(f"  {i:2d}. {g}")
+    print("=" * 78 + "\n")
+
+
 def main():
     args = parse_args()
     registry.load()
@@ -124,6 +213,11 @@ def main():
 
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
+
+        # Handle weekly diet plan directly if present
+        if "test_reports" in data or args.weekly_diet:
+            render_weekly_diet_plan(data)
+            return
 
         disease = data.get("disease", disease)
         if "raw_inputs" in data:

@@ -184,8 +184,40 @@ def run_all_tests():
     assert_status(client.get("/medical/drug-interactions/amlodipine"), 200, "GET /medical/drug-interactions/amlodipine")
     assert_status(client.get("/medical/drug-interactions/losartan"), 200, "GET /medical/drug-interactions/losartan")
 
+    # 11. Personalized Weekly Diet Recommendation (Test Reports + Regional Preferences)
+    weekly_payload = {
+        "user_id": "smoke_test_patient",
+        "age_years": 58,
+        "sex": "male",
+        "body_mass_index": 28.2,
+        "test_reports": {
+            "systolic_bp_mmhg": 150.0,
+            "diastolic_bp_mmhg": 92.0,
+            "fasting_glucose_mg_dl": 140.0,
+            "hba1c_pct": 7.6,
+            "serum_creatinine_mg_dl": 1.9,
+            "report_summary_text": "Patient with Stage 3 CKD, uncontrolled HTN, and T2DM on Lisinopril."
+        },
+        "preferences": {
+            "native_place_region": "South Indian",
+            "dietary_type": "vegetarian",
+            "interests_and_likes": ["ragi", "millets", "light spices"],
+            "cooking_skill": "intermediate",
+            "active_medications": ["lisinopril", "jardiance"]
+        }
+    }
+    weekly_res = client.post("/recommend-weekly-plan", json=weekly_payload)
+    assert_status(weekly_res, 200, "POST /recommend-weekly-plan (7-Day, 5-Interval Cultural Clinical Diet)")
+    weekly_data = weekly_res.json()
+    assert len(weekly_data["days"]) == 7, "Weekly plan must contain exactly 7 days"
+    assert len(weekly_data["days"][0]["intervals"]) == 5, "Each day must have 5 meal intervals"
+    assert weekly_data["clinical_targets"]["potassium_guidance_mg"] <= 2000, "Renal potassium limit failed in weekly targets"
+    assert weekly_data["clinical_targets"]["sodium_limit_mg"] <= 1500, "DASH sodium restriction failed in weekly targets"
+    assert len(weekly_data["medication_alerts"]) >= 1, "Medication alerts should be generated"
+    print("  [PASS] Weekly Diet Plan Verified: 7 Days x 5 Intervals, Regional Grounding, Lab Targets & Drug Alerts OK")
+
     print("=" * 70)
-    print("  SUCCESS: ALL 21 REST ENDPOINTS + COMORBIDITY SUITE PASSED WITH HTTP 200!")
+    print("  SUCCESS: ALL 22 REST ENDPOINTS + COMORBIDITY + WEEKLY DIET SUITE PASSED WITH HTTP 200!")
     print("=" * 70 + "\n")
 
 

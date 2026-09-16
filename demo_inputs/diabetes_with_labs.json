@@ -14,5 +14,15 @@
     "skin_thickness_mm": 35.0,
     "diabetes_pedigree": 0.68
   },
-  "clinical_context": "Uncontrolled Type 2 Diabetes with high insulin resistance (elevated HOMA-IR) and obesity."
+  "clinical_context": "Uncontrolled Type 2 Diabetes with high insulin resistance (elevated HOMA-IR) and obesity.",
+  "preferences": {
+    "native_place_region": "South Indian",
+    "dietary_type": "vegetarian",
+    "allergies": ["gluten"],
+    "interests_and_likes": ["millets", "foxtail millet", "vegetable sambhar", "curd rice", "herbal tea", "pesarattu"],
+    "dislikes": ["white rice", "sweets", "potatoes"],
+    "cooking_skill": "intermediate",
+    "time_constraints_mins": 35,
+    "active_medications": ["metformin", "jardiance", "semaglutide"]
+  }
 }

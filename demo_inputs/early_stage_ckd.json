@@ -14,5 +14,15 @@
     "urine_albumin_dipstick": 1.0,
     "hemoglobin_g_dl": 13.0
   },
-  "clinical_context": "Stage 2 Early Chronic Kidney Disease with trace microalbuminuria and borderline hypertension."
+  "clinical_context": "Stage 2 Early Chronic Kidney Disease with trace microalbuminuria and borderline hypertension.",
+  "preferences": {
+    "native_place_region": "Eastern Indian",
+    "dietary_type": "non_vegetarian",
+    "allergies": [],
+    "interests_and_likes": ["fish", "rohu", "dalia", "lau ghonto", "green tea", "potol"],
+    "dislikes": ["oily curries", "red meat", "pickles"],
+    "cooking_skill": "advanced",
+    "time_constraints_mins": 40,
+    "active_medications": ["losartan"]
+  }
 }

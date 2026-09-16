@@ -16,5 +16,15 @@
     "heart_rate_bpm": 82.0,
     "blood_pressure_meds": true
   },
-  "clinical_context": "Stage 2 Hypertension with dyslipidemia, heavy smoking history, and high pulse pressure."
+  "clinical_context": "Stage 2 Hypertension with dyslipidemia, heavy smoking history, and high pulse pressure.",
+  "preferences": {
+    "native_place_region": "Continental",
+    "dietary_type": "non_vegetarian",
+    "allergies": ["shellfish"],
+    "interests_and_likes": ["grilled chicken", "steamed fish", "quinoa", "garlic", "steamed greens", "green tea"],
+    "dislikes": ["grapefruit", "butter", "trans fats", "red meat"],
+    "cooking_skill": "intermediate",
+    "time_constraints_mins": 30,
+    "active_medications": ["amlodipine", "atorvastatin", "hydrochlorothiazide"]
+  }
 }

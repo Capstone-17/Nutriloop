@@ -9,5 +9,16 @@
     "systolic_bp_mmhg": 146.0,
     "diastolic_bp_mmhg": 90.0,
     "fasting_glucose_mg_dl": 168.0
+  },
+  "clinical_context": "Type 2 Diabetes questionnaire sample with hypertension and elevated fasting blood glucose (168 mg/dL).",
+  "preferences": {
+    "native_place_region": "Western Indian",
+    "dietary_type": "vegetarian",
+    "allergies": [],
+    "interests_and_likes": ["thepla", "methi", "khakhra", "moong dal", "curd", "dudhi"],
+    "dislikes": ["excessive sugar", "deep fried snacks"],
+    "cooking_skill": "intermediate",
+    "time_constraints_mins": 30,
+    "active_medications": ["metformin", "glimepiride"]
   }
 }

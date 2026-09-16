@@ -389,3 +389,85 @@ class DrugInteractionRequest(BaseModel):
 class DrugInteractionResponse(BaseModel):
     interactions: List[Dict[str, Any]] = Field(default_factory=list)
     severity_summary: Dict[str, int] = Field(default_factory=dict)
+
+
+# ==================== Weekly Diet Recommendation Schemas ====================
+
+class LatestTestReportInput(BaseModel):
+    systolic_bp_mmhg: Optional[float] = Field(default=None, ge=70.0, le=260.0)
+    diastolic_bp_mmhg: Optional[float] = Field(default=None, ge=40.0, le=160.0)
+    fasting_glucose_mg_dl: Optional[float] = Field(default=None, ge=40.0, le=500.0)
+    postprandial_glucose_mg_dl: Optional[float] = Field(default=None, ge=50.0, le=600.0)
+    hba1c_pct: Optional[float] = Field(default=None, ge=3.5, le=18.0)
+    serum_creatinine_mg_dl: Optional[float] = Field(default=None, ge=0.2, le=25.0)
+    blood_urea_mg_dl: Optional[float] = Field(default=None, ge=2.0, le=400.0)
+    egfr_ml_min: Optional[float] = Field(default=None, ge=2.0, le=160.0)
+    serum_potassium_meq_l: Optional[float] = Field(default=None, ge=1.5, le=9.0)
+    serum_sodium_meq_l: Optional[float] = Field(default=None, ge=100.0, le=180.0)
+    serum_phosphorus_mg_dl: Optional[float] = Field(default=None, ge=0.5, le=15.0)
+    urine_albumin_dipstick: Optional[float] = Field(default=None, ge=0.0, le=5.0)
+    total_cholesterol_mg_dl: Optional[float] = Field(default=None, ge=80.0, le=600.0)
+    ldl_cholesterol_mg_dl: Optional[float] = Field(default=None, ge=20.0, le=400.0)
+    hdl_cholesterol_mg_dl: Optional[float] = Field(default=None, ge=10.0, le=150.0)
+    triglycerides_mg_dl: Optional[float] = Field(default=None, ge=30.0, le=1200.0)
+    report_summary_text: Optional[str] = Field(default=None, max_length=5000)
+
+
+class PatientPreferencesInput(BaseModel):
+    native_place_region: str = Field(default="South Indian", description="Native region / culinary tradition (e.g. South Indian, North Indian, Gujarati, Maharashtrian, Bengali, Continental)")
+    dietary_type: Literal["vegetarian", "non_vegetarian", "vegan", "eggetarian", "jain"] = "vegetarian"
+    allergies: List[str] = Field(default_factory=list)
+    interests_and_likes: List[str] = Field(default_factory=list, description="Preferred foods/ingredients e.g. millets, ragi, paneer, soups, light spices")
+    dislikes: List[str] = Field(default_factory=list, description="Disliked foods e.g. bitter gourd, oats")
+    cooking_skill: Literal["beginner", "intermediate", "advanced"] = "intermediate"
+    time_constraints_mins: Optional[int] = Field(default=30, ge=10, le=180)
+    active_medications: List[str] = Field(default_factory=list, description="Active prescriptions e.g. lisinopril, amlodipine, jardiance, metformin")
+    calorie_target_override: Optional[int] = Field(default=None, ge=1000, le=4000)
+
+
+class MealItem(BaseModel):
+    item_name: str
+    portion: str
+    nutrients: Dict[str, float] = Field(default_factory=dict)
+
+
+class SingleMealInterval(BaseModel):
+    interval_name: str  # "Breakfast", "Mid-Morning Snack", "Lunch", "Evening Snack", "Dinner"
+    time_window: str
+    meal_title: str
+    items: List[MealItem]
+    total_nutrients: Dict[str, float]
+    clinical_justification: str
+    prep_tips: str
+    substitutions: List[Dict[str, str]] = Field(default_factory=list)
+
+
+class DayDietPlan(BaseModel):
+    day_number: int  # 1 to 7
+    day_name: str    # "Monday" to "Sunday"
+    intervals: List[SingleMealInterval]
+    daily_total_nutrients: Dict[str, float]
+    daily_target_compliance: Dict[str, Any]
+
+
+class WeeklyDietPlanRequest(BaseModel):
+    user_id: Optional[str] = "guest_patient"
+    age_years: int = Field(default=52, ge=18, le=100)
+    sex: Literal["male", "female"] = "male"
+    body_mass_index: float = Field(default=26.5, ge=12.0, le=70.0)
+    test_reports: LatestTestReportInput = Field(default_factory=LatestTestReportInput)
+    preferences: PatientPreferencesInput = Field(default_factory=PatientPreferencesInput)
+
+
+class WeeklyDietPlanResponse(BaseModel):
+    user_id: str
+    generated_at: str
+    patient_summary: Dict[str, Any]
+    clinical_targets: Dict[str, Any]
+    detected_conditions: List[str]
+    days: List[DayDietPlan]
+    weekly_nutritional_summary: Dict[str, Any]
+    medication_alerts: List[str] = Field(default_factory=list)
+    grocery_checklist: List[str] = Field(default_factory=list)
+    clinical_notes: str
+

@@ -1,0 +1,32 @@
+{
+  "user_id": "patient_ramesh_56",
+  "age_years": 56,
+  "sex": "male",
+  "body_mass_index": 28.4,
+  "test_reports": {
+    "systolic_bp_mmhg": 152.0,
+    "diastolic_bp_mmhg": 94.0,
+    "fasting_glucose_mg_dl": 145.0,
+    "postprandial_glucose_mg_dl": 210.0,
+    "hba1c_pct": 7.8,
+    "serum_creatinine_mg_dl": 1.9,
+    "blood_urea_mg_dl": 52.0,
+    "egfr_ml_min": 44.0,
+    "serum_potassium_meq_l": 4.7,
+    "serum_sodium_meq_l": 139.0,
+    "serum_phosphorus_mg_dl": 4.2,
+    "urine_albumin_dipstick": 1.0,
+    "total_cholesterol_mg_dl": 215.0,
+    "report_summary_text": "56-year-old male with Stage 3 CKD secondary to Type 2 Diabetes (HbA1c 7.8%) and poorly controlled essential hypertension (BP 152/94). Serum creatinine is elevated at 1.9 mg/dL with microalbuminuria (1+). Serum potassium is currently 4.7 mEq/L. Active medications include Lisinopril 20mg and Jardiance 10mg."
+  },
+  "preferences": {
+    "native_place_region": "South Indian",
+    "dietary_type": "vegetarian",
+    "allergies": ["peanuts"],
+    "interests_and_likes": ["millets", "ragi", "light spices", "rasam", "steamed food"],
+    "dislikes": ["karela", "bitter gourd", "raw salads"],
+    "cooking_skill": "intermediate",
+    "time_constraints_mins": 30,
+    "active_medications": ["lisinopril", "jardiance", "metformin"]
+  }
+}

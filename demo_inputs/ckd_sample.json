@@ -9,5 +9,16 @@
     "systolic_bp_mmhg": 142.0,
     "diastolic_bp_mmhg": 88.0,
     "fasting_glucose_mg_dl": 132.0
+  },
+  "clinical_context": "Moderate CKD risk profile in a 56-year-old female with diagnosed diabetes and hypertension.",
+  "preferences": {
+    "native_place_region": "South Indian",
+    "dietary_type": "vegetarian",
+    "allergies": [],
+    "interests_and_likes": ["ragi", "steamed food", "light spices", "rasam", "curd"],
+    "dislikes": ["karela", "bitter gourd", "fried snacks"],
+    "cooking_skill": "intermediate",
+    "time_constraints_mins": 30,
+    "active_medications": ["lisinopril", "metformin"]
   }
 }
