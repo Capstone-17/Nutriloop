@@ -1,13 +1,29 @@
 import json
+import os
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+
+# Pre-cache physical cores to prevent loky from launching PowerShell subprocesses on Windows
+os.environ["JOBLIB_MULTIPROCESSING"] = "0"
+os.environ["LOKY_MAX_CPU_COUNT"] = str(os.cpu_count() or 4)
+try:
+    import joblib.externals.loky.backend.context as loky_context
+    loky_context.physical_cores_cache = os.cpu_count() or 4
+except Exception:
+    pass
 
 import joblib
 import numpy as np
 import pandas as pd
 
 
-ARTIFACT_DIR = Path(__file__).resolve().parent.parent / "artifacts"
+def _get_bundle_dir() -> Path:
+    if getattr(sys, "_MEIPASS", None):
+        return Path(sys._MEIPASS)
+    return Path(__file__).resolve().parent.parent
+
+ARTIFACT_DIR = _get_bundle_dir() / "artifacts"
 
 
 class ModelRegistry:
@@ -16,6 +32,7 @@ class ModelRegistry:
         self.features: Dict[str, List[str]] = {}
         self.risk_profiles: Dict[str, Dict] = {}
         self._risk_profiles_loaded = False
+
 
     def load(self) -> None:
         self.load_feature_metadata()
@@ -77,15 +94,16 @@ class ModelRegistry:
         X = np.array([row], dtype=float)
 
         model = self.models[disease]
-        pred = int(model.predict(X)[0])
+        with joblib.parallel_backend("threading"):
+            pred = int(model.predict(X)[0])
 
-        if hasattr(model, "predict_proba"):
-            score = float(model.predict_proba(X)[0, 1])
-        elif hasattr(model, "decision_function"):
-            decision = float(model.decision_function(X)[0])
-            score = float(1.0 / (1.0 + np.exp(-decision)))
-        else:
-            score = float(pred)
+            if hasattr(model, "predict_proba"):
+                score = float(model.predict_proba(X)[0, 1])
+            elif hasattr(model, "decision_function"):
+                decision = float(model.decision_function(X)[0])
+                score = float(1.0 / (1.0 + np.exp(-decision)))
+            else:
+                score = float(pred)
 
         model_name = model.__class__.__name__
         return pred, score, model_name

@@ -3,7 +3,7 @@
     "model_name": "HistGradientBoostingClassifier",
     "thresholds": {
       "moderate": 0.5,
-      "high": 0.9
+      "high": 0.75
     },
     "metrics": {
       "accuracy": 0.8572727737188984,
@@ -162,7 +162,7 @@
     "model_name": "HistGradientBoostingClassifier",
     "thresholds": {
       "moderate": 0.5,
-      "high": 0.9
+      "high": 0.75
     },
     "metrics": {
       "accuracy": 0.9398991857309035,
@@ -275,8 +275,8 @@
   "diabetes": {
     "model_name": "HistGradientBoostingClassifier",
     "thresholds": {
-      "moderate": 0.51,
-      "high": 0.9
+      "moderate": 0.5,
+      "high": 0.75
     },
     "metrics": {
       "accuracy": 0.9050264353265322,

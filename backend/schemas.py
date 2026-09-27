@@ -2,7 +2,7 @@ from typing import Any, Dict, Literal, Optional, List, Union
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 DiseaseType = Literal["ckd", "hypertension", "diabetes"]
@@ -248,6 +248,8 @@ class ChatbotResponse(BaseModel):
     escalated: bool
     latency_ms: float
     steps: int
+    engine_mode: Optional[str] = "Dr. Nutriloop Clinical AI"
+    updated_diet_plan: Optional[Dict[str, Any]] = None
 
 
 # Agentic AI Schemas
@@ -423,6 +425,33 @@ class PatientPreferencesInput(BaseModel):
     time_constraints_mins: Optional[int] = Field(default=30, ge=10, le=180)
     active_medications: List[str] = Field(default_factory=list, description="Active prescriptions e.g. lisinopril, amlodipine, jardiance, metformin")
     calorie_target_override: Optional[int] = Field(default=None, ge=1000, le=4000)
+    craving_or_treat: Optional[str] = Field(default=None, description="Patient's specific craving or desired indulgence (e.g. sugar, sweet dessert, biryani, coffee) for smart weekly budgeting")
+
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_calorie_alias(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "calorie_target_kcal" in data and "calorie_target_override" not in data:
+                data["calorie_target_override"] = data.get("calorie_target_kcal")
+            val = data.get("calorie_target_override")
+            if not val or str(val).strip() in ("", "0", "null", "None"):
+                data["calorie_target_override"] = None
+        return data
+
+    @field_validator("dietary_type", mode="before")
+    @classmethod
+    def normalize_dietary_type(cls, v: Any) -> str:
+        if isinstance(v, str):
+            cleaned = v.strip().lower().replace("-", "_").replace(" ", "_")
+            if cleaned in ("non_veg", "nonveg", "non_vegetarian"):
+                return "non_vegetarian"
+            if cleaned in ("veg", "vegetarian"):
+                return "vegetarian"
+            if cleaned in ("egg", "eggetarian", "ovo_vegetarian"):
+                return "eggetarian"
+            return cleaned
+        return v
+
 
 
 class MealItem(BaseModel):
@@ -462,6 +491,7 @@ class WeeklyDietPlanRequest(BaseModel):
 class WeeklyDietPlanResponse(BaseModel):
     user_id: str
     generated_at: str
+    regional_cuisine: Optional[str] = "Regional Cuisine"
     patient_summary: Dict[str, Any]
     clinical_targets: Dict[str, Any]
     detected_conditions: List[str]
@@ -469,5 +499,7 @@ class WeeklyDietPlanResponse(BaseModel):
     weekly_nutritional_summary: Dict[str, Any]
     medication_alerts: List[str] = Field(default_factory=list)
     grocery_checklist: List[str] = Field(default_factory=list)
+    categorized_grocery_checklist: Dict[str, List[str]] = Field(default_factory=dict)
     clinical_notes: str
+    smart_craving_strategy: Optional[Dict[str, Any]] = None
 

@@ -2,17 +2,23 @@
 Interactive & Scriptable Clinical Risk Prediction CLI Tool
 ===========================================================
 Usage:
-  python predict_cli.py demo_inputs/comorbid_ckd_htn.json
-  python predict_cli.py --file demo_inputs/diabetes_with_labs.json
+  python predict_cli.py sample_patient.json
+  python predict_cli.py --file patient_data.json
   python predict_cli.py --disease ckd --interactive
-  python predict_cli.py --raw-input demo_inputs/ckd_sample.json
+  python predict_cli.py --raw-input patient_ckd.json
   python predict_cli.py --disease hypertension --show-template
 """
 
 from __future__ import annotations
 import argparse
 import json
+import os
 import sys
+
+# Globally prevent Python from writing .pyc files or creating __pycache__ directories
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -228,7 +234,7 @@ def main():
             raw_inputs = data
 
     else:
-        print("Error: Specify a JSON payload file (e.g. `python scripts/predict_cli.py demo_inputs/comorbid_ckd_htn.json`), --file, --interactive, or --show-template")
+        print("Error: Specify a JSON payload file (e.g. `python scripts/predict_cli.py sample_patient.json`), --file, --interactive, or --show-template")
         sys.exit(1)
 
     if not disease:

@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nutriloop - Clinical Nutrition & Chronic Disease Management</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-icon">⚕️</div>
+      <div>
+        <div class="brand-title">Nutriloop</div>
+      </div>
+    </div>
+
+    <div class="header-status-area"></div>
+  </header>
+
+  <!-- Navigation Bar -->
+  <nav class="app-nav">
+    <button class="nav-tab active" data-tab="tab-assessment">
+      🩺 Patient Lab Assessment
+    </button>
+    <button class="nav-tab" data-tab="tab-diet">
+      🥗 7-Day Regional Weekly Diet
+    </button>
+    <button class="nav-tab" data-tab="tab-chat">
+      💬 AI Clinical Nutritionist
+    </button>
+    <button class="nav-tab" data-tab="tab-settings">
+      ⚙️ Local AI & Saved Data
+    </button>
+  </nav>
+
+  <!-- Main Content Panes -->
+  <main class="app-main">
+
+    <!-- TAB 1: Patient Lab Assessment -->
+    <section id="tab-assessment" class="tab-pane active">
+      <div class="grid-2col">
+        <!-- Input Form -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📋 Patient Demographics & Test Reports</div>
+            <div class="history-select-bar">
+              <div class="history-select-wrapper">
+                <span class="history-select-icon">📜</span>
+                <select id="preset-selector" class="history-select" title="Select a previous test report for this patient">
+                  <option value="">-- No Previous Test Reports --</option>
+                </select>
+              </div>
+              <button type="button" id="btn-delete-test" class="btn-delete-report" style="display: none;" title="Delete selected historical test report">🗑️</button>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Patient Name</label>
+              <input type="text" id="p-user-id" class="form-input" value="John Doe" placeholder="e.g. John Doe">
+              <span class="input-hint">Patient Full Name (Loads history)</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Age (years)</label>
+              <input type="number" id="p-age" class="form-input" value="45">
+              <span class="input-hint">Adult Scope: 18–100 yrs</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Sex</label>
+              <select id="p-sex" class="form-select">
+                <option value="male" selected>Male</option>
+                <option value="female">Female</option>
+              </select>
+              <span class="input-hint">Biological Reference</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">BMI (kg/m²)</label>
+              <input type="number" step="0.1" id="p-bmi" class="form-input" value="22.0">
+              <span class="input-hint">Normal: 18.5–24.9 | 10–90</span>
+            </div>
+          </div>
+
+          <div class="card-header" style="margin-top: 14px; margin-bottom: 10px;">
+            <div class="card-title" style="font-size: 13px;">🩸 Clinical Vitals & Lab Biomarkers</div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Systolic BP (mmHg)</label>
+              <input type="number" id="p-sbp" class="form-input" value="115" min="70" max="260">
+              <span class="input-hint">Normal: &lt;120 | 70–260 mmHg</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Diastolic BP (mmHg)</label>
+              <input type="number" id="p-dbp" class="form-input" value="75" min="40" max="160">
+              <span class="input-hint">Normal: &lt;80 | 40–160 mmHg</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Fasting Glucose (mg/dL)</label>
+              <input type="number" id="p-fbg" class="form-input" value="90" min="40" max="450">
+              <span class="input-hint">Normal: 70–99 | 40–450 mg/dL</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">HbA1c (%)</label>
+              <input type="number" step="0.1" id="p-hba1c" class="form-input" value="5.2" min="3.0" max="20.0">
+              <span class="input-hint">Normal: &lt;5.7% | 3.0–20.0%</span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Serum Creatinine (mg/dL)</label>
+              <input type="number" step="0.1" id="p-creat" class="form-input" value="0.9" min="0.1" max="25.0">
+              <span class="input-hint">Normal: 0.6–1.2 | 0.1–25.0</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">eGFR (mL/min)</label>
+              <input type="number" step="0.1" id="p-egfr" class="form-input" value="100.0" min="5.0" max="160.0">
+              <span class="input-hint">Optimal: ≥90 | 5–160 mL/min</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Serum Potassium (mEq/L)</label>
+              <input type="number" step="0.1" id="p-pot" class="form-input" value="4.2" min="2.0" max="8.5">
+              <span class="input-hint">Normal: 3.5–5.0 | 2.0–8.5</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Serum Sodium (mEq/L)</label>
+              <input type="number" id="p-sod" class="form-input" value="140" min="100" max="180">
+              <span class="input-hint">Normal: 135–145 | 100–180</span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 12px; margin-top: 16px;">
+            <button id="btn-assess-patient" class="btn btn-primary" style="flex: 1;">
+              ⚡ Run Multi-Disease Risk Assessment
+            </button>
+            <button id="btn-transfer-diet" class="btn btn-secondary" title="Transfer clinical values to weekly diet generator">
+              ➡️ Move to Diet Plan
+            </button>
+          </div>
+        </div>
+
+        <!-- Assessment Results Output -->
+        <div class="card" id="assessment-results-card">
+          <div class="card-header">
+            <div class="card-title">📊 Multi-Disease Risk Assessment Results</div>
+            <span id="assessment-status-badge" class="brand-badge" style="display: none;">Assessed</span>
+          </div>
+
+          <!-- Risk Meters Grid -->
+          <div class="risk-dashboard-grid" id="risk-meters-container">
+            <!-- CKD Meter -->
+            <div class="risk-meter-card active-meter" id="meter-ckd" title="Click to view detailed CKD explainability">
+              <div style="font-size: 13px; font-weight: 700; color: #cbd5e1;">Chronic Kidney Disease</div>
+              <div class="risk-circle">
+                <span class="risk-score-num" id="score-ckd">--</span>
+                <small style="font-size: 10px; color: var(--text-subtle);">SCORE</small>
+              </div>
+              <span class="risk-badge" id="badge-ckd">Pending</span>
+              <div style="font-size: 10px; color: var(--text-subtle); margin-top: 5px;">Low: &lt;50% | Mod: 50–75% | High: &ge;75%</div>
+            </div>
+
+            <!-- Hypertension Meter -->
+            <div class="risk-meter-card" id="meter-hypertension" title="Click to view detailed Hypertension explainability">
+              <div style="font-size: 13px; font-weight: 700; color: #cbd5e1;">Hypertension</div>
+              <div class="risk-circle">
+                <span class="risk-score-num" id="score-hypertension">--</span>
+                <small style="font-size: 10px; color: var(--text-subtle);">SCORE</small>
+              </div>
+              <span class="risk-badge" id="badge-hypertension">Pending</span>
+              <div style="font-size: 10px; color: var(--text-subtle); margin-top: 5px;">Low: &lt;50% | Mod: 50–75% | High: &ge;75%</div>
+            </div>
+
+            <!-- Diabetes Meter -->
+            <div class="risk-meter-card" id="meter-diabetes" title="Click to view detailed Diabetes explainability">
+              <div style="font-size: 13px; font-weight: 700; color: #cbd5e1;">Type 2 Diabetes</div>
+              <div class="risk-circle">
+                <span class="risk-score-num" id="score-diabetes">--</span>
+                <small style="font-size: 10px; color: var(--text-subtle);">SCORE</small>
+              </div>
+              <span class="risk-badge" id="badge-diabetes">Pending</span>
+              <div style="font-size: 10px; color: var(--text-subtle); margin-top: 5px;">Low: &lt;50% | Mod: 50–75% | High: &ge;75%</div>
+            </div>
+          </div>
+
+          <!-- Detected Conditions -->
+          <div style="margin-bottom: 14px;">
+            <div class="form-label" style="margin-bottom: 6px;">Detected Chronic Conditions:</div>
+            <div id="detected-conditions-tags" style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <span class="chip-btn" style="cursor: default;">Run assessment to evaluate conditions</span>
+            </div>
+          </div>
+
+          <!-- Clinical Result Explanation & Action Recommendations -->
+          <div class="explain-panel" id="explain-panel">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+              <div class="form-label" style="font-weight: 700; color: #e2e8f0; font-size: 12.5px; margin: 0;">
+                💡 Disease Risk Explanation & Recommended Actions:
+              </div>
+              <div class="explain-tabs">
+                <button type="button" class="explain-tab-btn active" id="tab-btn-ckd">CKD</button>
+                <button type="button" class="explain-tab-btn" id="tab-btn-hypertension">Hypertension</button>
+                <button type="button" class="explain-tab-btn" id="tab-btn-diabetes">Diabetes</button>
+              </div>
+            </div>
+
+            <div id="explain-card-content" class="explain-card-content">
+              <div style="color: var(--text-subtle); font-size: 12px; padding: 12px; text-align: center;">
+                Click <strong>⚡ Run Multi-Disease Risk Assessment</strong> to view tailored clinical explanations and actionable recommendations.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: 7-Day Regional Weekly Diet -->
+    <section id="tab-diet" class="tab-pane">
+      <!-- Historical Test Warning Banner -->
+      <div id="diet-historical-warning" class="diet-warning-banner" style="display: none;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 16px;">⚠️</span>
+          <div>
+            <strong>Historical Test Selected:</strong> Meal plan is being calibrated against report from <span id="diet-warning-date" style="font-weight: 700; text-decoration: underline;">--</span>, not your latest test result.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🍽️ Regional & Dietary Preferences</div>
+          <button id="btn-generate-diet" class="btn btn-emerald">
+            ✨ Generate 7-Day Medical Nutrition Plan
+          </button>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Native Culinary Region</label>
+            <select id="diet-region" class="form-select">
+              <option value="South Indian">South Indian (Idli, Dosa, Rasam, Sambhar, Millets, Ragi)</option>
+              <option value="North Indian">North Indian (Rotis, Dal, Sabzi, Paneer, Khichdi)</option>
+              <option value="Gujarati">Gujarati (Khichdi, Thepla, Kadhi, Light Spices)</option>
+              <option value="Bengali">Bengali (Rice, Dal, Steamed Vegetables, Mustard)</option>
+              <option value="Continental">Continental (Oats, Whole Grains, Salads, Soups)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Dietary Pattern</label>
+            <select id="diet-type" class="form-select">
+              <option value="vegetarian">Vegetarian</option>
+              <option value="non_vegetarian">Non-Vegetarian</option>
+              <option value="eggetarian">Eggetarian (Vegetarian + Eggs)</option>
+              <option value="vegan">Vegan (100% Plant-Based)</option>
+              <option value="jain">Jain (No Onion/Garlic/Root)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Daily Calorie Target (kcal)</label>
+            <input type="number" id="diet-calories" class="form-input" placeholder="Auto (from labs / TDEE)" value="">
+            <span class="input-hint">Leave blank to auto-calculate from clinical labs & Mifflin-St Jeor TDEE</span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Food Interests & Likes (comma separated)</label>
+            <input type="text" id="diet-likes" class="form-input" placeholder="e.g. rasam, oats, paneer, khichdi, ragi" value="">
+            <span class="input-hint">Preferred regional staples or dishes to incorporate</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Allergies & Excluded Foods (strict 0-tolerance)</label>
+            <input type="text" id="diet-dislikes" class="form-input" placeholder="e.g. peanuts, bitter gourd (strict 0-tolerance)" value="">
+            <span class="input-hint">e.g. coconut, peanuts (Strictly removed)</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Active Medications (safety cross-referenced)</label>
+            <input type="text" id="diet-meds" class="form-input" placeholder="e.g. lisinopril, jardiance, metformin (leave blank if none)" value="">
+            <span class="input-hint">Leave blank if no prescription drugs taken</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">🎯 Craving / Desired Treat (Smart Budgeting)</label>
+            <input type="text" id="diet-craving" class="form-input" placeholder="e.g. sugar, sweet dessert, biryani, coffee">
+            <span class="input-hint">Budgeted safely 1x/wk, other 6 days sugar-free</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weekly Diet Plan Results Container -->
+      <div id="weekly-plan-results" style="display: none;">
+        <!-- Smart Craving Strategy Box -->
+        <div id="diet-craving-box" class="craving-strategy-box" style="display: none;"></div>
+
+        <!-- Medication Alerts Box -->
+        <div id="diet-med-alerts" class="med-alert-box" style="display: none;"></div>
+
+        <!-- Targets Summary Pills -->
+        <div class="nutri-targets-row" id="diet-targets-row"></div>
+
+        <!-- Action Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <h3 style="font-size: 16px; color: #ffffff;">📅 7-Day / 5-Interval Meal Schedule</h3>
+          <div style="display: flex; gap: 10px;">
+            <button id="btn-save-diet" class="btn btn-primary">
+              💾 Save to Local Folder (JSON & HTML)
+            </button>
+            <button id="btn-open-folder-diet" class="btn btn-secondary">
+              📂 Open Saved Reports
+            </button>
+          </div>
+        </div>
+
+        <!-- Days Container -->
+        <div id="diet-days-list"></div>
+
+        <!-- Grocery Checklist Box -->
+        <div class="card" style="margin-top: 20px;">
+          <div class="card-title" style="margin-bottom: 10px;">🛒 Weekly Grocery Checklist</div>
+          <div id="diet-grocery-list" style="columns: 2; font-size: 13px; color: #cbd5e1; padding-left: 20px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: AI Clinical Nutritionist (Chat) -->
+    <section id="tab-chat" class="tab-pane">
+      <div class="chat-container">
+        <!-- AI Intelligence Engine Control Toolbar -->
+        <div class="ai-settings-bar">
+          <div class="ai-settings-controls">
+            <span style="font-weight: 600; color: #38bdf8;">🤖 AI Engine:</span>
+            <select id="ai-engine-select" class="form-input" style="padding: 4px 8px; font-size: 12px; width: auto; background: #1e293b; border-color: var(--border-card);">
+              <option value="auto">⚡ Auto (Gemini Cloud > Local Ollama > Clinical AI)</option>
+              <option value="gemini">✨ Google Gemini (Cloud AI — Fast & Smart)</option>
+              <option value="openai">🧠 OpenAI GPT-4o-mini (Cloud AI)</option>
+              <option value="ollama">🖥️ Local Ollama (llama3.2:3b)</option>
+              <option value="builtin">🩺 Built-in Clinical Medical AI (Offline)</option>
+            </select>
+
+            <div id="ai-key-wrapper" style="display: flex; align-items: center; gap: 6px;">
+              <input type="password" id="ai-api-key-input" class="form-input" style="padding: 4px 8px; font-size: 12px; width: 210px; background: #1e293b;" placeholder="Paste Gemini / OpenAI Key...">
+              <button id="btn-save-ai-key" class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;">
+                💾 Save
+              </button>
+            </div>
+            <span id="ai-key-status" style="font-size: 11px; color: var(--accent-emerald);"></span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted);">
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #60a5fa; text-decoration: underline;">Get free Gemini Key ↗</a>
+          </div>
+        </div>
+
+        <!-- Message History -->
+        <div class="chat-messages" id="chat-messages-container">
+          <div class="chat-msg assistant">
+            <div class="chat-bubble">
+              <p><strong>Hello! I am Dr. Nutriloop</strong>, your Clinical AI Physician and Medical Nutrition Specialist.</p>
+              <p>I supervise your chronic disease management across <strong>Chronic Kidney Disease, Hypertension, and Type 2 Diabetes</strong> with direct access to your clinical reports, lab readings, and 7-day nutrition schedule.</p>
+              <p>Feel free to ask me anything about your diet, food safety (e.g. <em>"Can I eat rasam?"</em>, <em>"Is maggi safe?"</em>), medications, or request meal swaps!</p>
+            </div>
+            <div class="chat-meta">
+              <span>Nutriloop</span>
+              <span class="brand-badge" style="font-size: 10px;">Safe & Grounded</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Suggestion Chips -->
+        <div class="chat-chips">
+          <button class="chip-btn" onclick="sendQuickPrompt('Suggest a low-potassium breakfast for CKD stage 3')">
+            🥣 Low-Potassium Breakfast
+          </button>
+          <button class="chip-btn" onclick="sendQuickPrompt('What regional South Indian foods are safe for diabetes?')">
+            🍛 South Indian Diabetic Options
+          </button>
+          <button class="chip-btn" onclick="sendQuickPrompt('Can I eat bananas or oranges with kidney disease?')">
+            🍌 Fruits & Renal Safety
+          </button>
+          <button class="chip-btn" onclick="sendQuickPrompt('I have severe chest pain and breathlessness')">
+            🚨 Test Emergency Symptom Guardrail
+          </button>
+        </div>
+
+        <!-- Chat Input Bar -->
+        <div class="chat-input-bar">
+          <input type="text" id="chat-input-text" class="form-input" style="flex: 1;" placeholder="Ask about recipes, nutrients, safe meal ideas, or substitutions...">
+          <button id="btn-chat-send" class="btn btn-primary" style="min-width: 100px;">
+            Send 💬
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: Local AI & Saved Data -->
+    <section id="tab-settings" class="tab-pane">
+      <div class="grid-2col">
+        <!-- Ollama AI Model Manager -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🤖 Local Ollama AI Model Manager</div>
+            <button id="btn-refresh-ollama" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;">
+              🔄 Refresh Status
+            </button>
+          </div>
+
+          <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 14px;">
+            The application includes an embedded local Ollama runtime with zero external setup required. Click below to install the recommended clinical model. Once downloaded, the background service terminates automatically to save system resources.
+          </div>
+
+          <div class="status-pill" style="margin-bottom: 14px; border-radius: var(--radius-sm); justify-content: space-between;">
+            <div>
+              <strong>Ollama Engine:</strong> <span id="ollama-service-status">Detecting...</span>
+            </div>
+            <div>
+              <span id="ollama-installed-badge" class="risk-badge badge-low" style="display:none;">Model Ready</span>
+            </div>
+          </div>
+
+          <!-- Model Download Section -->
+          <div style="background: var(--bg-input); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-card);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div>
+                <strong style="color: #ffffff; font-size: 14px;">Clinical Model: llama3.2:3b</strong>
+                <div style="font-size: 11px; color: var(--text-muted);">High-efficiency 3B parameters (~2.0 GB). Runs locally on CPU/GPU with zero external telemetry.</div>
+              </div>
+            </div>
+
+            <div class="progress-bar-container">
+              <div class="progress-bar-fill" id="model-progress-fill"></div>
+            </div>
+            <div id="model-progress-text" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+              Status: Ready
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+              <button id="btn-install-model" class="btn btn-primary" style="flex: 1;">
+                ⬇️ 1-Click Install llama3.2:3b Model
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Local Data & Storage Manager -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📁 Local Persistence & Saved Reports</div>
+            <button id="btn-open-folder" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;">
+              📂 Open in Explorer
+            </button>
+          </div>
+
+          <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 14px;">
+            All data is saved locally on your PC in the same folder as this application. No external database or server is required.
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label">Application Storage Directory</label>
+            <input type="text" id="settings-data-dir" class="form-input" readonly>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label">Local SQLite Database File</label>
+            <input type="text" id="settings-db-path" class="form-input" readonly>
+          </div>
+
+          <div class="card-title" style="font-size: 13px; margin-bottom: 8px;">Saved Reports & Plans:</div>
+          <div id="saved-reports-list" style="max-height: 220px; overflow-y: auto;">
+            <div style="font-size: 12px; color: var(--text-subtle);">No saved reports yet. Generate and save a weekly diet plan to view here.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Clinical Validation Alert Modal -->
+  <div id="clinical-modal" class="modal-overlay" style="display: none;">
+    <div class="clinical-modal-card">
+      <div class="clinical-modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 24px;">⚠️</span>
+          <div>
+            <div class="clinical-modal-title">Physiological Boundary Notice</div>
+            <div class="clinical-modal-subtitle">Clinical Validation Safeguard Triggered</div>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="btn-close-clinical-modal">&times;</button>
+      </div>
+      <div class="clinical-modal-body">
+        <div class="clinical-alert-box" id="clinical-modal-message">
+          Notice details...
+        </div>
+        <div class="clinical-guidance-note">
+          <strong>Medical Rationale:</strong> Machine learning clinical risk assessment and diet planning models require physiologically viable inputs. Extreme outliers indicate severe acute emergencies requiring acute resuscitation (e.g. neuroglycopenic hypoglycemia &lt; 40 mg/dL) or data-entry typographical errors.
+        </div>
+      </div>
+      <div class="clinical-modal-footer">
+        <button id="btn-modal-correct" class="btn btn-primary" style="width: 100%;">
+          ✓ Acknowledge & Correct Field
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Confirmation Modal Card -->
+  <div id="confirm-modal" class="modal-overlay" style="display: none;">
+    <div class="confirm-modal-card">
+      <div class="confirm-modal-header">
+        <div class="confirm-modal-icon-wrap">
+          <span class="confirm-modal-icon">🗑️</span>
+        </div>
+        <div class="confirm-modal-heading">
+          <div class="confirm-modal-title" id="confirm-modal-title">Delete Test Report</div>
+          <div class="confirm-modal-subtitle">Permanent Deletion Safeguard</div>
+        </div>
+        <button class="modal-close-btn" id="btn-confirm-close">&times;</button>
+      </div>
+      <div class="confirm-modal-body">
+        <div class="confirm-modal-message" id="confirm-modal-message">
+          Are you sure you want to delete this test report? This action cannot be undone.
+        </div>
+      </div>
+      <div class="confirm-modal-footer">
+        <button id="btn-confirm-cancel" class="btn btn-secondary">Cancel</button>
+        <button id="btn-confirm-proceed" class="btn btn-danger">Delete Report</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

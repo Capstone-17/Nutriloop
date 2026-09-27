@@ -1,7 +1,7 @@
 """
 Comparative Model Benchmark Suite
 =================================
-Evaluates all trained models in Latest_Update against baseline implementations
+Evaluates all trained chronic disease models against baseline implementations
 and generates a structured comparison report with Macro-F1, PR-AUC, ROC-AUC,
 Sensitivity/Recall, Specificity, and Brier calibration scores.
 """
@@ -9,6 +9,13 @@ Sensitivity/Recall, Specificity, and Brier calibration scores.
 from __future__ import annotations
 import json
 import logging
+import os
+import sys
+
+# Globally prevent Python from writing .pyc files or creating __pycache__ directories
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
 from pathlib import Path
 from typing import Dict, Any
 

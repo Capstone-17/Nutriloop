@@ -1,12 +1,18 @@
 """
-Comprehensive 21-Endpoint REST API Smoke Test Suite
-===================================================
-Validates that all core, Phase 2, and Phase 3 endpoints in Latest_Update
-execute with status 200 and conform strictly to Pydantic schemas.
+Comprehensive REST API Smoke Test Suite
+========================================
+Validates that all 22 REST endpoints in NutriMed AI execute with status 200
+and conform strictly to Pydantic schemas.
 """
 
 from __future__ import annotations
+import os
 import sys
+
+# Globally prevent Python from writing .pyc files or creating __pycache__ directories
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -30,7 +36,7 @@ def run_all_tests():
     registry.load()
 
     print("\n" + "=" * 70)
-    print("        RUNNING 21-ENDPOINT SMOKE TEST SUITE FOR LATEST_UPDATE")
+    print("        RUNNING REPOSITORY REST API SMOKE TEST SUITE")
     print("=" * 70)
 
     with TestClient(app) as client:

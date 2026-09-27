@@ -5,8 +5,41 @@ from pathlib import Path
 from typing import Any, Dict, Optional, List, Generator
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+import sys
+
+def get_data_dir() -> Path:
+    """Return dedicated directory for patient data (database, saved reports, models, logs).
+    If running as a standalone executable:
+      - Uses or creates a 'Nutriloop_Data' folder in the directory next to the .exe.
+      - If shifted to a new location alone, automatically creates 'Nutriloop_Data' there.
+    If running from source code:
+      - Uses or creates 'Nutriloop_Data' in the workspace root.
+    """
+    if getattr(sys, "frozen", False):
+        base_dir = Path(sys.executable).resolve().parent
+    else:
+        base_dir = Path(__file__).resolve().parent.parent
+
+    data_dir = base_dir / "Nutriloop_Data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+
+    # Migrate from legacy NutriMed_Patient_Data if it exists and app_data.db isn't in Nutriloop_Data yet
+    legacy_dir = base_dir / "NutriMed_Patient_Data"
+    if legacy_dir.exists() and not (data_dir / "app_data.db").exists() and (legacy_dir / "app_data.db").exists():
+        try:
+            import shutil
+            shutil.copy2(str(legacy_dir / "app_data.db"), str(data_dir / "app_data.db"))
+        except Exception:
+            pass
+
+    return data_dir
+
+BASE_DIR = get_data_dir()
 DB_PATH = BASE_DIR / "app_data.db"
+REPORTS_DIR = BASE_DIR / "saved_reports"
+REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+MODELS_DIR = BASE_DIR / "models"
+MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def get_conn() -> sqlite3.Connection:
@@ -200,6 +233,281 @@ def init_db() -> None:
             )
             """
         )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS patient_test_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                age_years INTEGER NOT NULL,
+                sex TEXT NOT NULL,
+                body_mass_index REAL NOT NULL,
+                systolic_bp_mmhg REAL NOT NULL,
+                diastolic_bp_mmhg REAL NOT NULL,
+                fasting_glucose_mg_dl REAL NOT NULL,
+                hba1c_pct REAL,
+                serum_creatinine_mg_dl REAL,
+                egfr_ml_min REAL,
+                serum_potassium_meq_l REAL,
+                serum_sodium_meq_l REAL,
+                report_summary_text TEXT,
+                raw_inputs_json TEXT NOT NULL,
+                detected_conditions_json TEXT NOT NULL,
+                assessments_json TEXT NOT NULL
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS active_weekly_plan (
+                user_id TEXT PRIMARY KEY,
+                plan_json TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS app_settings (
+                setting_key TEXT PRIMARY KEY,
+                setting_value TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+
+def get_app_setting(key: str, default: Optional[str] = None) -> Optional[str]:
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT setting_value FROM app_settings WHERE setting_key = ?", (key,))
+        row = cur.fetchone()
+        return str(row["setting_value"]) if row else default
+    except Exception:
+        return default
+    finally:
+        conn.close()
+
+
+def set_app_setting(key: str, value: str) -> None:
+    with get_db_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO app_settings (setting_key, setting_value, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(setting_key) DO UPDATE SET
+                setting_value = excluded.setting_value,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (key, value)
+        )
+
+
+def save_patient_test(
+    user_id: str,
+    raw_inputs: Dict[str, Any],
+    assessments: Dict[str, Any],
+    detected_conditions: List[str],
+) -> int:
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        labs = raw_inputs.get("test_reports", raw_inputs)
+        age = int(raw_inputs.get("age_years", 50) or 50)
+        sex = str(raw_inputs.get("sex", "male")).lower()
+        bmi = float(raw_inputs.get("body_mass_index", 25.0) or 25.0)
+        sbp = float(labs.get("systolic_bp_mmhg", 120.0) or 120.0)
+        dbp = float(labs.get("diastolic_bp_mmhg", 80.0) or 80.0)
+        fbg = float(labs.get("fasting_glucose_mg_dl", 100.0) or 100.0)
+        hba1c = float(labs.get("hba1c_pct")) if labs.get("hba1c_pct") is not None else None
+        sc = float(labs.get("serum_creatinine_mg_dl")) if labs.get("serum_creatinine_mg_dl") is not None else None
+        egfr = float(labs.get("egfr_ml_min")) if labs.get("egfr_ml_min") is not None else None
+        pot = float(labs.get("serum_potassium_meq_l")) if labs.get("serum_potassium_meq_l") is not None else None
+        sod = float(labs.get("serum_sodium_meq_l")) if labs.get("serum_sodium_meq_l") is not None else None
+        summary = str(labs.get("report_summary_text", "") or "")
+
+        cur.execute(
+            """
+            INSERT INTO patient_test_history (
+                user_id, age_years, sex, body_mass_index,
+                systolic_bp_mmhg, diastolic_bp_mmhg, fasting_glucose_mg_dl,
+                hba1c_pct, serum_creatinine_mg_dl, egfr_ml_min,
+                serum_potassium_meq_l, serum_sodium_meq_l, report_summary_text,
+                raw_inputs_json, detected_conditions_json, assessments_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id, age, sex, bmi,
+                sbp, dbp, fbg,
+                hba1c, sc, egfr,
+                pot, sod, summary,
+                json.dumps(raw_inputs),
+                json.dumps(detected_conditions),
+                json.dumps(assessments),
+            ),
+        )
+        test_id = cur.lastrowid
+        conn.commit()
+        return test_id
+    finally:
+        conn.close()
+
+
+def get_patient_test_history(user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        if user_id and user_id.strip():
+            cur.execute(
+                """
+                SELECT id, user_id, created_at, age_years, sex, body_mass_index,
+                       systolic_bp_mmhg, diastolic_bp_mmhg, fasting_glucose_mg_dl,
+                       hba1c_pct, serum_creatinine_mg_dl, egfr_ml_min,
+                       serum_potassium_meq_l, serum_sodium_meq_l, report_summary_text,
+                       detected_conditions_json, assessments_json
+                FROM patient_test_history
+                WHERE user_id = ?
+                ORDER BY id DESC
+                """,
+                (user_id.strip(),),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT id, user_id, created_at, age_years, sex, body_mass_index,
+                       systolic_bp_mmhg, diastolic_bp_mmhg, fasting_glucose_mg_dl,
+                       hba1c_pct, serum_creatinine_mg_dl, egfr_ml_min,
+                       serum_potassium_meq_l, serum_sodium_meq_l, report_summary_text,
+                       detected_conditions_json, assessments_json
+                FROM patient_test_history
+                ORDER BY id DESC
+                """
+            )
+        rows = cur.fetchall()
+        results = []
+        for i, r in enumerate(rows):
+            results.append({
+                "id": r["id"],
+                "user_id": r["user_id"],
+                "created_at": r["created_at"],
+                "is_latest": (i == 0),
+                "age_years": r["age_years"],
+                "sex": r["sex"],
+                "body_mass_index": r["body_mass_index"],
+                "systolic_bp_mmhg": r["systolic_bp_mmhg"],
+                "diastolic_bp_mmhg": r["diastolic_bp_mmhg"],
+                "fasting_glucose_mg_dl": r["fasting_glucose_mg_dl"],
+                "hba1c_pct": r["hba1c_pct"],
+                "serum_creatinine_mg_dl": r["serum_creatinine_mg_dl"],
+                "egfr_ml_min": r["egfr_ml_min"],
+                "serum_potassium_meq_l": r["serum_potassium_meq_l"],
+                "serum_sodium_meq_l": r["serum_sodium_meq_l"],
+                "report_summary_text": r["report_summary_text"],
+                "detected_conditions": json.loads(r["detected_conditions_json"]) if r["detected_conditions_json"] else [],
+                "assessments": json.loads(r["assessments_json"]) if r["assessments_json"] else {},
+            })
+        return results
+    finally:
+        conn.close()
+
+
+def get_patient_test_by_id(test_id: int) -> Optional[Dict[str, Any]]:
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT id, user_id, created_at, age_years, sex, body_mass_index,
+                   systolic_bp_mmhg, diastolic_bp_mmhg, fasting_glucose_mg_dl,
+                   hba1c_pct, serum_creatinine_mg_dl, egfr_ml_min,
+                   serum_potassium_meq_l, serum_sodium_meq_l, report_summary_text,
+                   raw_inputs_json, detected_conditions_json, assessments_json
+            FROM patient_test_history
+            WHERE id = ?
+            """,
+            (test_id,),
+        )
+        r = cur.fetchone()
+        if not r:
+            return None
+        labs_dict = {
+            "systolic_bp_mmhg": r["systolic_bp_mmhg"],
+            "diastolic_bp_mmhg": r["diastolic_bp_mmhg"],
+            "fasting_glucose_mg_dl": r["fasting_glucose_mg_dl"],
+            "hba1c_pct": r["hba1c_pct"],
+            "serum_creatinine_mg_dl": r["serum_creatinine_mg_dl"],
+            "egfr_ml_min": r["egfr_ml_min"],
+            "serum_potassium_meq_l": r["serum_potassium_meq_l"],
+            "serum_sodium_meq_l": r["serum_sodium_meq_l"],
+            "report_summary_text": r["report_summary_text"],
+        }
+        return {
+            "id": r["id"],
+            "user_id": r["user_id"],
+            "created_at": r["created_at"],
+            "age_years": r["age_years"],
+            "sex": r["sex"],
+            "body_mass_index": r["body_mass_index"],
+            "systolic_bp_mmhg": r["systolic_bp_mmhg"],
+            "diastolic_bp_mmhg": r["diastolic_bp_mmhg"],
+            "fasting_glucose_mg_dl": r["fasting_glucose_mg_dl"],
+            "hba1c_pct": r["hba1c_pct"],
+            "serum_creatinine_mg_dl": r["serum_creatinine_mg_dl"],
+            "egfr_ml_min": r["egfr_ml_min"],
+            "serum_potassium_meq_l": r["serum_potassium_meq_l"],
+            "serum_sodium_meq_l": r["serum_sodium_meq_l"],
+            "report_summary_text": r["report_summary_text"],
+            "test_reports": labs_dict,
+            "raw_inputs": json.loads(r["raw_inputs_json"]) if r["raw_inputs_json"] else {},
+            "detected_conditions": json.loads(r["detected_conditions_json"]) if r["detected_conditions_json"] else [],
+            "assessments": json.loads(r["assessments_json"]) if r["assessments_json"] else {},
+        }
+    finally:
+        conn.close()
+
+
+def get_latest_patient_test(user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        if user_id and user_id.strip():
+            cur.execute(
+                """
+                SELECT id FROM patient_test_history
+                WHERE user_id = ?
+                ORDER BY id DESC LIMIT 1
+                """,
+                (user_id.strip(),),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT id FROM patient_test_history
+                ORDER BY id DESC LIMIT 1
+                """
+            )
+        r = cur.fetchone()
+        if not r:
+            return None
+        return get_patient_test_by_id(r["id"])
+    finally:
+        conn.close()
+
+
+def delete_patient_test(test_id: int) -> bool:
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM patient_test_history WHERE id = ?", (test_id,))
+        deleted = cur.rowcount > 0
+        conn.commit()
+        return deleted
+    finally:
+        conn.close()
 
 
 
@@ -760,4 +1068,41 @@ def get_agent_session(user_id: str) -> Optional[Dict[str, Any]]:
             "user_profile": json.loads(row["user_profile_json"]),
             "updated_at": row["updated_at"],
         }
+
+
+# ==============================================================================
+# Persistent Helpers: Active Weekly Diet Plan
+# ==============================================================================
+def save_active_weekly_plan(user_id: str, plan_data: Dict[str, Any]) -> None:
+    """Persist or overwrite the latest 7-Day Regional Weekly Diet Plan for this patient."""
+    with get_db_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO active_weekly_plan (user_id, plan_json, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id) DO UPDATE SET
+                plan_json = excluded.plan_json,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (user_id, json.dumps(plan_data, ensure_ascii=False)),
+        )
+
+
+def get_active_weekly_plan(user_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieve the current active 7-Day Weekly Diet Plan for this patient."""
+    with get_db_conn() as conn:
+        row = conn.execute(
+            "SELECT plan_json, updated_at FROM active_weekly_plan WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+        if not row:
+            return None
+        try:
+            return json.loads(row["plan_json"])
+        except Exception:
+            return None
+
+
+# Initialize schema automatically
+init_db()
 

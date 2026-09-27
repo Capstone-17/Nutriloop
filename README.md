@@ -1,535 +1,406 @@
-# A Deep Learning and Generative AI-Driven Diet Recommendation System for Personalized Chronic Disease Management
+# NutriMed AI (Nutriloop)
+### Precision Clinical Nutrition & Multi-Disease Risk Intelligence Platform
 
-> **Production Release: Version 2.0 (Clinical CDS Platform)**  
-> **Repository:** `capstone_repo` | **Target OS:** Windows / Linux / macOS  
-> **Focus Diseases:** Chronic Kidney Disease (CKD), Essential Hypertension (HTN), Type 2 Diabetes Mellitus (T2DM), and Multi-Morbid Cohorts.  
-> **Clinical Standards Grounding:** KDOQI / KDIGO (Renal), DASH / AHA / ACC (Cardiovascular), ADA 2024 (Endocrine), ICMR-NIN (Culinary Nutrition).  
-> **Regulatory Architecture:** Non-Device Clinical Decision Support (CDS) compliant with FDA Jan 2026 Guidance & Llama Acceptable Use Policy.
+[![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11-3776AB?logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![PyWebView](https://img.shields.io/badge/Desktop-PyWebView%20%2B%20Edge%20WebView2-blue?logo=windows&logoColor=white)](https://pywebview.flowrl.com)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Clinical Guidelines](https://img.shields.io/badge/Clinical%20Standards-KDIGO%202024%20%7C%20KDOQI%202020%20%7C%20ADA%202024%20%7C%20DASH-critical)](https://kdigo.org)
+
+**NutriMed AI (Nutriloop)** is an enterprise-grade clinical decision support and personalized medical nutrition therapy (MNT) platform. Engineered for patients managing chronic conditions—specifically **Chronic Kidney Disease (CKD)**, **Essential Hypertension (HTN)**, and **Type 2 Diabetes Mellitus (T2DM)**—the system bridges calibrated machine-learning risk intelligence with guideline-adherent dietary synthesis.
 
 ---
 
 ## Table of Contents
-
-1. [Executive Summary & System Identity](#1-executive-summary--system-identity)
-2. [End-to-End System Architecture](#2-end-to-end-system-architecture)
-3. [Clinical Intelligence & Comorbidity Conflict Resolution](#3-clinical-intelligence--comorbidity-conflict-resolution)
-   - [3.1 The KDOQI vs. DASH Paradox](#31-the-kdoqi-vs-dash-paradox)
-   - [3.2 Mathematical Formulation of Comorbidity Bounds](#32-mathematical-formulation-of-comorbidity-bounds)
-   - [3.3 Expanded 18+ Medication Pharmacopeia](#33-expanded-18-medication-pharmacopeia)
-4. [Machine Learning Modeling & Population Benchmarks](#4-machine-learning-modeling--population-benchmarks)
-   - [4.1 Population-Scale Training Cohorts ($N=1,224,788$)](#41-population-scale-training-cohorts-n1224788)
-   - [4.2 Non-Linear Pathophysiological Feature Engineering](#42-non-linear-pathophysiological-feature-engineering)
-   - [4.3 Model Selection & Platt Probability Calibration](#43-model-selection--platt-probability-calibration)
-   - [4.4 Empirical Benchmark Performance Matrix](#44-empirical-benchmark-performance-matrix)
-5. [Dynamic Imputation & Adaptive Questionnaire Engine](#5-dynamic-imputation--adaptive-questionnaire-engine)
-6. [Unified Food Knowledge Base & Regional Fuzzy Retrieval](#6-unified-food-knowledge-base--regional-fuzzy-retrieval)
-7. [Longitudinal Adaptation, Behavioral Habits & Outcomes Tracker](#7-longitudinal-adaptation-behavioral-habits--outcomes-tracker)
-8. [Database Persistence & High-Concurrency Architecture](#8-database-persistence--high-concurrency-architecture)
-9. [Zero-Downtime Conversational AI & Clinical Chatbot](#9-zero-downtime-conversational-ai--clinical-chatbot)
-10. [Comprehensive REST API Reference (21 Endpoints)](#10-comprehensive-rest-api-reference-21-endpoints)
-11. [Interactive CLI Tool & Demonstration Payloads](#11-interactive-cli-tool--demonstration-payloads)
-12. [Complete File-by-File Repository Map](#12-complete-file-by-file-repository-map)
-13. [Installation, Verification & Quick Start](#13-installation-verification--quick-start)
-14. [Regulatory Compliance & Medical Disclaimer](#14-regulatory-compliance--medical-disclaimer)
+1. [Core Architectural Pillars](#1-core-architectural-pillars)
+2. [Clinical Target Derivation & Priority Hierarchy](#2-clinical-target-derivation--priority-hierarchy)
+3. [7-Day / 5-Interval Cultural Meal Engine](#3-7-day--5-interval-cultural-meal-engine)
+4. [Pharmacopeia & Drug-Nutrient Safety Guardrails](#4-pharmacopeia--drug-nutrient-safety-guardrails)
+5. [Multi-Tier Conversational AI Assistant & Clinical Agent](#5-multi-tier-conversational-ai-assistant--clinical-agent)
+6. [System Architecture & Data Flow](#6-system-architecture--data-flow)
+7. [Directory Structure](#7-directory-structure)
+8. [Installation & Setup](#8-installation--setup)
+9. [Desktop Application & Standalone Build](#9-desktop-application--standalone-build)
+10. [REST API Documentation](#10-rest-api-documentation)
+11. [Verification & Automated Test Suites](#11-verification--automated-test-suites)
+12. [Ethical & Regulatory Compliance](#12-ethical--regulatory-compliance)
 
 ---
 
-## 1. Executive Summary & System Identity
+## 1. Core Architectural Pillars
 
-Chronic diseases—specifically **Chronic Kidney Disease (CKD)**, **Essential Hypertension (HTN)**, and **Type 2 Diabetes Mellitus (T2DM)**—are the primary drivers of global morbidity, mortality, and healthcare expenditure. When these conditions co-exist within the same individual (multi-morbidity, such as Diabetic Nephropathy complicated by Hypertension), standard single-disease dietary recommendations frequently contradict one another, exposing patients to severe clinical dangers such as hyperkalemic cardiac arrest, volume overload, or acute hypoglycemic shock.
+```
++-------------------------------------------------------------------------------+
+|                               NutriMed AI Platform                            |
++------------------------------------+------------------------------------------+
+|  1. Diagnostic Risk Intelligence   |  2. Precision Nutrition Synthesis        |
+|  - Calibrated ML (RF, LGBM, XGB)   |  - Mifflin-St Jeor TDEE Derivation       |
+|  - CKD-EPI 2021 eGFR Calculation   |  - Dynamic Calorie & Portion Scaler      |
+|  - Multimorbid Comorbidity Engine  |  - 155+ Regional Dish Catalog (5 Regions)|
+|  - SHAP Factor Attribution         |  - Biomarker-Responsive Dish Prioritizer |
++------------------------------------+------------------------------------------+
+|  3. Clinical Safety Guardrails     |  4. Multi-Tier AI Clinical Assistant     |
+|  - 31 Drug-Nutrient Cross-Checks   |  - Cloud LLMs (Gemini Flash, GPT-4o-mini)|
+|  - Daily Schedule Plan Validation  |  - Local ReAct LLM (Ollama)              |
+|  - SGLT2i euDKA Carb Floor         |  - Deep Generative Clinical Synthesizer  |
+|  - ACC/AHA DASH Sodium Ceiling     |  - Live Meal Plan Natural Language Swap  |
++------------------------------------+------------------------------------------+
+```
 
-This platform bridges clinical nutrition, calibrated machine learning, and generative agentic reasoning into a unified, enterprise-grade clinical decision support system:
-* **Evidence-Based Grounding:** Every nutrient limit and meal score is mathematically anchored in peer-reviewed clinical guidelines (KDIGO, KDOQI, DASH, ADA, ICMR-NIN).
-* **Calibrated Machine Learning Risk Scoring:** Trained on **$1,224,788$ population-scale patient records** across multi-cohort examination data with rigorous Platt sigmoid calibration to deliver well-calibrated posterior probabilities.
-* **Comorbidity Conflict Resolution:** Solves the **KDOQI vs. DASH Paradox**, enforcing renal electrolyte safety precedence over cardiovascular potassium loading.
-* **18+ Drug Pharmacopeia:** Cross-references active chronic disease drugs (SGLT2 inhibitors, GLP-1 receptor agonists, ACE inhibitors, ARBs, CCBs, Beta-blockers, Diuretics, Binders) against meal components to prevent fatal adverse food-drug interactions.
-* **Continuous State Persistence:** Thread-safe SQLite database configured in Write-Ahead Logging (`WAL`) mode with 11 relational tables tracking longitudinal meal deviations, habit evolution, and clinical biomarker trajectories.
-* **Zero-Downtime Conversational Agent:** A 3-layer clinical chatbot with hard-coded pre-LLM regex escalation, ReAct tool execution over 7,110 food items with regional culinary synonyms, and deterministic graceful degradation if local LLMs are unreachable.
+1. **Dual In-Process / Client-Server Runtime**: Runs either as a 100% offline desktop application with native Edge WebView2 or as a headless REST microservice.
+2. **Zero Bytecode Clutter**: Configured with `PYTHONDONTWRITEBYTECODE=1` and `sys.dont_write_bytecode = True` across all entry points, guaranteeing zero `__pycache__` footprint.
+3. **Rigorous Clinical Grounding**: Follows KDIGO 2024, KDOQI 2020, ADA 2024, and ACC/AHA DASH clinical guidelines.
+4. **Local-First Privacy**: Patient records, lab values, and chat logs are stored in a dedicated local directory (`Nutriloop_Data/app_data.db`), ensuring HIPAA-aligned data sovereignty.
 
 ---
 
-## 2. End-to-End System Architecture
+## 2. Clinical Target Derivation & Priority Hierarchy
 
-The platform operates across four decoupled, modular layers: the Presentation/Client Tier, the FastAPI Service Gateway, the Core Clinical Logic & ML Ingestion Tier, and the Relational Persistence Layer.
+When managing multi-morbid patients (e.g. CKD Stage 3 + Stage 2 HTN + T2DM), standard dietary guidelines often present conflicting advice. NutriMed AI resolves these conflicts through a strict **Clinical Precedence Protocol**:
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│                                            CLIENTS & CONSUMERS                                                   │
-│                 Interactive Terminal CLI                 REST API Consumers (Swagger / Mobile UI)                │
-└────────────────────────────────────────────────────────┬─────────────────────────────────────────────────────────┘
-                                                         │ HTTP / JSON
-                                                         ▼
-┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│                                       FASTAPI SERVICE GATEWAY (backend/app.py)                                   │
-│  Lifespan Management • Pydantic v2 Validation • 21 Endpoints • Subsystem Routing • CORS • Structured Exceptions  │
-├─────────────────────────┬──────────────────────────────┬───────────────────────────────┬─────────────────────────┤
-│    Health & Risk APIs   │   Medical Safety Engine      │   Adaptation & Learning       │   Hybrid Chatbot Agent  │
-│  • Direct Pre-scaled    │  • Comorbidity Bounds        │  • Longitudinal Dev Tracker   │  • Pre-LLM Regex Guard  │
-│  • Raw Questionnaire    │  • 18+ Drug Pharmacopeia     │  • Behavioral Habit Learner   │  • ReAct Tool Dispatch  │
-│  • Dynamic Imputation   │  • Meal & Plan Safety Check  │  • Biomarker Trends (BP/eGFR) │  • Offline CDS Fallback │
-└───────────┬─────────────┴──────────────┬───────────────┴───────────────┬───────────────┴────────────┬────────────┘
-            │                            │                               │                            │
-            ▼                            ▼                               ▼                            ▼
-┌──────────────────────────┐ ┌───────────────────────────┐ ┌───────────────────────────┐ ┌──────────────────────┐
-│  TRAINED ML ARTIFACTS    │ │   CLINICAL RULES ENGINE   │ │     FOOD KNOWLEDGE BASE   │ │ SQLITE WAL DATABASE  │
-│ • CKD HistGradientBoost  │ │ • KDOQI vs DASH Solver    │ │ • 7,110 Curated Food Items│ │ (app_data.db)        │
-│ • HTN HistGradientBoost  │ │ • ADA Glycemic Regulation │ │ • 28 Standardized Nutrient│ │ • 11 Relational Tab. │
-│ • T2DM HistGradientBoost │ │ • Strictness Multipliers  │ │ • Regional Culinary Synon.│ │ • WAL Concurrency    │
-│ • Sigmoid Platt Calibr.  │ │ • Macro/Micro Targets     │ │ • Fuzzy Matching (difflib)│ │ • 30s Busy Timeout   │
-│ • Population Medians     │ │ • Deviation Thresholding  │ │ • Multi-Criteria Scoring  │ │ • Context Managers   │
-└──────────────────────────┘ └───────────────────────────┘ └───────────────────────────┘ └──────────────────────┘
++--------------------------------------------------------------------------+
+|                   CLINICAL CONFLICT RESOLUTION MATRIX                    |
++--------------------------------------------------------------------------+
+| Condition Conflict       | Clinically Enforced Rule                      |
++--------------------------+-----------------------------------------------+
+| DASH Potassium Loading   | KDIGO/KDOQI Renal Priority:                   |
+| (>= 4700 mg/day) vs.     | When eGFR < 60 mL/min or Serum K+ >= 5.0,     |
+| Renal Hyperkalemia Risk  | potassium is capped at <= 2000 mg/day.        |
++--------------------------+-----------------------------------------------+
+| Overweight / Obese       | KDOQI 2020 Adjusted Body Weight (aBW):        |
+| High Protein Intake      | aBW = IBW + 0.25 * (Actual - IBW)             |
+| vs. Renal Hyperfiltration| Prevents glomerular overloading in CKD.       |
++--------------------------+-----------------------------------------------+
+| Ketogenic / Low Carb     | ADA 2024 Carbohydrate Floor:                  |
+| vs. SGLT2i Therapy       | Enforces >= 130 g/day carbs to prevent        |
+| (Empagliflozin/Jardiance)| fatal Euglycemic Ketoacidosis (euDKA).        |
++--------------------------+-----------------------------------------------+
+| Stage 2 Hypertension     | ACC/AHA DASH Sodium Ceiling:                  |
+| Fluid Retention          | Enforces <= 1500 mg/day sodium.               |
++--------------------------+-----------------------------------------------+
 ```
+
+### Automated eGFR Calculation (CKD-EPI 2021)
+If a laboratory panel omits eGFR, the engine computes it using the race-free CKD-EPI 2021 formula:
+$$\text{eGFR} = 142 \times \min\left(\frac{S_{cr}}{\kappa}, 1\right)^\alpha \times \max\left(\frac{S_{cr}}{\kappa}, 1\right)^{-1.200} \times 0.9938^{\text{Age}} \times [1.012 \text{ if Female}]$$
+*(where $\kappa = 0.7$ for females, $0.9$ for males; $\alpha = -0.241$ for females, $-0.302$ for males).*
 
 ---
 
-## 3. Clinical Intelligence & Comorbidity Conflict Resolution
+## 3. 7-Day / 5-Interval Cultural Meal Engine
 
-### 3.1 The KDOQI vs. DASH Paradox
-In isolated clinical scenarios:
-* **Hypertension Guidelines (DASH / AHA / ACC):** Mandate high potassium intake ($3,500\text{--}4,700\,\text{mg/day}$) to induce natriuresis, reduce vascular peripheral resistance, and lower systolic blood pressure.
-* **Chronic Kidney Disease Guidelines (KDOQI / KDIGO):** Patients with impaired glomerular filtration rate ($\text{eGFR} < 60\,\text{mL/min/1.73m}^2$) have diminished renal excretion of potassium. High dietary potassium triggers life-threatening **hyperkalemia**, manifesting as cardiac dysrhythmias and cardiac arrest.
+The diet recommendation component generates an authentic, nutritionally balanced 7-day plan with **5 daily intervals**:
+1. **Breakfast** (25% daily calories) — 08:00–09:00
+2. **Mid-Morning Snack** (10% daily calories) — 11:00–11:30
+3. **Lunch** (35% daily calories) — 13:00–14:00
+4. **Evening Snack** (10% daily calories) — 16:30–17:30
+5. **Dinner** (20% daily calories) — 19:30–20:30
 
-When a patient presents with **both CKD and Hypertension**, applying both guidelines naively causes a direct clinical paradox. 
+### Dynamic Portion Scaling & Caloric Precision
+Unlike basic recipe assemblers that underfeed patients by ~40%, NutriMed AI uses a two-tier dynamic portion scaler:
+- **`scale_dish_items`**: Calculates $R = \text{interval\_target\_kcal} / \text{base\_dish\_kcal}$ (clamped safely between $0.50\times$ and $2.40\times$). Scales calories, proteins, carbohydrates, healthy fats, sodium, and potassium proportionately.
+- **`scale_portion_string`**: Dynamically adjusts human-readable portion strings (`2 idlis` $\to$ `3 idlis`, `1 cup` $\to$ `1.4 cups`, `150 g` $\to$ `210 g`, `2 rotis` $\to$ `3 rotis`) so patient instructions reflect the exact calculated calories.
+- **Caloric Target Adherence**: Consistently achieves **$\pm 0.5\%$** of target calories across all 5 regional cuisines.
 
-Our Constraint Intersection Solver in [backend/rules.py](file:///d:/College/Capstone/Sem_7/capstone_repo/backend/rules.py) resolves this via an **Electrolyte Safety Precedence Rule**:
-1. **Renal Potassium Safety strictly overrides DASH:** Daily dietary potassium is capped at $\le 2,000\,\text{mg/day}$ ($\le 1,800\,\text{mg/day}$ in high-risk decompensated CKD).
-2. **DASH Sodium Restriction is Retained:** Daily sodium is clamped to the strictest bound ($\le 1,500\,\text{mg/day}$), providing robust blood pressure suppression without risking hyperkalemia.
+### Condition-Scored Dish Prioritization & Biomarker Responsiveness
+Rather than rotating through static menus irrespective of clinical reports, the meal engine actively evaluates patient diagnostic biomarkers and scores available regional recipes:
+- **Type 2 Diabetes & Prediabetes**: Penalizes high-GI refined flours (maida, polished white rice) by up to -80 points; promotes low-GI complex grains (ragi, steel-cut oats, bajra, foxtail millet, besan) and soluble-fiber-rich legumes by +30 to +50 points. Automatically sets a high fiber floor ($\ge 35$ g/day) and reduces carbohydrate load by 15–25%.
+- **Stage 2 Hypertension**: Prioritizes natriuretic low-sodium meals (bottle gourd, zucchini, ridge gourd, ivy gourd) seasoned with garlic and coriander, enforcing the ACC/AHA DASH limit ($\le 1500$ mg/day sodium).
+- **Chronic Kidney Disease (CKD)**: Restricts high-potassium ingredients (raw spinach, bananas, tender coconut water) to protect against hyperkalemic cardiotoxicity, prioritizing renal-safe vegetables (lauki, snake gourd kootu).
+- **Personalized Clinical Justifications**: Every single meal in the 7-day schedule provides an individualized clinical rationale citing the patient's actual diagnostic lab values (e.g. `[Diabetic MNT: Low-GI complex grain (<55 GI) paired with 11.8g soluble fiber to control postprandial glucose spike (FBS 220 mg/dL, HbA1c 9.8%)]`).
+- **User Preference Matching**: Requested food likes (e.g. rasam, chaas) are prioritized within clinical safety bounds and highlighted with a `[⭐ Preferred Choice]` badge.
 
-```
-                              ┌───────────────────────────────────────────────┐
-                              │  Multi-Morbid Profile: CKD + HTN + Diabetes   │
-                              └──────────────────────┬────────────────────────┘
-                                                     │
-                             ┌───────────────────────┴───────────────────────┐
-                             ▼                                               ▼
-               ┌───────────────────────────┐                   ┌───────────────────────────┐
-               │      KDOQI PRECEDENCE     │                   │      DASH PRECEDENCE      │
-               │   Renal Potassium Safety  │                   │     Sodium Restriction    │
-               │  Potassium <= 2,000 mg/d  │                   │    Sodium <= 1,500 mg/d   │
-               └─────────────┬─────────────┘                   └─────────────┬─────────────┘
-                             └───────────────────────┬───────────────────────┘
-                                                     ▼
-                                     ┌───────────────────────────────┐
-                                     │         ADA REGULATION        │
-                                     │    Free Sugars <= 20 g/d      │
-                                     │    Carbohydrates <= 40%       │
-                                     │    Dietary Fiber >= 35 g/d    │
-                                     └───────────────────────────────┘
-```
+### 5 Cultural Regions (155+ Catalog Dishes)
+Zero duplicate days—every region has at least 7 unique breakfasts, 5 mid-morning snacks, 7 unique lunches, 5 evening snacks, and 7 unique dinners:
+- 🌴 **South Indian**: Idli with Sambar, Ragi Koozh, Moong Dal Pesarattu, Brown Rice Vegetable Sambar Sadam, Foxtail Millet Khichdi.
+- 🌾 **North Indian**: Methi Thepla, Daliya Khichdi, Besan Chilla, Whole Wheat Roti with Bhindi Masala, Palak Tofu/Paneer with Multigrain Roti.
+- 🌊 **Western Indian**: Jowar Bhakri with Baingan Bharta, Khaman Dhokla, Handvo, Dal Baati (Modified Low GI), Sprouts Usal with Ragi Bhakri.
+- 🌿 **Eastern Indian**: Sattu Paratha with Baingan Chokha, Panta Bhat, Steamed Ilish/Machher Jhol or Chana Dal, Shukto with Rice, Ghugni with Roti.
+- 🥗 **Continental**: Steel-cut Oatmeal with Chia Seeds, Quinoa Power Bowl with Steamed Broccoli, Grilled Chicken/Tofu with Asparagus, Lentil Minestrone Soup.
 
-### 3.2 Mathematical Formulation of Comorbidity Bounds
-For a patient profile characterized by disease set $\mathcal{D} \subseteq \{\text{CKD}, \text{HTN}, \text{T2DM}\}$ with composite risk status $\mathcal{R} \in \{\text{low}, \text{moderate}, \text{high}\}$:
+### Dietary Philosophies & Allergen Elimination
+- **Supported Dietary Types**: `Vegetarian`, `Non-Vegetarian`, `Vegan`, `Eggetarian`, `Jain`.
+- **Strict Jain Compliance**: 0 onion, 0 garlic, 0 root vegetables (no potatoes, carrots, beets, or radishes).
+- **Allergen Filtration**: Hard elimination of peanuts, gluten, dairy, tree nuts, shellfish, or user dislikes across all ingredients.
 
-$$\text{Sodium Limit (mg/d)} = \begin{cases} 
-1500 & \text{if } \text{HTN} \in \mathcal{D} \land \mathcal{R} \in \{\text{moderate}, \text{high}\} \\
-1800 & \text{if } \text{HTN} \in \mathcal{D} \land \mathcal{R} = \text{low} \\
-1800 & \text{if } \text{CKD} \in \mathcal{D} \land \mathcal{R} \in \{\text{moderate}, \text{high}\} \\
-2000 & \text{otherwise}
-\end{cases}$$
+### Smart Craving Strategy
+Permits one structured, scheduled indulgence per week (e.g. Saturday evening snack) while rebalancing surrounding intervals and enforcing strict zero-sugar adherence on Days 1–6.
 
-$$\text{Potassium Limit (mg/d)} = \begin{cases}
-1800 & \text{if } \text{CKD} \in \mathcal{D} \land \mathcal{R} = \text{high} \\
-2000 & \text{if } \text{CKD} \in \mathcal{D} \land \mathcal{R} \in \{\text{low}, \text{moderate}\} \\
-3500 & \text{if } \text{HTN} \in \mathcal{D} \land \text{CKD} \notin \mathcal{D} \\
-3000 & \text{otherwise}
-\end{cases}$$
+### Categorized Grocery Checklist
+Groceries are organized into 5 structured supermarket aisles:
+- 🥬 **Fresh Produce & Vegetables**
+- 🌾 **Whole Grains & Pulses**
+- 🥛 **Dairy, Eggs & Proteins**
+- 🌰 **Nuts, Seeds & Spices**
+- 🫒 **Oils & Condiments**
 
-$$\text{Phosphorus Limit (mg/d)} = \begin{cases}
-800 & \text{if } \text{CKD} \in \mathcal{D} \land \mathcal{R} = \text{high} \\
-1000 & \text{if } \text{CKD} \in \mathcal{D} \land \mathcal{R} \in \{\text{low}, \text{moderate}\} \\
-\text{Unrestricted} & \text{if } \text{CKD} \notin \mathcal{D}
-\end{cases}$$
+---
 
-$$\text{Free Sugars Limit (g/d)} = \begin{cases}
-20 & \text{if } \text{T2DM} \in \mathcal{D} \land \mathcal{R} = \text{high} \\
-30 & \text{if } \text{T2DM} \in \mathcal{D} \land \mathcal{R} \in \{\text{low}, \text{moderate}\} \\
-40 & \text{otherwise}
-\end{cases}$$
+## 4. Pharmacopeia & Drug-Nutrient Safety Guardrails
 
-### 3.3 Expanded 18+ Medication Pharmacopeia
-The system inspects patient medications via [backend/medical_knowledge.py](file:///d:/College/Capstone/Sem_7/capstone_repo/backend/medical_knowledge.py) and [backend/safety_engine.py](file:///d:/College/Capstone/Sem_7/capstone_repo/backend/safety_engine.py), mapping generic and proprietary brand names to detect nutrient contraindications:
+The integrated [safety_engine.py](backend/safety_engine.py) screens active patient medications against 31 clinical drug monographs:
 
-| Drug Class | Exemplar Agents & Brand Aliases | Mechanism & Critical Dietary Contraindication |
+| Drug Class | Examples | Dietary Contraindications & Monitoring |
 | :--- | :--- | :--- |
-| **SGLT2 Inhibitors** | *Empagliflozin (Jardiance), Dapagliflozin (Farxiga), Canagliflozin* | Promotes renal glucosuria. Concomitant severe carbohydrate restriction ($<100\,\text{g/d}$ or ketogenic diet) shifts fuel utilization to fatty acids, triggering life-threatening **Euglycemic Diabetic Ketoacidosis (euDKA)**. Demands hydration monitoring. |
-| **GLP-1 Receptor Agonists** | *Semaglutide (Ozempic, Rybelsus), Liraglutide, Tirzepatide (Mounjaro)* | Potentiates insulin secretion and significantly delays gastric emptying. High-fat, greasy, or ultra-processed meals trigger severe nausea, gastroparesis, and vomiting. |
-| **ACE Inhibitors** | *Lisinopril, Ramipril, Enalapril, Captopril* | Suppresses angiotensin II and aldosterone production, impairing renal potassium excretion. Potassium-enriched salt substitutes ($\text{KCl}$) or excessive dietary potassium cause severe hyperkalemia. |
-| **Angiotensin Receptor Blockers (ARBs)** | *Losartan, Valsartan, Telmisartan, Candesartan* | Directly blocks $\text{AT}_1$ receptors, dampening aldosterone secretion. Strict contraindication against potassium-based salt alternatives. |
-| **Calcium Channel Blockers (CCBs)** | *Amlodipine (Norvasc), Nifedipine, Diltiazem* | Grapefruit and Seville oranges contain furanocoumarins that irreversibly inhibit intestinal CYP3A4, causing massive serum drug bioavailability spikes, profound hypotension, and peripheral edema. |
-| **Beta-Blockers** | *Metoprolol, Atenolol, Carvedilol, Bisoprolol* | Blunts sympathetic tone; completely masks early adrenergic warning signs of hypoglycemia (tremors, palpitations, tachycardia). |
-| **Loop & Thiazide Diuretics** | *Furosemide (Lasix), Hydrochlorothiazide, Torsemide* | Excessive dietary sodium directly counteracts natriuresis and worsens fluid retention. Real licorice (glycyrrhizin) exacerbates hypokalemia. |
-| **Potassium Binders** | *Patiromer (Veltassa), Sodium Zirconium Cyclosilicate (Lokelma)* | Non-selective cation exchange resins bind oral medications in the digestive lumen. Must be spaced by $\ge 2\text{--}3\,\text{hours}$ from all other maintenance drugs. |
-| **Phosphate Binders** | *Sevelamer (Renvela), Calcium Acetate (PhosLo)* | Binds dietary phosphorus in the intestinal lumen to prevent systemic absorption. Ineffective if taken on an empty stomach; must be taken with the first bite of meals. |
-| **Statins (HMG-CoA Reductase Inhibitors)** | *Atorvastatin (Lipitor), Simvastatin* | CYP3A4 substrate inhibition by grapefruit raises systemic exposure, elevating the incidence of myopathy and rhabdomyolysis. |
-| **Biguanides** | *Metformin (Glucophage)* | Inhibits mitochondrial complex I and hepatic gluconeogenesis. Alcohol consumption during fasting potentiates lactic acidosis. |
-| **Exogenous Insulin** | *Basal / Bolus Analogues* | Carbohydrate-to-insulin mismatch precipitates fatal neuroglycopenic hypoglycemia or severe hyperosmolar hyperglycemia. |
-| **Cardiac Glycosides** | *Digoxin (Lanoxin)* | Hypokalemia sensitizes myocardial $\text{Na}^+/\text{K}^+$ ATPase, triggering lethal digitalis toxicity and arrhythmias. |
-| **Vitamin K Antagonists** | *Warfarin (Coumadin)* | Dietary fluctuations in vitamin K (dark leafy greens) alter prothrombin complex synthesis, causing erratic INR fluctuations. |
+| **ACE Inhibitors** | Lisinopril, Ramipril, Enalapril | Avoid potassium chloride salt substitutes; monitor high-potassium foods (bananas, coconut water). |
+| **ARBs** | Losartan, Telmisartan, Valsartan | Restrict salt substitutes; risk of additive hyperkalemia. |
+| **SGLT2 Inhibitors** | Empagliflozin, Dapagliflozin | **Strict carbohydrate floor ($\ge 130$ g/day)**; ketogenic diets strictly contraindicated due to euDKA risk. Ensure adequate hydration. |
+| **Calcium Channel Blockers** | Amlodipine, Diltiazem | **Strict ban on grapefruit and Seville oranges** (CYP3A4 inhibition). |
+| **Statins** | Atorvastatin, Rosuvastatin | Avoid grapefruit products; monitor for myopathy. |
+| **Loop Diuretics** | Furosemide, Torsemide | Monitor for hypokalemia, hypomagnesemia, and volume depletion. |
+| **K-Sparing Diuretics** | Spironolactone, Eplerenone | Strict cap on potassium intake ($\le 2000$ mg/day); avoid salt substitutes. |
+| **Biguanides** | Metformin | Take with meals to reduce GI distress; screen for B12 deficiency; avoid heavy alcohol (lactic acidosis). |
+| **Sulfonylureas** | Glimepiride, Glipizide | Enforce consistent meal timing; avoid skipping meals (hypoglycemia risk). |
 
 ---
 
-## 4. Machine Learning Modeling & Population Benchmarks
+## 5. Multi-Tier Conversational AI Assistant & Clinical Agent
 
-### 4.1 Population-Scale Training Cohorts ($N=1,224,788$)
-The platform models three distinct chronic conditions using population-scale epidemiological and examination data:
-1. **Chronic Kidney Disease ($N=489,322$):** Grounded in the UCI Clinical Laboratory panel. Incorporates continuous biomarkers: serum creatinine, blood urea, specific gravity, albuminuria, serum sodium, potassium, and hemoglobin.
-2. **Hypertension ($N=399,741$):** Fused from the Framingham Heart Study, NHANES 2017–2018 physical examination records, and CDC BRFSS. Contains physical multi-reading blood pressure, resting heart rate, total cholesterol, BMI, and smoking history.
-3. **Type 2 Diabetes ($N=335,725$):** Fused from Pima Indians Diabetes, NHANES 2017–2018 laboratory oral glucose tolerance tests, fasting plasma glucose, fasting insulin, HbA1c, and BRFSS cohorts.
+Nutriloop features a multi-tier conversational medical AI architecture designed to deliver real-time, frontier clinical intelligence while guaranteeing 100% offline functionality, privacy, and clinical safety:
 
-### 4.2 Non-Linear Pathophysiological Feature Engineering
-In [scripts/preprocess_data.py](file:///d:/College/Capstone/Sem_7/capstone_repo/scripts/preprocess_data.py), continuous physiological variables undergo transformation to capture non-linear metabolic risk dynamics:
-* **HOMA-IR Proxy (Homeostatic Model Assessment for Insulin Resistance):**
-  $$\text{HOMA-IR} = \frac{\text{Fasting Glucose (mg/dL)} \times \text{Fasting Insulin (\mu IU/mL)}}{405.0}$$
-* **Metabolic Burden Index:**
-  $$\text{Metabolic Burden} = \left(\frac{\text{Glucose}}{100.0}\right)^2 \times \left(\frac{\text{BMI}}{25.0}\right)$$
-* **Age-Glycemic Interaction:**
-  $$\text{Age-Glucose Interaction} = \frac{\text{Age} \times \text{Glucose}}{100.0}$$
-* **Logarithmic Insulin-Glucose Interaction:**
-  $$\text{Log Insulin-Glucose} = \ln(1 + \text{Insulin}) \times \ln(1 + \text{Glucose})$$
-* **Hemodynamic Mean Arterial Pressure (MAP) & Pulse Pressure:**
-  $$\text{MAP} = \text{diaBP} + \frac{\text{sysBP} - \text{diaBP}}{3.0}, \quad \text{Pulse Pressure} = \text{sysBP} - \text{diaBP}$$
-* **Creatinine-to-Urea Ratio:**
-  $$\text{Creatinine-Urea Ratio} = \frac{\text{Serum Creatinine}}{\text{Blood Urea} + 10^{-5}}$$
+```
+[User Chat Consultation / Query]
+               |
+               v
++-------------------------------------------------------+
+|  Tier 0: Pre-LLM Acute Emergency Guardrail            | ---> Immediate Emergency Escalation
+|  (Interprets acute chest pain, dyspnea, ketoacidosis) |      (Zero LLM Latency, 911/112 referral)
++--------------------------+----------------------------+
+                           | Passed safety screening
+                           v
++-------------------------------------------------------+
+|  Tier 1: Google Gemini 1.5 Flash (Cloud API)          | ---> High-speed, frontier medical reasoning
++--------------------------+----------------------------+
+                           | If key absent / offline
+                           v
++-------------------------------------------------------+
+|  Tier 2: OpenAI GPT-4o-mini (Cloud API)               | ---> Enterprise frontier conversational AI
++--------------------------+----------------------------+
+                           | If key absent / offline
+                           v
++-------------------------------------------------------+
+|  Tier 3: Local Ollama Model (llama3.2:3b / mistral)   | ---> 100% local, zero-telemetry neural weights
++--------------------------+----------------------------+
+                           | If Ollama runtime uninstalled
+                           v
++-------------------------------------------------------+
+|  Tier 4: Deep Clinical Reasoning Synthesizer          | ---> Instant generative biochemical & MNT reasoning
+|  (Biomarker-grounded rules, foods & drug safety)      |      citing patient FBS, HbA1c, BP, and eGFR
++-------------------------------------------------------+
+```
 
-### 4.3 Model Selection & Platt Probability Calibration
-* In [scripts/train_and_optimize.py](file:///d:/College/Capstone/Sem_7/capstone_repo/scripts/train_and_optimize.py), eight candidate classifier families were evaluated under 5-fold Stratified Cross-Validation (`HistGradientBoosting`, `RandomForest`, `StackingEnsemble`, `XGBoost`, `SVC`, `KNeighbors`, `LogisticRegression`, `GaussianNB`).
-* `HistGradientBoostingClassifier` was selected as the superior architecture due to its $O(N)$ histogram binning (256 discrete bins), native handling of missing clinical lab data, and high inference speed.
-* **Platt Sigmoid Calibration:** Raw classifier margins are fitted via `CalibratedClassifierCV(method='sigmoid', cv=3)` to output true clinical posterior probabilities:
-  $$P(Y=1 \mid X) = \frac{1}{1 + \exp(A \cdot f(X) + B)}$$
-  delivering well-calibrated confidence scores with low Brier score calibration error ($\le 0.1068$).
+### Key Capabilities
 
-### 4.4 Empirical Benchmark Performance Matrix
-Metrics evaluated against held-out clinical test splits via [scripts/benchmark_models.py](file:///d:/College/Capstone/Sem_7/capstone_repo/scripts/benchmark_models.py):
+1. **Frontier Cloud Intelligence with In-App Switcher**:
+   - Tab 3 (Chat) includes a native **AI Engine & API Key Toolbar**.
+   - Supports **Google Gemini 1.5 Flash** (recommended, free tier available via [Google AI Studio](https://aistudio.google.com/app/apikey)) and **OpenAI GPT-4o-mini**.
+   - API keys are persisted securely in the local SQLite `app_settings` table.
 
-| Disease | Best Model Architecture | Decision Threshold | Test Accuracy | Macro F1 | Recall (+) | Precision (+) | Specificity | PR-AUC | ROC-AUC | Brier Score |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Chronic Kidney Disease (CKD)** | `HistGradientBoostingClassifier` | 0.50 | **85.73%** | **0.8572** | **83.75%** | **87.18%** | **87.70%** | **0.9239** | **0.9207** | **0.1068** |
-| **Essential Hypertension (HTN)** | `HistGradientBoostingClassifier` | 0.50 | **93.99%** | **0.9398** | **94.07%** | **94.33%** | **93.91%** | **0.9430** | **0.9537** | **0.0535** |
-| **Type 2 Diabetes (T2DM)** | `HistGradientBoostingClassifier` | 0.51 | **90.50%** | **0.9041** | **87.91%** | **91.05%** | **92.69%** | **0.9066** | **0.9276** | **0.0810** |
+2. **Patient Medical Dossier Grounding**:
+   - Every agent invocation dynamically constructs and injects the patient's full diagnostic panel (age, sex, BMI, BP, Fasting Glucose, HbA1c, Serum Creatinine, eGFR, Potassium, Sodium), active medications, and the complete active 7-Day Regional Meal Plan into the system prompt.
+
+3. **Generative Deep Clinical Synthesizer (Zero-Key Offline Mode)**:
+   - When offline without an API key, Dr. Nutriloop does **not** rely on canned or predefined one-liners. Instead, it runs an in-depth clinical reasoning synthesizer:
+     - **Specific Food Evaluations**: Detailed glycemic, renal, and cardiovascular analysis for regional and common foods (e.g. *Pepper-Cumin Rasam*, *Instant Noodles / Maggi* with clinical whole-wheat atta recipe adaptations, *Sunday Biryani craving management*, *85%+ dark chocolate vs milk chocolate*, *curd/chaas probiotics*, *paneer vs tofu protein titration*, and *banana potassium restrictions in CKD*).
+     - **Biomarker Pathophysiology**: Thorough explanations of HbA1c, fasting glucose, serum creatinine, and eGFR renal filtration dynamics.
+     - **Pharmacopeia & Drug-Nutrient Rules**: Alerts on SGLT2i carbohydrate floors ($\ge 130$ g/day) to prevent euglycemic DKA, Metformin meal timing, ACEi potassium sparing, and Amlodipine CYP3A4 grapefruit juice contraindications.
+
+4. **Live Natural Language Meal Alterations**:
+   - Patients can request meal swaps directly in chat (e.g., *"Replace Tuesday dinner with vegetable soup"*). The agent parses the request, executes `TOOL_REGISTRY["alter_diet_plan_meal"]`, updates the active 7-day schedule in SQLite, and refreshes Tab 2 live.
+
+5. **Rich Markdown Chat UI**:
+   - Chat bubbles render clean GitHub-flavored markdown including headings, bold emphasis, structured lists, and code blocks for a modern conversational experience.
 
 ---
 
-## 5. Dynamic Imputation & Adaptive Questionnaire Engine
+## 6. System Architecture & Data Flow
 
-Real-world clinical workflows rarely present complete laboratory panels. In [backend/raw_input.py](file:///d:/College/Capstone/Sem_7/capstone_repo/backend/raw_input.py):
-* The platform accepts patient questionnaire answers alongside optional clinical labs (serum creatinine, blood urea, urine dipstick, HbA1c, fasting insulin, lipid profile).
-* When a patient leaves an advanced biomarker blank, the system dynamically imputes the value using the empirical training cohort median from [artifacts/population_medians.json](file:///d:/College/Capstone/Sem_7/capstone_repo/artifacts/population_medians.json).
-* Validates biological plausibility with Pydantic v2 schemas:
-
-```python
-# Exemplar Pydantic Schema from backend/schemas.py
-class CKDRawInput(BaseModel):
-    age_years: int = Field(ge=18, le=100)
-    sex: Literal["male", "female"]
-    body_mass_index: float = Field(ge=10.0, le=90.0)
-    diagnosed_diabetes: bool = False
-    diagnosed_hypertension: bool = False
-    systolic_bp_mmhg: Optional[float] = Field(default=None, ge=70.0, le=260.0)
-    diastolic_bp_mmhg: Optional[float] = Field(default=None, ge=40.0, le=160.0)
-    fasting_glucose_mg_dl: Optional[float] = Field(default=None, ge=40.0, le=450.0)
-    serum_creatinine_mg_dl: Optional[float] = Field(default=None, ge=0.1, le=25.0)
-    blood_urea_mg_dl: Optional[float] = Field(default=None, ge=1.0, le=400.0)
-    hemoglobin_g_dl: Optional[float] = Field(default=None, ge=3.0, le=25.0)
-    urine_albumin_dipstick: Optional[int] = Field(default=None, ge=0, le=5)
+```
+                      +-----------------------------+
+                      |   PyWebView Native Window   |
+                      |   (HTML5 / CSS3 / VanillaJS)|
+                      +--------------+--------------+
+                                     |  pywebview.api
+                                     v
+                      +-----------------------------+
+                      |       desktop_api.py        |
+                      +--------------+--------------+
+                                     |
+        +----------------------------+----------------------------+
+        |                            |                            |
+        v                            v                            v
++---------------+            +---------------+            +---------------+
+|  ML Registry  |            | Weekly Engine |            | Ollama Agent  |
+| (RF/LGBM/XGB) |            | (Portion/MNT) |            | (ReAct Tools) |
++-------+-------+            +-------+-------+            +-------+-------+
+        |                            |                            |
+        +----------------------------+----------------------------+
+                                     |
+                                     v
+                      +-----------------------------+
+                      |      SQLite app_data.db     |
+                      |  (Logs, Meals, Plans, Hist) |
+                      +-----------------------------+
 ```
 
 ---
 
-## 6. Unified Food Knowledge Base & Regional Fuzzy Retrieval
-
-The dietary engine indexes **7,110 curated food items** in [datasets/unified_food_kb.csv](file:///d:/College/Capstone/Sem_7/capstone_repo/datasets/unified_food_kb.csv), harmonized across the Indian Food Composition Tables (IFCT 2017, ICMR-NIN), OpenFoodFacts, and global databases across 40 distinct attributes (energy, macronutrients, sodium, potassium, phosphorus, calcium, iron, zinc, fiber, free sugars, fatty acid breakdown, and data completeness).
-
-### Regional Culinary Synonyms & Fuzzy Search
-Standard exact substring queries often fail on regional naming conventions (e.g., searching "dal" failed to match "lentil" or "sambhar"). In [backend/chatbot/tools.py](file:///d:/College/Capstone/Sem_7/capstone_repo/backend/chatbot/tools.py):
-* **`CULINARY_SYNONYMS` Dictionary:** Maps colloquial Indian culinary terms to clinical food entries:
-  * `daal` / `dal` $\rightarrow$ `["lentil", "pulse", "sambhar"]`
-  * `roti` / `chapati` $\rightarrow$ `["phulka", "flatbread", "wheat"]`
-  * `paneer` $\rightarrow$ `["cottage cheese", "cheese"]`
-  * `sabzi` / `subji` $\rightarrow$ `["vegetable", "mixed vegetable", "curry"]`
-  * `dahi` $\rightarrow$ `["curd", "yogurt"]`
-  * `chawal` $\rightarrow$ `["rice", "boiled rice"]`
-  * `khichdi` $\rightarrow$ `["rice", "lentil", "khichri"]`
-* **Fuzzy Match Fallback:** When a query yields zero exact or synonym matches, `difflib.get_close_matches(cutoff=0.5)` identifies closest phonetic/textual neighbors, ensuring zero search drop-off.
-
-### Multi-Criteria Disease Scoring Algorithm
-In [backend/reporting.py](file:///d:/College/Capstone/Sem_7/capstone_repo/backend/reporting.py) (`_score_foods`), candidate foods are evaluated against the patient's calibrated nutritional targets:
-
-$$\text{Food Score} = \sum_{k \in \text{Nutrients}} w_k \cdot \left[ 1 - \frac{\text{Nutrient}_k}{\text{Cap}_k} \right]^+ + w_{\text{fiber}} \cdot \left[ \frac{\text{Fiber}}{\text{Target}_{\text{fiber}}} \right] + w_{\text{comp}} \cdot \text{Completeness}$$
-
----
-
-## 7. Longitudinal Adaptation, Behavioral Habits & Outcomes Tracker
-
-In [backend/adaptation_engine.py](file:///d:/College/Capstone/Sem_7/capstone_repo/backend/adaptation_engine.py) and [backend/feedback_learning.py](file:///d:/College/Capstone/Sem_7/capstone_repo/backend/feedback_learning.py), the platform moves beyond static meal recommendations to continuous, longitudinal learning:
-* **Deviation Detection:** Every logged meal is compared against the target meal plan. Calorie and nutrient deviations are graded into severity tiers:
-  * `LOW` ($\ge 15\%$ deviation)
-  * `MODERATE` ($\ge 25\%$ deviation)
-  * `HIGH` ($\ge 40\%$ deviation)
-* **Consecutive Pattern Analysis:** When $\ge 3$ consecutive deviations are detected in a specific meal type (e.g., breakfast), an automated `AdaptationAction` is registered:
-  * Consistent over-consumption $\rightarrow$ automatic $10\%$ downward calorie adjustment on subsequent plans.
-  * Consecutive high-severity deviations $\rightarrow$ automatic supervisor alert dispatch.
-* **Habit Learning:** Analyzes rolling windows of $\ge 5$ meals to compute:
-  * `meal_timing` patterns (identifying habitual eating windows).
-  * `portion_size` ratios (quantifying individual portion over/under tendencies).
-  * `adherence` trends (`improving`, `stable`, or `declining`).
-* **Clinical Biomarker Outcome Correlation:** Ingests serial health measurements (blood pressure, fasting glucose, HbA1c, eGFR, weight) and computes clinical trends (`significant_improvement`, `stable`, or `concerning`).
-
----
-
-## 8. Database Persistence & High-Concurrency Architecture
-
-Application state is persisted to [app_data.db](file:///d:/College/Capstone/Sem_7/capstone_repo/app_data.db) via [backend/db.py](file:///d:/College/Capstone/Sem_7/capstone_repo/backend/db.py) with enterprise concurrency guarantees:
-* **Write-Ahead Logging (`PRAGMA journal_mode=WAL;`):** Readers do not block writers, and writers do not block readers. Permits scaling to multi-worker server configurations (`uvicorn --workers 4`).
-* **30-Second Busy Timeout (`PRAGMA busy_timeout=30000;`):** Eliminates `sqlite3.OperationalError: database is locked` errors during concurrent operations.
-* **Thread-Safe Context Manager (`with get_db_conn() as conn:`):** Ensures automatic transaction commit on clean execution and automatic rollback on unhandled exceptions.
-
-### Relational Schema (11 Tables)
-1. `risk_profile`: Historical machine learning inference runs, risk scores, and predicted binary classes.
-2. `diet_plan`: Calibrated caloric, macronutrient, and electrolyte targets generated for users.
-3. `meal_log`: Consumed vs. planned calories, percentage deviation, and food notes.
-4. `alert`: Open and resolved clinical safety alerts with severity classifications.
-5. `risk_explanation_log`: Complete audit trail containing raw inputs, transformed features, top permutation factors, and clinical narrative text.
-6. `adaptation_action`: Corrective adaptation actions triggered by meal deviation events.
-7. `user_pattern`: Learned behavioral habits (timing windows, portion ratios, adherence metrics).
-8. `feedback_record`: Patient subjective satisfaction ratings (1–5) and qualitative feedback.
-9. `health_outcome`: Serial clinical biomarkers (blood pressure, HbA1c, eGFR, weight change) with clinical significance assessments.
-10. `agent_session`: Multi-turn conversational histories and serialized user profiles.
-11. `sqlite_sequence`: Internal SQLite autoincrement sequence tracker.
-
----
-
-## 9. Zero-Downtime Conversational AI & Clinical Chatbot
-
-The conversational agent in [backend/chatbot/agent.py](file:///d:/College/Capstone/Sem_7/capstone_repo/backend/chatbot/agent.py) operates across a resilient 3-layer architecture:
+## 7. Directory Structure
 
 ```
-                                  Incoming User Message
-                                            │
-                                            ▼
-                    ┌───────────────────────────────────────────────┐
-                    │       LAYER 1: Pre-LLM Regex Escalation       │
-                    │   Checks for medications, dosing, symptoms,   │
-                    │   or diagnostic inquiries                     │
-                    └───────┬───────────────────────────────┬───────┘
-                            │ Matched                       │ No Match
-                            ▼                               ▼
-               ┌─────────────────────────┐     ┌─────────────────────────┐
-               │ Return Immediate Fixed  │     │   LAYER 2: ReAct Loop   │
-               │ Clinical Escalation Msg │     │   Queries Local LLM     │
-               └─────────────────────────┘     │   (Ollama / llama3.2)   │
-                                               └────────────┬────────────┘
-                                                            │ LLM Offline / Socket Refused
-                                                            ▼
-                                               ┌─────────────────────────┐
-                                               │   LAYER 3: Fallback     │
-                                               │   Degrades to Determin. │
-                                               │   AgenticMealPlanner    │
-                                               └─────────────────────────┘
-```
-
-1. **Layer 1 — Pre-LLM Regex Escalation:** Before querying the language model, incoming text is scanned against `ESCALATION_PATTERNS`. Queries touching medication dosages, acute clinical symptoms (chest pain, shortness of breath), or diagnostic requests immediately receive an authoritative non-device escalation response directing them to emergency services or their physician.
-2. **Layer 2 — ReAct Tool Execution:** When safe, the agent reasons over schema-bound tools:
-   * `get_risk_profile`: Retrieves calibrated ML scores (prohibits the LLM from hallucinating risk numbers).
-   * `get_diet_plan`: Retrieves active macronutrient and electrolyte targets.
-   * `search_food_kb`: RAG lookup against the 7,110-item knowledge base with synonym expansion and fuzzy matching.
-   * `log_meal`: Grounds user portion sizes to exact food KB nutritional density.
-   * `log_interaction`: Writes full turn audits to `risk_explanation_log`.
-3. **Layer 3 — Zero-Downtime Degradation:** If the local LLM daemon (Ollama) is offline or unreachable, the system catches the connection error and auto-degrades to the deterministic [AgenticMealPlanner](file:///d:/College/Capstone/Sem_7/capstone_repo/backend/agent_engine.py#L182-L1022). The user receives clinically valid meal guidance without server errors.
-
----
-
-## 10. Comprehensive REST API Reference (22 Endpoints)
-
-FastAPI serves 22 endpoints documented via Swagger UI (`/docs`) and ReDoc (`/redoc`):
-
-### Health, Models & Risk Inference
-| Method | Route | Description |
-| :--- | :--- | :--- |
-| `GET` | `/health` | Verifies server health status, list of loaded models, and count of open alerts. |
-| `GET` | `/implementation-progress` | Model benchmark metrics, generated audit volume, and comparison summary. |
-| `GET` | `/raw-input-template/{disease}` | Questionnaire fields schema, data types, and default clinical values. |
-| `POST` | `/predict-risk` | Predicts risk probability and band from pre-normalized feature dictionaries. |
-| `POST` | `/predict-risk-raw` | Full inference pipeline from raw questionnaire answers with dynamic median imputation. |
-| `POST` | `/risk-explanation-raw` | Generates clinical narrative explanation and lists top permutation risk factors. |
-| `POST` | `/risk-report` | Full diagnostic report with diet plan targets and food recommendations from pre-scaled inputs. |
-| `POST` | `/risk-report-raw` | Full diagnostic report, diet plan, and food recommendations from raw questionnaire answers. |
-| `POST` | `/recommend-plan` | Solves single-condition or multi-disease comorbidity plans applying precedence rules. |
-| `POST` | `/recommend-weekly-plan` | Generates 7-day, 5-interval personalized meal plan from latest test reports & native region. |
-| `POST` | `/log-meal` | Records meal calories and issues immediate deviation alerts if $\ge 15\%$ off target. |
-| `GET` | `/risk-explanations` | Paginated query interface for historical audit records with user and disease filters. |
-
-### Medical Safety & Guidelines
-| Method | Route | Description |
-| :--- | :--- | :--- |
-| `GET` | `/medical/guidelines` | Evidence-based guideline summaries across KDIGO, KDOQI, DASH, ADA, and ICMR. |
-| `GET` | `/medical/drug-interactions/{drug}` | Food and nutrient interaction warnings across 18+ chronic disease medications. |
-| `POST` | `/safety/validate` | Validates meals or daily totals against patient comorbidity constraints and active drugs. |
-
-### Adaptation & Continuous Learning
-| Method | Route | Description |
-| :--- | :--- | :--- |
-| `POST` | `/adaptation/log-meal` | Detailed meal logging with nutrient-level deviation tracking and adaptation triggers. |
-| `GET` | `/adaptation/summary/{user_id}` | Retrieves active adaptations, unresolved alerts, learned habits, and adherence rates. |
-| `POST` | `/feedback/submit` | Records subjective patient satisfaction ratings (1–5) and qualitative feedback. |
-| `POST` | `/outcomes/record` | Ingests serial clinical biomarkers (blood pressure, glucose, eGFR, weight) and computes trends. |
-| `GET` | `/learning/summary` | Global cohort learning metrics, recommendation acceptance rates, and system trends. |
-
-### Conversational & Multi-Agent AI
-| Method | Route | Description |
-| :--- | :--- | :--- |
-| `POST` | `/chatbot/chat` | Clinical safety-first chatbot with ReAct tool-calling and zero-downtime offline fallback. |
-| `POST` | `/agent/chat` | Multi-agent dietary goal planner, recipe builder, and cultural nutrition assistant. |
-
----
-
-## 11. Interactive CLI Tool & Demonstration Payloads
-
-The platform includes a CLI interface in [scripts/predict_cli.py](file:///d:/College/Capstone/Sem_7/capstone_repo/scripts/predict_cli.py):
-
-### Interactive Wizard
-```powershell
-# Launches terminal questionnaire wizard with validation
-python scripts/predict_cli.py --interactive
-```
-
-### Scripted Evaluation on Demo Payloads
-```powershell
-# Evaluate clinical test profiles in demo_inputs/
-python scripts/predict_cli.py demo_inputs/comorbid_ckd_htn.json
-python scripts/predict_cli.py demo_inputs/diabetes_with_labs.json
-python scripts/predict_cli.py demo_inputs/hypertension_with_lipids.json
-python scripts/predict_cli.py demo_inputs/healthy_baseline.json
-```
-
-### Demo Input Profiles ([demo_inputs/](file:///d:/College/Capstone/Sem_7/capstone_repo/demo_inputs))
-* [comorbid_ckd_htn.json](file:///d:/College/Capstone/Sem_7/capstone_repo/demo_inputs/comorbid_ckd_htn.json): Multi-morbid Stage 3 CKD with diabetic nephropathy and hypertension.
-* [diabetes_with_labs.json](file:///d:/College/Capstone/Sem_7/capstone_repo/demo_inputs/diabetes_with_labs.json): High-risk T2DM with full laboratory panel (HbA1c $7.2\%$, fasting insulin $140\,\mu\text{IU/mL}$).
-* [diabetes_sample.json](file:///d:/College/Capstone/Sem_7/capstone_repo/demo_inputs/diabetes_sample.json): Standard survey-based diabetes profile with optional labs omitted.
-* [hypertension_with_lipids.json](file:///d:/College/Capstone/Sem_7/capstone_repo/demo_inputs/hypertension_with_lipids.json): Stage 2 hypertension with complete lipid panel (total cholesterol $245\,\text{mg/dL}$).
-* [hypertension_sample.json](file:///d:/College/Capstone/Sem_7/capstone_repo/demo_inputs/hypertension_sample.json): Moderate hypertension profile without lab panels.
-* [early_stage_ckd.json](file:///d:/College/Capstone/Sem_7/capstone_repo/demo_inputs/early_stage_ckd.json): Stage 2 early renal impairment with microalbuminuria.
-* [ckd_sample.json](file:///d:/College/Capstone/Sem_7/capstone_repo/demo_inputs/ckd_sample.json): Standard questionnaire-based CKD profile.
-* [healthy_baseline.json](file:///d:/College/Capstone/Sem_7/capstone_repo/demo_inputs/healthy_baseline.json): Healthy normotensive young adult control (Low Risk baseline).
-
----
-
-## 12. Complete File-by-File Repository Map
-
-```
-capstone_repo/
-├── .gitignore                         # Configures repository exclusions: ignores temporary artifacts,
-│                                      # SQLite runtimes, bytecodes, and large datasets (preprocessed/ & raw/)
-│                                      # while explicitly retaining unified_food_kb.csv.
-├── app_data.db                        # Production SQLite database configured in WAL mode containing 11 tables.
-├── README.md                          # Definitive, exhaustive platform technical documentation.
-├── requirements.txt                   # Pinned production dependencies (FastAPI, Scikit-Learn, Pandas, etc.).
-│
-├── artifacts/
-│   ├── ckd_features.json              # 30 ordered feature names for CKD model inputs.
-│   ├── ckd_model.joblib               # Calibrated HistGradientBoosting model for CKD risk prediction.
-│   ├── diabetes_features.json         # 17 ordered feature names (including interaction features) for T2DM.
-│   ├── diabetes_model.joblib          # Calibrated HistGradientBoosting model for T2DM risk prediction.
-│   ├── hypertension_features.json     # 19 ordered feature names for Hypertension risk prediction.
-│   ├── hypertension_model.joblib      # Calibrated HistGradientBoosting model for Hypertension risk prediction.
-│   ├── nutrient_calibration_rules.json# Scoring weights, dietary guideline targets, and distribution percentiles.
-│   ├── population_medians.json        # Empirical training cohort medians used for dynamic lab imputation.
-│   └── risk_thresholds_and_factors.json# Calibrated thresholds, test metrics, and permutation feature importances.
-│
-├── backend/
-│   ├── __init__.py                    # Backend package initializer.
-│   ├── adaptation_engine.py           # Longitudinal meal deviation detection, alert generation, and habit learning.
-│   ├── agent_engine.py                # AgenticMealPlanner for recipe synthesis, personalization, and fallback advice.
-│   ├── app.py                         # Core FastAPI application defining lifespan context and 21 REST endpoints.
-│   ├── db.py                          # Concurrency-safe SQLite WAL persistence, context managers, and CRUD APIs.
-│   ├── feedback_learning.py           # Patient satisfaction tracking, longitudinal biomarker trends, and outcomes.
-│   ├── medical_knowledge.py           # 18+ medication pharmacopeia, clinical guideline evidence, and drug interactions.
-│   ├── model_registry.py              # Singleton registry loading joblib models and executing calibrated predictions.
-│   ├── raw_input.py                   # Conversational questionnaire mapper, dynamic imputer, and feature scaler.
-│   ├── reporting.py                   # Food KB ranking engine (_score_foods) and clinical narrative builder.
-│   ├── rules.py                       # Comorbidity constraint solver resolving the KDOQI vs. DASH potassium paradox.
-│   ├── safety_engine.py               # Multi-tier safety boundary checker and active drug cross-referencing.
-│   ├── schemas.py                     # Strict Pydantic v2 schemas for request/response validation.
-│   └── chatbot/
-│       ├── __init__.py                # Chatbot package initializer.
-│       ├── agent.py                   # ReAct conversational loop with pre-LLM regex escalation & offline fallback.
-│       ├── system_prompt.py           # Clinical safety guardrail prompt and regex escalation patterns.
-│       └── tools.py                   # 5 grounded tools with culinary synonym dictionary and fuzzy search.
-│
-├── datasets/
-│   ├── unified_food_kb.csv            # 7,110 curated Indian and global food items with 40 attributes.
-│   └── preprocessed/                  # 1,224,788 population-scale clinical records across 9 train/test splits.
-│
-├── demo_inputs/                       # 8 JSON test profiles representing diverse clinical and control scenarios.
-│
-└── scripts/
-    ├── benchmark_models.py            # Evaluates trained models against held-out test splits and reports metrics.
-    ├── calibrate_nutrition.py         # Generates nutrient calibration rules from the unified food knowledge base.
-    ├── predict_cli.py                 # Interactive terminal wizard and batch JSON file prediction tool.
-    ├── preprocess_data.py             # Feature engineering, scaling, splitting, and SMOTE balancing pipeline.
-    ├── smoke_test.py                  # Automated 21-endpoint regression test suite and comorbidity validator.
-    └── train_and_optimize.py          # 5-fold CV tournament, Platt calibration, and artifact export pipeline.
+Nutriloop/
+├── .gitignore                        # Git exclusion rules
+├── app_desktop.py                    # Standalone desktop executable launcher (Edge WebView2)
+├── desktop_api.py                    # Python-JavaScript in-process bridge for PyWebView
+├── Nutriloop.spec                    # PyInstaller standalone build configuration
+├── requirements.txt                  # Python package dependencies
+├── artifacts/                        # Trained ML models, scalers, and clinical thresholds
+│   ├── ckd_best_model.pkl
+│   ├── hypertension_best_model.pkl
+│   ├── diabetes_best_model.pkl
+│   └── risk_thresholds_and_factors.json
+├── backend/                          # Core business logic & clinical engines
+│   ├── __init__.py                   # Global bytecode write suppression
+│   ├── app.py                        # FastAPI application (22 endpoints)
+│   ├── db.py                         # SQLite schema & persistence helpers (app_settings, tests)
+│   ├── model_registry.py             # Model loader & inference wrapper
+│   ├── ollama_manager.py             # Ollama discovery, health, & download manager
+│   ├── raw_input.py                  # Clinical survey mapping & imputation
+│   ├── reporting.py                  # Clinical report formatting & text generation
+│   ├── rules.py                      # eGFR CKD-EPI, KDIGO, KDOQI, DASH logic
+│   ├── safety_engine.py              # 31-drug interaction & meal validation engine
+│   ├── schemas.py                    # Pydantic v2 data models & validators
+│   ├── weekly_diet_engine.py         # Precision 7-day MNT & portion scaler engine
+│   └── chatbot/                      # Multi-tier conversational AI subsystem
+│       ├── agent.py                  # Multi-tier dispatch (Gemini, OpenAI, Ollama, Synthesizer)
+│       ├── system_prompt.py          # Clinical prompt engineering & safety guardrails
+│       └── tools.py                  # Guidelines, drug interaction, & plan alteration tools
+├── bin/                              # Bundled platform binaries (e.g. Ollama for Windows)
+├── datasets/                         # Medical nutrition datasets
+│   └── unified_food_kb.csv           # 1,300+ item nutritional database
+├── gui/                              # Modern dark-mode UI
+│   ├── index.html                    # Single-page interface with Tab 3 AI Engine Toolbar
+│   ├── style.css                     # Responsive CSS design system with Markdown styling
+│   └── app.js                        # Client state, PyWebView bridge, Markdown parser, & chart rendering
+├── Nutriloop_Data/                   # Auto-created runtime patient directory (app_data.db, reports)
+└── scripts/                          # Verification & benchmarking tools
+    ├── benchmark_models.py           # Model evaluation suite (F1, PR-AUC, Brier score)
+    ├── predict_cli.py                # Command-line prediction tool
+    ├── smoke_test.py                 # 22-endpoint REST API smoke test suite
+    └── test_diet_accuracy.py         # Precision clinical diet accuracy test suite
 ```
 
 ---
 
-## 13. Installation, Verification & Quick Start
+## 8. Installation & Setup
 
-### 1. Environment Setup
-```powershell
-# Clone the repository and navigate to root
-cd capstone_repo
+### Prerequisites
+- **Python**: 3.10, 3.11, or 3.12 (64-bit)
+- **Operating System**: Windows 10/11, macOS, or Linux
+- **AI Models** *(Optional)*: Google Gemini API Key, OpenAI API Key, or local [Ollama](https://ollama.ai)
 
-# Create and activate a Python virtual environment (Python 3.10+)
-python -m venv .venv
-.venv\Scripts\Activate.ps1
+### 1. Clone Repository & Create Virtual Environment
+```bash
+git clone https://github.com/your-org/nutriloop.git
+cd nutriloop
 
-# Install lean production dependencies
+python -m venv venv
+# Windows:
+.\venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+```
+
+### 2. Install Dependencies
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. Verify Pipeline & Run Benchmarks
-All model weights and feature manifests are pre-built in `artifacts/`. You can immediately benchmark the models or run smoke tests:
-```powershell
-# Run the comprehensive 21-endpoint smoke test suite
-python scripts/smoke_test.py
-
-# Run diagnostic model benchmarks across held-out test cohorts
-python scripts/benchmark_models.py
+### 3. Launch Desktop Application
+```bash
+python app_desktop.py
 ```
 
-### 3. Launch the REST API Server
-```powershell
-# Launch FastAPI with multi-worker scaling
+### 4. Launch FastAPI REST Service (Alternative)
+```bash
 uvicorn backend.app:app --host 127.0.0.1 --port 8000 --reload
 ```
-API Documentation will be live at:
-* **Interactive Swagger UI:** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-* **ReDoc Documentation:** [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
-
-### 4. Optional: Big Dataset Retraining Pipeline
-To retrain and recalibrate all models from raw datasets:
-```powershell
-# 1. Ingest, engineer features, scale, and split datasets
-python scripts/preprocess_data.py
-
-# 2. Execute 5-fold CV candidate tournament, Platt calibration, and export artifacts
-python scripts/train_and_optimize.py
-
-# 3. Calibrate food knowledge base nutrient scoring rules
-python scripts/calibrate_nutrition.py
-```
+Navigate to `http://127.0.0.1:8000/docs` for the interactive Swagger documentation.
 
 ---
 
-## 14. Regulatory Compliance & Medical Disclaimer
+## 9. Desktop Application & Standalone Build
 
-### Non-Device Clinical Decision Support (CDS) Regulatory Architecture
-This platform has been engineered to comply with the **FDA Final Guidance on Clinical Decision Support Software (January 2026)** to operate outside the regulatory classification of Software as a Medical Device (SaMD):
-1. **Independent Reviewability:** The software provides complete traceability for every recommendation, exposing the underlying clinical guidelines (KDOQI, DASH, ADA), the machine learning probability score, the decision threshold used, and the top contributing risk factors.
-2. **Healthcare Professional Oversight:** The system is explicitly framed as an informational decision-support and patient wellness tool, designed to augment rather than replace professional clinical judgment.
-3. **No Autonomous Clinical Action:** The platform does not alter drug dosages, diagnose medical conditions, or provide acute medical intervention recommendations.
-4. **Hard Safety Guardrails:** All user queries referencing medication changes, drug adjustments, or acute medical symptoms are intercepted prior to language model reasoning by deterministic regex filters, returning a standardized clinical escalation referral.
+NutriMed AI (Nutriloop) packages into a single, standalone Windows `.exe` (~189 MB) with zero external runtime dependencies:
 
-### Medical Disclaimer
-> **IMPORTANT MEDICAL NOTICE:**  
-> This software is intended solely for academic research, health education, and nutritional decision support. It is not an FDA-cleared diagnostic device, clinical monitoring tool, or medical treatment system. The dietary plans, nutrient limits, and risk probabilities provided by this system do not constitute medical advice or establish a physician-patient relationship. Users must consult a licensed physician, registered dietitian, or nephrologist before initiating dietary changes, modifying physical activity, or adjusting prescribed medications. In the event of acute clinical symptoms or a medical emergency, immediately contact local emergency services.
+```powershell
+# Build standalone Windows executable with bytecode write suppression
+$env:PYTHONDONTWRITEBYTECODE="1"
+pyinstaller --noconfirm Nutriloop.spec
+```
+The output executable is generated at:
+```
+dist/Nutriloop.exe
+```
+
+### Self-Contained Runtime Behavior
+- **Bundled Assets**: Embeds all GUI HTML/CSS/JS assets, scikit-learn models, scalers, food knowledge base, and platform binaries directly into the single executable.
+- **Isolated Data Sovereignty**: Upon first launch (or when moved to a new directory), the executable automatically creates a dedicated `Nutriloop_Data/` folder alongside itself containing `app_data.db`, audit logs, and exported patient reports, completely isolated from user profile system noise.
+
+---
+
+## 10. REST API Documentation
+
+The platform exposes **22 REST endpoints**:
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/health` | Service health status. |
+| `GET` | `/implementation-progress` | Model training and deployment metadata. |
+| `GET` | `/raw-input-template/{disease}` | Questionnaire template for disease input. |
+| `POST` | `/predict-risk-raw` | Multi-disease risk evaluation from raw clinical inputs. |
+| `POST` | `/risk-explanation-raw` | SHAP factor attributions and clinical explanations. |
+| `POST` | `/risk-report-raw` | Comprehensive multi-page clinical risk report. |
+| `POST` | `/recommend-plan` | Single-meal nutrition therapy recommendation. |
+| `POST` | `/recommend-weekly-plan` | **7-day / 5-interval personalized regional weekly diet plan**. |
+| `POST` | `/safety/validate` | Real-time meal nutrient and drug interaction safety check. |
+| `GET` | `/medical/drug-interactions/{med}` | Drug-nutrient interaction monograph. |
+| `GET` | `/medical/guidelines` | Clinical practice guidelines (KDIGO, KDOQI, ADA, DASH). |
+| `POST` | `/log-meal` | Log patient meal consumption to SQLite. |
+| `POST` | `/adaptation/log-meal` | Feedback adaptation meal logging. |
+| `GET` | `/adaptation/summary/{user_id}` | Patient adherence trend analysis. |
+| `POST` | `/chatbot/chat` | AI Clinical Nutritionist conversational endpoint. |
+
+---
+
+## 11. Verification & Automated Test Suites
+
+### Precision Diet Recommendation Accuracy Suite
+```bash
+python scripts/test_diet_accuracy.py
+```
+Validates:
+- **Biomarker & eGFR Derivation**: CKD Stage 3a (48.7 mL/min), SGLT2i carbohydrate floor ($\ge 130$ g), KDOQI Adjusted Body Weight protein targets.
+- **Caloric Precision Across 5 Regions**: South Indian, North Indian, Western Indian, Eastern Indian, and Continental menus meet target calories within $\pm 0.5\%$.
+- **Variety Audit**: Confirms 0 duplicate days across all 5 regions.
+- **Dietary & Allergen Filtering**: 100% compliance for Jain (0 root veg) and allergen elimination.
+
+### Comprehensive REST API Smoke Test Suite
+```bash
+python scripts/smoke_test.py
+```
+Validates all 22 REST endpoints, comorbidity conflict resolutions, and weekly diet plan generation with HTTP 200 status codes.
+
+### Machine Learning Benchmark Suite
+```bash
+python scripts/benchmark_models.py
+```
+Evaluates Macro-F1, PR-AUC, ROC-AUC, Sensitivity, Specificity, and Brier calibration scores.
+
+---
+
+## 12. Ethical & Regulatory Compliance
+
+- **Clinical Decision Support Notice**: NutriMed AI is designed to assist registered dietitians, nephrologists, and primary care physicians. It provides clinical decision support and does not replace professional medical diagnosis or emergency care.
+- **Privacy & Security**: All inference and persistent data storage occur locally on the user's host machine. No protected health information (PHI) is transmitted to third-party cloud servers.

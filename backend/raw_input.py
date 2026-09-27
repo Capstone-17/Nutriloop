@@ -206,11 +206,98 @@ def align_transformed_features(
     return aligned
 
 
+def format_clinical_validation_error(ex: ValidationError) -> str:
+    """Translate Pydantic schema validation errors into patient/physician-friendly clinical explanations."""
+    clinical_messages = []
+    for error in ex.errors():
+        loc = error.get("loc", ())
+        field = str(loc[-1]) if loc else "field"
+        val = error.get("input", "entered value")
+        err_type = error.get("type", "")
+
+        if field == "fasting_glucose_mg_dl":
+            if "greater_than" in err_type:
+                clinical_messages.append(
+                    f"Fasting Glucose ({val} mg/dL) is physiologically impossible for outpatient clinical assessment. "
+                    f"A fasting blood glucose under 40 mg/dL indicates critical, life-threatening neuroglycopenic hypoglycemia "
+                    f"(diabetic shock / neuroglycopenic coma) requiring acute emergency medical resuscitation, not routine nutritional planning. "
+                    f"Please verify if this was a typo (e.g. intended 120 or 200 mg/dL). Permitted clinical range: 40-450 mg/dL (Normal: 70-99 mg/dL)."
+                )
+            elif "less_than" in err_type:
+                clinical_messages.append(
+                    f"Fasting Glucose ({val} mg/dL) exceeds recordable outpatient limits (> 450 mg/dL), indicating "
+                    f"an acute Hyperosmolar Hyperglycemic State (HHS) or Diabetic Ketoacidosis (DKA) requiring immediate emergency hospitalization. "
+                    f"Permitted clinical range: 40-450 mg/dL."
+                )
+            else:
+                clinical_messages.append(f"Fasting Glucose: {error.get('msg')} (entered: {val}). Valid clinical range: 40-450 mg/dL.")
+
+        elif field == "systolic_bp_mmhg":
+            if "greater_than" in err_type:
+                clinical_messages.append(
+                    f"Systolic Blood Pressure ({val} mmHg) is below viable perfusion limits (< 70 mmHg), indicating acute circulatory shock / collapse. "
+                    f"Permitted range: 70-260 mmHg."
+                )
+            elif "less_than" in err_type:
+                clinical_messages.append(
+                    f"Systolic Blood Pressure ({val} mmHg) indicates an acute Hypertensive Emergency (> 260 mmHg) with imminent risk of stroke or aortic dissection. "
+                    f"Permitted range: 70-260 mmHg."
+                )
+            else:
+                clinical_messages.append(f"Systolic Blood Pressure: {error.get('msg')} (entered: {val}). Valid range: 70-260 mmHg.")
+
+        elif field == "diastolic_bp_mmhg":
+            if "greater_than" in err_type:
+                clinical_messages.append(
+                    f"Diastolic Blood Pressure ({val} mmHg) is below viable coronary perfusion threshold (< 40 mmHg). "
+                    f"Permitted range: 40-160 mmHg."
+                )
+            elif "less_than" in err_type:
+                clinical_messages.append(
+                    f"Diastolic Blood Pressure ({val} mmHg) exceeds acute intracranial vascular tolerance (> 160 mmHg). "
+                    f"Permitted range: 40-160 mmHg."
+                )
+            else:
+                clinical_messages.append(f"Diastolic Blood Pressure: {error.get('msg')} (entered: {val}). Valid range: 40-160 mmHg.")
+
+        elif field == "serum_creatinine_mg_dl":
+            if "greater_than" in err_type:
+                clinical_messages.append(
+                    f"Serum Creatinine ({val} mg/dL) is below physiological muscle turnover levels (< 0.1 mg/dL). "
+                    f"Permitted range: 0.1-25.0 mg/dL."
+                )
+            elif "less_than" in err_type:
+                clinical_messages.append(
+                    f"Serum Creatinine ({val} mg/dL) indicates end-stage anuric renal failure (> 25.0 mg/dL) requiring emergency dialysis. "
+                    f"Permitted range: 0.1-25.0 mg/dL."
+                )
+            else:
+                clinical_messages.append(f"Serum Creatinine: {error.get('msg')} (entered: {val}). Valid range: 0.1-25.0 mg/dL.")
+
+        elif field == "body_mass_index":
+            clinical_messages.append(
+                f"Body Mass Index ({val} kg/m²) is outside the viable assessment range (10.0-90.0 kg/m²). "
+                f"Please verify patient height and weight."
+            )
+
+        elif field == "age_years":
+            clinical_messages.append(
+                f"Age ({val} years) is outside the calibrated adult assessment scope (18-100 years)."
+            )
+
+        else:
+            clinical_messages.append(
+                f"{field.replace('_', ' ').title()}: {error.get('msg')} (entered value: {val})."
+            )
+
+    return "\n\n".join(clinical_messages)
+
+
 def _map_ckd(raw_inputs: Dict[str, Any]) -> RawMappingResult:
     try:
         payload = CKDRawInput(**raw_inputs)
     except ValidationError as ex:
-        raise ValueError(ex.json()) from ex
+        raise ValueError(format_clinical_validation_error(ex)) from ex
 
     meds = POPULATION_MEDIANS.get("ckd", {})
     sys_bp = payload.systolic_bp_mmhg or meds.get("systolic_bp_mmhg", 120.0)
@@ -258,7 +345,7 @@ def _map_hypertension(raw_inputs: Dict[str, Any]) -> RawMappingResult:
     try:
         payload = HypertensionRawInput(**raw_inputs)
     except ValidationError as ex:
-        raise ValueError(ex.json()) from ex
+        raise ValueError(format_clinical_validation_error(ex)) from ex
 
     meds = POPULATION_MEDIANS.get("hypertension", {})
     sys_bp = payload.systolic_bp_mmhg or meds.get("systolic_bp_mmhg", 128.0)
@@ -307,7 +394,7 @@ def _map_diabetes(raw_inputs: Dict[str, Any]) -> RawMappingResult:
     try:
         payload = DiabetesRawInput(**raw_inputs)
     except ValidationError as ex:
-        raise ValueError(ex.json()) from ex
+        raise ValueError(format_clinical_validation_error(ex)) from ex
 
     meds = POPULATION_MEDIANS.get("diabetes", {})
     glucose = payload.fasting_glucose_mg_dl or meds.get("fasting_glucose_mg_dl", 117.0)

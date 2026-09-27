@@ -1,3 +1,10 @@
+import os
+import sys
+
+# Globally prevent Python from writing .pyc files or creating __pycache__ directories
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query
 from datetime import datetime, timezone
@@ -24,6 +31,7 @@ from backend.rules import (
     assess_meal_deviation,
     build_calibration_context,
     build_plan,
+    calibrate_disease_risk,
     classify_risk_level,
 )
 from backend.schemas import (
@@ -234,7 +242,8 @@ def predict_risk(req: PredictRiskRequest) -> PredictRiskResponse:
 def predict_risk_raw(req: PredictRiskRawRequest) -> PredictRiskRawResponse:
     try:
         mapped = map_raw_payload(req.disease, req.raw_inputs)
-        pred, score, model_name = registry.predict(req.disease, mapped.transformed_features)
+        pred, raw_score, model_name = registry.predict(req.disease, mapped.transformed_features)
+        score = calibrate_disease_risk(req.disease, raw_score, req.raw_inputs)
     except ValueError as ex:
         raise HTTPException(status_code=400, detail=str(ex)) from ex
 

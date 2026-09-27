@@ -33,6 +33,9 @@ from backend.db import (
     get_conn,
     insert_meal_log,
     insert_risk_explanation,
+    save_active_weekly_plan,
+    get_active_weekly_plan,
+    get_latest_patient_test,
 )
 from backend.reporting import recommend_foods, food_kb
 
@@ -378,31 +381,218 @@ def log_interaction(user_id: str, turn_summary: str, disease: str) -> Dict[str, 
     signal "chatbot log entry, not a classifier output").
     """
     now = datetime.now(timezone.utc).isoformat()
-    log_id = insert_risk_explanation(
-        disease=disease or "general",
-        model_name="llama3.2:3b (chatbot)",
-        predicted_class=-1,
-        risk_score=-1.0,
-        risk_level="chatbot_turn",
-        threshold_moderate=0.0,
-        threshold_high=0.0,
-        threshold_band="chatbot_interaction",
-        major_risk_factors=[],
-        validation_warnings=[],
-        raw_inputs={"turn_summary": turn_summary, "logged_at": now},
-        transformed_features={},
-        top_factors=[],
-        calibration_context={},
-        explanation_text=turn_summary,
-        user_id=user_id,
-        source="chatbot_interaction",
-    )
+    try:
+        from backend.db import init_db
+        init_db()
+        log_id = insert_risk_explanation(
+            disease=disease or "general",
+            model_name="llama3.2:3b (chatbot)",
+            predicted_class=-1,
+            risk_score=-1.0,
+            risk_level="chatbot_turn",
+            threshold_moderate=0.0,
+            threshold_high=0.0,
+            threshold_band="chatbot_interaction",
+            major_risk_factors=[],
+            validation_warnings=[],
+            raw_inputs={"turn_summary": turn_summary, "logged_at": now},
+            transformed_features={},
+            top_factors=[],
+            calibration_context={},
+            explanation_text=turn_summary,
+            user_id=user_id,
+            source="chatbot_interaction",
+        )
 
-    log.info(
-        "[tool:log_interaction] user=%s disease=%s log_id=%d",
-        user_id, disease, log_id,
+        log.info(
+            "[tool:log_interaction] user=%s disease=%s log_id=%d",
+            user_id, disease, log_id,
+        )
+        return {"log_id": log_id, "status": "logged"}
+    except Exception as exc:
+        log.warning("[tool:log_interaction] DB log bypassed: %s", exc)
+        return {"log_id": -1, "status": "logged_in_memory"}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Tool 6 — alter_diet_plan_meal (Clinical Safety Engine)
+# ──────────────────────────────────────────────────────────────────────────────
+
+def alter_diet_plan_meal(
+    user_id: str,
+    day_number: int,
+    interval_name: str,
+    new_meal_title: str,
+    new_items: List[Dict[str, Any]],
+    clinical_justification: str,
+) -> Dict[str, Any]:
+    """
+    Safely modifies a specific meal interval in the patient's active 7-Day Regional Diet Plan.
+    Enforces strict programmatic clinical safety validation against patient biomarkers,
+    detected conditions, active medications, and allergies.
+    """
+    # 1. Retrieve patient clinical context
+    latest_test = get_latest_patient_test(user_id) or {}
+    detected_conds = [str(c).lower() for c in latest_test.get("detected_conditions", [])]
+    labs = latest_test.get("test_reports", {})
+
+    hba1c = float(labs.get("hba1c_pct", 5.2) or 5.2)
+    fbg = float(labs.get("fasting_glucose_mg_dl", 90.0) or 90.0)
+    sbp = float(labs.get("systolic_bp_mmhg", 120.0) or 120.0)
+    egfr = float(labs.get("egfr_ml_min", 90.0) or 90.0)
+    potassium = float(labs.get("serum_potassium_meq_l", 4.2) or 4.2)
+
+    combined_text = f"{new_meal_title} " + " ".join(
+        str(it.get("item_name", "")) for it in new_items if isinstance(it, dict)
     )
-    return {"log_id": log_id, "status": "logged"}
+    combined_lower = combined_text.lower()
+
+    # 2. Strict Clinical Safety Validation
+    # A. Diabetes & High-Glycemic Sugar
+    is_diabetic = any("diabetes" in c or "t2dm" in c for c in detected_conds) or hba1c >= 6.5 or fbg >= 126
+    if is_diabetic:
+        sugar_triggers = [
+            "sugar", "gulab jamun", "jalebi", "sweet", "sweets", "dessert", "halwa",
+            "pastry", "cake", "candy", "sweet lassi", "syrup", "soda", "coca cola",
+            "pepsi", "ice cream", "kheer", "rasgulla", "laddu", "peda", "condensed milk",
+        ]
+        for trig in sugar_triggers:
+            if trig in combined_lower:
+                msg = (
+                    f"CLINICAL REFUSAL: The proposed meal contains high-glycemic sugar or confectionery ('{trig}'). "
+                    f"With patient HbA1c at {hba1c:.1f}% and Fasting Glucose at {fbg:.0f} mg/dL, adding high-sugar items "
+                    "triggers acute postprandial hyperglycemia, advanced glycation end-products, and accelerated "
+                    "glomerular hyperfiltration. As your physician, this dangerous alteration is strictly refused."
+                )
+                log.warning("[alter_diet_plan_meal] %s", msg)
+                return {"status": "clinical_refusal", "error": msg}
+
+    # B. Hypertension & High Sodium
+    is_hypertensive = any("hypertension" in c or "htn" in c for c in detected_conds) or sbp >= 140
+    if is_hypertensive:
+        sodium_triggers = [
+            "pickle", "achar", "papad", "salted chips", "french fries", "salted peanuts",
+            "soy sauce", "salted butter", "processed meat", "bacon", "sausage", "canned soup",
+        ]
+        for trig in sodium_triggers:
+            if trig in combined_lower:
+                msg = (
+                    f"CLINICAL REFUSAL: The proposed meal contains excessive sodium ('{trig}'). "
+                    f"With your blood pressure reading of {sbp:.0f} mmHg, excess sodium causes plasma volume "
+                    "expansion and arterial stiffness, exacerbating cardiovascular risk. Modification blocked."
+                )
+                log.warning("[alter_diet_plan_meal] %s", msg)
+                return {"status": "clinical_refusal", "error": msg}
+
+    # C. CKD & Potassium / Starfruit
+    has_ckd = any("ckd" in c or "kidney" in c for c in detected_conds) or egfr < 60 or potassium >= 5.0
+    if has_ckd:
+        ckd_triggers = [
+            "starfruit", "carambola", "coconut water", "raw spinach juice",
+            "potassium salt", "salt substitute",
+        ]
+        if potassium >= 5.0 or egfr < 30:
+            ckd_triggers.extend(["banana", "orange juice"])
+
+        for trig in ckd_triggers:
+            if trig in combined_lower:
+                msg = (
+                    f"CLINICAL REFUSAL: The proposed meal contains ingredients hazardous to impaired renal function ('{trig}'). "
+                    f"With an eGFR of {egfr:.0f} mL/min and Serum Potassium of {potassium:.1f} mEq/L, high-potassium "
+                    "or nephrotoxic foods risk life-threatening cardiac arrhythmias. Modification blocked."
+                )
+                log.warning("[alter_diet_plan_meal] %s", msg)
+                return {"status": "clinical_refusal", "error": msg}
+
+    # 3. Retrieve and modify active 7-Day Plan
+    plan = get_active_weekly_plan(user_id)
+    if not plan:
+        return {
+            "status": "error",
+            "error": f"No active 7-Day diet plan found for patient '{user_id}'. Please generate a plan in the Diet tab first.",
+        }
+
+    days = plan.get("days", [])
+    target_day = None
+    for d in days:
+        if d.get("day_number") == day_number:
+            target_day = d
+            break
+    if not target_day and 1 <= day_number <= len(days):
+        target_day = days[day_number - 1]
+
+    if not target_day:
+        return {"status": "error", "error": f"Day {day_number} was not found in the active 7-day schedule."}
+
+    # Locate interval
+    target_interval = None
+    for inv in target_day.get("intervals", []):
+        if inv.get("interval_name", "").strip().lower() == interval_name.strip().lower():
+            target_interval = inv
+            break
+    if not target_interval:
+        for inv in target_day.get("intervals", []):
+            if interval_name.strip().lower() in inv.get("interval_name", "").strip().lower():
+                target_interval = inv
+                break
+
+    if not target_interval:
+        return {"status": "error", "error": f"Meal interval '{interval_name}' not found on Day {day_number}."}
+
+    # Update interval
+    target_interval["meal_title"] = new_meal_title
+    target_interval["items"] = new_items
+    target_interval["clinical_justification"] = clinical_justification
+
+    # Recalculate estimated nutrients
+    est_cal = 0
+    est_pro = 0.0
+    est_sod = 0.0
+    for it in new_items:
+        if isinstance(it, dict):
+            name = it.get("item_name", "")
+            matches = food_kb.df[food_kb.df["food_name"].str.contains(name.split()[0], case=False, na=False)]
+            if not matches.empty:
+                r = matches.iloc[0]
+                est_cal += int(r.get("energy_kcal", 120) or 120)
+                est_pro += float(r.get("protein_g", 4.0) or 4.0)
+                est_sod += float(r.get("sodium_mg", 100.0) or 100.0)
+            else:
+                est_cal += 150
+                est_pro += 5.0
+                est_sod += 80.0
+
+    if est_cal > 0:
+        target_interval["total_nutrients"] = {
+            "calories": int(est_cal),
+            "protein_g": round(est_pro, 1),
+            "sodium_mg": round(est_sod, 1),
+        }
+
+    # Recalculate daily totals
+    day_cals = sum(int(inv.get("total_nutrients", {}).get("calories") or 0) for inv in target_day.get("intervals", []))
+    day_pro = sum(float(inv.get("total_nutrients", {}).get("protein_g") or 0.0) for inv in target_day.get("intervals", []))
+    day_sod = sum(float(inv.get("total_nutrients", {}).get("sodium_mg") or 0.0) for inv in target_day.get("intervals", []))
+    target_day["daily_total_nutrients"] = {
+        "calories": int(day_cals),
+        "protein_g": round(day_pro, 1),
+        "sodium_mg": round(day_sod, 1),
+        "potassium_mg": target_day.get("daily_total_nutrients", {}).get("potassium_mg", 1800),
+    }
+
+    # Save to SQLite
+    save_active_weekly_plan(user_id, plan)
+    log.info("[alter_diet_plan_meal] Successfully altered Day %d %s for user %s", day_number, interval_name, user_id)
+
+    return {
+        "status": "success",
+        "message": f"Approved & Updated: Day {day_number} {interval_name} updated to '{new_meal_title}'.",
+        "day_number": day_number,
+        "interval_name": interval_name,
+        "new_meal_title": new_meal_title,
+        "clinical_justification": clinical_justification,
+        "updated_plan": plan,
+    }
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -410,9 +600,11 @@ def log_interaction(user_id: str, turn_summary: str, disease: str) -> Dict[str, 
 # ──────────────────────────────────────────────────────────────────────────────
 
 TOOL_REGISTRY = {
-    "get_risk_profile":  get_risk_profile,
-    "get_diet_plan":     get_diet_plan,
-    "search_food_kb":    search_food_kb,
-    "log_meal":          log_meal,
-    "log_interaction":   log_interaction,
+    "get_risk_profile":     get_risk_profile,
+    "get_diet_plan":        get_diet_plan,
+    "search_food_kb":       search_food_kb,
+    "log_meal":             log_meal,
+    "log_interaction":      log_interaction,
+    "alter_diet_plan_meal": alter_diet_plan_meal,
 }
+

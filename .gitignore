@@ -5,9 +5,6 @@ __pycache__/
 
 # Tooling and IDE caches
 .pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.ipynb_checkpoints/
 .vscode/
 .idea/
 
@@ -15,7 +12,6 @@ __pycache__/
 .venv/
 venv/
 env/
-ENV/
 
 # OS and filesystem noise
 .DS_Store
@@ -26,31 +22,22 @@ desktop.ini
 *.db
 *.sqlite
 *.sqlite3
-app_data.db
+Nutriloop_Data/
 
 # Logs and runtime artifacts
 *.log
-tmp/
-temp/
 
 # Environment variables and secrets
 .env
 .env.*
 !.env.example
 
-# Large binary archives and raw data dumps
+# Large binary archives
 *.zip
 *.tar.gz
-*.rar
-*.7z
-*.XPT
-*.xpt
-*.sas7bdat
 
 # Packaging and distribution
 build/
 dist/
 *.egg-info/
-node_modules/
 datasets/preprocessed/
-datasets/raw/

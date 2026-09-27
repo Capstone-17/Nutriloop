@@ -19,3 +19,7 @@ joblib
 # Datasets & Visualization
 ucimlrepo
 matplotlib
+
+# Desktop GUI & Standalone Packaging
+pywebview
+pyinstaller
