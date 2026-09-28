@@ -111,6 +111,10 @@ Before any deployment claim, resolve applicable CDSCO classification/licensing a
 - DECIDE-AI, early-stage live evaluation of AI decision support: https://www.nature.com/articles/s41591-022-01772-9
 - TRIPOD+AI, reporting clinical prediction model studies: https://www.bmj.com/content/385/bmj-2023-078378
 
+## Current CKD validation focus
+
+CKD was selected as the first disease to scope. A planning-only [CKD intended-use and validation protocol draft](CKD_PROTOCOL_DRAFT.md) records the source-code evidence, unresolved intended-use decisions, and proposed gated evaluation sequence. The target population, use, outcome, horizon, reference standard, and acceptance criteria remain unapproved; no external patient data should be accessed until these are frozen with clinical, statistical, data-governance, and ethics review.
+
 ## Current decision
 
 **Do not use this desktop app with real patient information or to guide care.** Continue only synthetic software checks and clinical-content review until the blocking findings are resolved. Gates 1–6 remain open; real-patient evaluation cannot begin until appropriate oversight, cohort access, protocol, and regulatory review are in place.
