@@ -42,8 +42,9 @@ class PredictRiskRequest(BaseModel):
 class PredictRiskResponse(BaseModel):
     disease: str
     predicted_class: int
-    risk_score: float
-    risk_level: Literal["low", "moderate", "high"]
+    risk_score: float = Field(description="Uncalibrated prototype score; not a clinical probability or validated risk estimate.")
+    risk_score_status: Literal["uncalibrated_research_prototype"] = "uncalibrated_research_prototype"
+    risk_level: Literal["low", "moderate", "high"] = Field(description="Engineering threshold band; not a clinically validated category.")
     threshold_used: float
     thresholds: Dict[str, float] = Field(default_factory=dict)
     threshold_band: str = "below_moderate"
@@ -129,7 +130,7 @@ class RiskExplanationLogRecord(BaseModel):
     disease: str
     model_name: str
     predicted_class: int
-    risk_score: float
+    risk_score: float = Field(description="Uncalibrated prototype score; not a clinical probability or validated risk estimate.")
     risk_level: str
     thresholds: Dict[str, float] = Field(default_factory=dict)
     threshold_band: str
@@ -208,8 +209,9 @@ class RiskReportResponse(BaseModel):
     disease: str
     diseases: List[str] = Field(default_factory=list)
     predicted_class: int
-    risk_score: float
-    risk_level: Literal["low", "moderate", "high"]
+    risk_score: float = Field(description="Uncalibrated prototype score; not a clinical probability or validated risk estimate.")
+    risk_score_status: Literal["uncalibrated_research_prototype"] = "uncalibrated_research_prototype"
+    risk_level: Literal["low", "moderate", "high"] = Field(description="Engineering threshold band; not a clinically validated category.")
     model_name: str
     thresholds: Dict[str, float]
     top_factors: List[Dict[str, Any]]

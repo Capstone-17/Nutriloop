@@ -4,6 +4,8 @@
 
 Automated CKD, blood-pressure, and glucose findings are labeled as rule-based flags, not diagnoses. A negative flag does not rule out disease. The diet engine still uses some single-value heuristics to alter its prototype targets; those targets are not clinically validated or safe to use for an individual. See the [CKD validation protocol](docs/clinical_validation/CKD_PROTOCOL_DRAFT.md) and [handoff](HANDOFF_README.md).
 
+The three disease score cards display an uncalibrated numeric score without a percent sign or low/moderate/high category. Detailed score panels suppress the prior action recommendations and identify the result as unvalidated. API schemas label `risk_score_status` as `uncalibrated_research_prototype`; these scores are not probabilities or clinical risk estimates.
+
 ### Precision Clinical Nutrition & Multi-Disease Risk Intelligence Platform
 
 [![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11-3776AB?logo=python&logoColor=white)](https://python.org)

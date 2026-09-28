@@ -23,6 +23,13 @@
 - Critical remaining issue: the same single-reading booleans still select CKD/HTN/diabetes-specific nutrition targets internally. This iteration corrects wording only. Confirmed diagnoses are not separately collected, those targets are unvalidated, and patient use remains prohibited.
 - Verification: Python compilation and `scripts/test_diet_accuracy.py` passed, including checks that single-value CKD/BP/diabetes outputs remain explicitly non-diagnostic and generated meal-plan notes carry the prototype disclaimer. No patient data or external clinical data used.
 
+## Completed latest iteration — uncalibrated score display
+
+- Changed all three GUI score cards to label outputs as research prototype signals; scores render as raw three-decimal values without percent signs or low/moderate/high bands.
+- Detailed panels now show signal factors as unvalidated and suppress the old individualized action recommendations. API response schemas for risk predictions/reports document `risk_score_status=uncalibrated_research_prototype` and say threshold bands are engineering categories only.
+- This is a presentation/API-contract safeguard. Model and heuristic score generation, disease-specific thresholds, and the legacy risk explanation content in other consumers remain unvalidated. No accuracy or clinical-performance claim follows from this change.
+- Verification: JS syntax and Python schema compilation passed; API schema metadata checks confirmed the uncalibrated status/descriptions; synthetic diet and NHANES mapping regression checks passed. No patient data used.
+
 ## Goal and working rule
 
 Work toward a defensible technical and clinical evaluation for CKD, hypertension, and type 2 diabetes. After each iteration, update the main README with a concise explanation and direct links, update this handoff with evidence/open decisions, and commit/push the finished iteration to `kevivt`.

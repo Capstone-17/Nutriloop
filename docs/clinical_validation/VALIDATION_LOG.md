@@ -164,3 +164,11 @@ KDIGO 2024 practice point 1.1.3.2 says not to infer chronicity from one abnormal
 Synthetic regression assertions confirm that the current example CKD/BP/glucose findings carry non-diagnostic wording and that generated diet notes include the prototype disclaimer. `py_compile` and `scripts/test_diet_accuracy.py` passed after the change. No patient data, clinical cohort, or human evaluation was used.
 
 This is a wording safeguard only. `derive_clinical_targets()` still uses its single-value heuristic booleans internally to select CKD-, hypertension-, and diabetes-specific nutrient targets, and the app has no separate clinician-confirmed diagnosis field or chronicity evidence. Until that logic is redesigned and reviewed, output targets must not be used for individual care. Official reference: [KDIGO 2024 CKD guideline](https://kdigo.org/guidelines/ckd-evaluation-and-management/).
+
+## Three-disease uncalibrated-score display iteration
+
+Reviewed the GUI's disease-score flow for CKD, hypertension, and diabetes. It had multiplied the returned score by 100, printed a percent sign, assigned arbitrary low/moderate/high labels, and shown disease-specific recommendations. Updated the GUI to render a raw three-decimal prototype score as uncalibrated, remove risk bands/percentage semantics, label feature output as non-clinical, and replace individualized score-based actions with a research-only warning. Updated the API response schemas so `risk_score_status` is `uncalibrated_research_prototype`, the score is described as not a probability, and `risk_level` is described as an engineering threshold band.
+
+Validation: JavaScript syntax check and Python compilation passed; schema inspection confirmed the status and descriptions; prior synthetic diet/mapping regressions continue to pass. No patient data or clinical cohort used.
+
+Limits: this only corrects the primary GUI and response contract. The underlying CKD rules score is still not responsive to classifier probabilities in the prior synthetic probe, and other consumers of risk levels/explanations may still show categories or advice. Model weights, thresholds, class predictions, feature factors, and disease-specific recommendations remain unvalidated. Do not use for care.

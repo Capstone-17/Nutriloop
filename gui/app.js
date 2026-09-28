@@ -604,7 +604,7 @@ function renderExplainability(dis) {
   if (!currentAssessmentData || !currentAssessmentData[dis]) {
     container.innerHTML = `
       <div style="color: var(--text-subtle); font-size: 12px; padding: 16px; text-align: center;">
-        Awaiting patient evaluation. Run assessment to view tailored clinical explanations and actionable recommendations.
+        Research-only prototype output. Do not enter real patient data or use results to guide care.
       </div>`;
     return;
   }
@@ -620,74 +620,23 @@ function renderExplainability(dis) {
   }
 
   const exp = item.explanation || {};
-  const level = (item.risk_level || "low").toLowerCase();
-  const pct = ((item.risk_score || 0) * 100).toFixed(1);
+  const scoreText = Number(item.risk_score || 0).toFixed(3);
   const dName = exp.disease_name || (dis === "ckd" ? "Chronic Kidney Disease" : dis === "hypertension" ? "Hypertension" : "Type 2 Diabetes");
-
-  let whyTitle = exp.why_title;
-  let actionTitle = exp.action_title;
-  let whyReasons = exp.why_reasons || [];
-  let actionSteps = exp.action_steps || [];
-
-  if (!whyTitle) {
-    if (level === "high") {
-      whyTitle = "Why Is It High? (Primary Clinical Causes)";
-      actionTitle = "What To Do (Urgent Clinical & Dietary Actions)";
-    } else if (level === "moderate") {
-      whyTitle = "Why Is It Moderate? (Key Contributing Factors)";
-      actionTitle = "How To Reduce It (Targeted Corrective Steps)";
-    } else {
-      whyTitle = "What Is Working Well (Positive Health Signals)";
-      actionTitle = "Steps To Preserve It (Daily Habits to Maintain Health)";
-    }
-  }
-
-  if (!whyReasons || whyReasons.length === 0) {
-    whyReasons = exp.risk_drivers && exp.risk_drivers.length > 0 ? exp.risk_drivers : [exp.clinical_summary || `Assessed risk score is ${pct}%.`];
-  }
-  if (!actionSteps || actionSteps.length === 0) {
-    actionSteps = [
-      "Review lab biomarker values regularly with your healthcare provider.",
-      "Follow personalized nutritional guidance aligned with your daily metabolic targets."
-    ];
-  }
-
-  const statusIcon = level === "high" ? "🔴" : level === "moderate" ? "🟡" : "🟢";
-  const whyIcon = level === "high" ? "🔍" : level === "moderate" ? "🔍" : "⭐";
-  const actionIcon = level === "high" ? "🚨" : level === "moderate" ? "📉" : "🌿";
-
+  const whyReasons = exp.why_reasons || exp.risk_drivers || [];
   const whyReasonsHtml = whyReasons.map((r) => `<li>${r}</li>`).join("");
-  const actionStepsHtml = actionSteps.map((s) => `<li>${s}</li>`).join("");
 
   container.innerHTML = `
-    <!-- Top Disease & Status Summary Bar -->
     <div class="explain-meta-bar">
-      <div class="explain-disease-title">
-        ${dName}
-      </div>
-      <span class="risk-badge badge-${level}">
-        ${statusIcon} ${level.toUpperCase()} RISK (${pct}%)
-      </span>
+      <div class="explain-disease-title">${dName}</div>
+      <span class="risk-badge">UNVALIDATED SCORE: ${scoreText}</span>
     </div>
-
-    <!-- 1. Result Explanation: Why is it so / What is working well -->
-    <div class="explain-section level-${level}-why">
-      <div class="explain-section-header">
-        <span>${whyIcon} ${whyTitle}</span>
-      </div>
-      <ul class="explain-list">
-        ${whyReasonsHtml}
-      </ul>
+    <div class="explain-section">
+      <div class="explain-section-header">Prototype signal factors (not clinical explanations)</div>
+      ${whyReasonsHtml ? `<ul class="explain-list">${whyReasonsHtml}</ul>` : "<p>No validated explanation is available.</p>"}
     </div>
-
-    <!-- 2. Action Plan: What to do / How to reduce it / Steps to preserve it -->
-    <div class="explain-section level-${level}-action">
-      <div class="explain-section-header">
-        <span>${actionIcon} ${actionTitle}</span>
-      </div>
-      <ul class="explain-list">
-        ${actionStepsHtml}
-      </ul>
+    <div class="explain-section">
+      <div class="explain-section-header">Not for diagnosis or treatment</div>
+      <p>This uncalibrated prototype score is not a probability and has not been clinically validated. Do not use it or its recommendations to make medical decisions.</p>
     </div>
   `;
 }
@@ -704,14 +653,10 @@ function updateRiskMeter(disease, data) {
     return;
   }
 
-  const scorePct = (data.risk_score * 100).toFixed(1);
-  scoreNum.textContent = `${scorePct}%`;
-
-  const level = (data.risk_level || "low").toLowerCase();
-  card.className = `risk-meter-card ${level}${activeExplainDisease === disease ? " active-meter" : ""}`;
-
-  badge.className = `risk-badge badge-${level}`;
-  badge.textContent = level.toUpperCase();
+  scoreNum.textContent = Number(data.risk_score).toFixed(3);
+  card.className = `risk-meter-card${activeExplainDisease === disease ? " active-meter" : ""}`;
+  badge.className = "risk-badge";
+  badge.textContent = "UNVALIDATED";
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
