@@ -1,52 +1,63 @@
-# Project Handoff — CKD Validation
+# Project Handoff — Three-Disease Validation
 
 - **Updated:** 2026-09-28
 - **Repository branch:** `kevivt`
-- **Last completed iteration:** CKD protocol draft, commit `b16d1ff` (parent iteration `f9abf61`)
-- **Current status:** Research planning only; not clinically validated and not approved for patient use.
+- **Last completed iterations:** CKD protocol draft (`b16d1ff`), three-disease audit, and source-level mapping fixes in this iteration
+- **Current status:** Research planning and static source audit only; no model is clinically validated or approved for patient use.
 
 ## Goal and working rule
 
-Work toward a defensible CKD evaluation while treating clinical safety, data governance, and reproducibility as core engineering requirements. After each iteration, update the main README with a short explanation and direct links, update this handoff with evidence and open decisions, then commit/push the finished iteration to `kevivt`.
+Work toward a defensible technical and clinical evaluation for CKD, hypertension, and type 2 diabetes. After each iteration, update the main README with a concise explanation and direct links, update this handoff with evidence/open decisions, and commit/push the finished iteration to `kevivt`.
 
-## Completed in this iteration
+## Completed this iteration
 
-- Selected CKD as the first disease branch to scope.
-- Added [CKD Intended-Use and Validation Protocol — Draft](docs/clinical_validation/CKD_PROTOCOL_DRAFT.md).
-- Updated the [clinical validation log](docs/clinical_validation/VALIDATION_LOG.md) and the README to link the CKD draft.
-- Confirmed the checked-in pipeline references UCI CKD dataset ID 336 and an optional local expanded file. The repository branch does not contain the raw CKD files or expected preprocessed train/test CSVs.
-- The UCI source describes 400 records, 24 input features, missing values, and `ckd` / `notckd` labels. The checked-in model schema has 29 fields after feature engineering. The use and provenance of any expanded data remain unverified.
-- Source review found preprocessing transforms fitted before row splitting, followed by CV on an already SMOTE-resampled training table. Patient/site identifiers and group separation are not evident in the checked-in feature schema.
-- The previous synthetic probe found the CKD rule score ignored changes in the raw classifier score; therefore its displayed percentage is not established as a calibrated probability.
+- Added [Three-Disease Pipeline Audit](docs/clinical_validation/THREE_DISEASE_PIPELINE_AUDIT.md) and linked it from the README.
+- Confirmed the UCI CKD metadata describes a 400-row source dataset with 24 input fields, while the deployed CKD feature schema is 28 fields (24 source fields plus four engineered fields). The CKD protocol draft's earlier count of 29 was corrected.
+- Fixed the hypertension mapping leak: use NHANES `BPQ050A` for `BPMeds` when present; otherwise leave missing. It no longer copies target `BPQ020`.
+- Found incompatible outcome construction in the pooled hypertension and diabetes loaders: cohort-specific labels are concatenated under one target name without evidence that definitions are equivalent.
+- Fixed the diabetes target mapping so NHANES borderline/nonresponse codes remain missing and are excluded by target-row `dropna`, rather than labeled negative.
+- Confirmed shared evaluation defects in the checked-in code: imputers/scalers fit before splitting, cross-validation runs on the already SMOTE-resampled table, calibration uses the resampled distribution, and the “best” threshold is selected on held-out test labels.
+- Confirmed expected raw/preprocessed train/test files are absent from the target branch; a reproducible retraining or clinical performance result cannot be generated from this branch alone. Neither model was retrained after mapping fixes.
+
+## Disease-level status
+
+| Disease | Status | Main blockers |
+|---|---|---|
+| CKD | Protocol draft; target/outcome decision pending | Training files and label provenance absent; displayed score heuristic ignores classifier output; preprocessing/evaluation leakage. |
+| Hypertension | Source mapping fix applied; retraining pending | Source labels differ; BRFSS-derived file absent; threshold tuned on test; provided local merged NHANES extract lacks `BPQ050A`; raw inputs are absent from target branch. |
+| Type 2 diabetes | Source mapping fix applied; retraining pending | Pima/NHANES/BRFSS labels differ; BRFSS-derived file absent; threshold tuned on test. |
 
 ## Evidence and limits
 
-Evidence currently consists of source inspection, the deterministic synthetic behavior probe, and metadata/code present in this branch. No independent clinical cohort, patient-level validation, external-site evaluation, prospective study, or clinician sign-off has been performed. No automated tests were run for this documentation-only iteration; whitespace checks passed.
+Evidence consists of checked-in source inspection, the prior deterministic synthetic CKD behavior probe, and public dataset metadata. No independent clinical cohort, patient-level validation, external-site evaluation, prospective study, or clinician sign-off has been performed. Two focused `unittest` regression checks for NHANES mapping passed; `git diff --check` passed. Full preprocessing/training was not run because source cohorts are absent from this branch.
 
 - [UCI CKD dataset metadata](https://archive.ics.uci.edu/dataset/336/chronic%2Bkidney%2Bdisease)
+- [CDC NHANES 2017–2018 questionnaire variable list](https://wwwn.cdc.gov/nchs/nhanes/search/variablelist.aspx?Component=Questionnaire&Cycle=2017-2018)
+- [CDC BRFSS 2023 data and documentation](https://www.cdc.gov/brfss/annual_data/annual_2023.html)
 - [KDIGO 2024 CKD guideline](https://kdigo.org/guidelines/ckd-evaluation-and-management/)
 - [TRIPOD+AI reporting guidance](https://www.bmj.com/content/385/bmj-2023-078378)
 - [ICMR ethics guidance](https://www.icmr.gov.in/post/handbook-on-national-ethical-guidelines-for-biomedical-and-health-research-involving-human-participants-2018)
 
 ## Decisions still open
 
-1. What is the model's target: current CKD status at an encounter, future CKD progression, kidney failure by a defined horizon, or research demonstration only?
-2. What intended population, care setting, and user should the eventual evaluation represent?
-3. What independent reference standard, index date, and feature timing will define the outcome?
-4. What sensitivity and specificity requirements, confidence-interval precision, and action threshold will the nephrologist and biostatistician set before evaluation?
-5. What data owner, ethics review, privacy controls, and consent/waiver process will govern any human-data study?
+1. CKD target: current CKD status, future progression, kidney failure over a defined horizon, or research demo only?
+2. Intended population, clinical setting, user, and action for each disease?
+3. Independent reference standard, index date, feature timing, and exclusion criteria for each target?
+4. Clinician/biostatistician-approved sensitivity, specificity, confidence-interval precision, and threshold acceptance criteria?
+5. Source cohort, patient/site identifiers, dataset access, ethics/privacy review, and consent/waiver process?
 
-The target/outcome choice is the immediate dependency. Until it is set, do not describe this model as predicting future risk and do not tune its threshold against a clinical dataset.
+The CKD target/outcome choice is the immediate dependency. The other two disease protocols also need their targets frozen before any clinical evaluation. Do not use real patient data or claim future-risk performance while these items are unresolved.
 
-## Next work after the target is chosen
+## Next work
 
-1. Trace the exact training label and reconcile UCI ID 336 with the missing expanded data; obtain versioned raw files, provenance, licenses, counts, IDs, dates, and hashes.
-2. Check duplicates, synthetic augmentation, feature timing, missingness, near-target features, and patient/site overlap.
-3. Rebuild a reproducible pipeline with transforms, calibration, resampling, and threshold selection fitted only inside development folds; keep patients grouped across partitions.
-4. Freeze an approved protocol and model before evaluation on a properly governed independent cohort.
-5. Report sensitivity at the pre-specified threshold with confidence intervals, plus specificity, PPV/NPV, prevalence, ROC-AUC, PR-AUC, calibration when probabilities are intended, missingness, subgroup performance, and confusion matrix.
-6. Proceed to silent prospective evaluation only if retrospective external validation and governance review support continuation.
+1. Trace and checksum exact training sources and outcome labels for all three disease models.
+2. Audit row counts, duplicates, synthetic augmentation, missingness, source/site/time fields, feature timing, and direct/indirect target leakage.
+3. Rebuild the hypertension model with the corrected `BPQ050A` mapping when that source field exists; otherwise retain the feature as missing and document fold-local imputation. Rebuild diabetes with borderline outcomes excluded.
+4. Rebuild a pipeline with patient grouping and all imputers, encoders, scalers, resampling, calibration, and threshold selection confined to development folds. Select threshold on development data, never on the final external test set.
+5. Freeze separate disease-specific protocols and models, then seek appropriately governed independent external cohorts.
+6. Report disease-specific sensitivity with confidence intervals at a locked threshold, specificity, PPV/NPV, prevalence, PR-AUC, ROC-AUC, confusion matrices, and calibration only where probabilities are intended.
+7. Move to silent prospective evaluation only if external validation and governance review support continuation.
 
 ## Current safety boundary
 
-Synthetic data and source-level engineering review only. Do not enter real patient data, use the displayed score to guide care, or represent the prototype as clinically validated. The CKD score semantics, “healthy / KDIGO Stage 1” wording, individualized advice, training provenance, and evaluation pipeline remain blocking items.
+Synthetic examples and source-level engineering review only. Do not enter real patient data, use the displayed scores to guide care, or represent the prototype as clinically validated. The CKD score semantics and explanations, all three source-label definitions, training provenance, post-fix model refitting, and evaluation pipeline remain blocking items.

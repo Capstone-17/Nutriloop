@@ -18,9 +18,12 @@
 
 This release has only passed source-level inspection and one deterministic synthetic-input behavior probe. No clinical performance, safety, subgroup, prospective, or external-site validation has been established. Do not enter real patient data. The report and probe are linked below; reproduce the probe after installing `requirements.txt` with `python scripts/audit_desktop_clinical_rules.py`.
 
+The source audit found a direct hypertension label leak and ambiguous pooled cohort labels. The label leak is now patched by using NHANES medication status only from its medication field when present; borderline NHANES diabetes responses are no longer treated as negatives. Two focused mapping regression checks pass, but models have not been retrained. Preprocessing, resampling, calibration, and test-set threshold leakage remain. See the [three-disease pipeline audit](docs/clinical_validation/THREE_DISEASE_PIPELINE_AUDIT.md).
+
 - [Validation log and required release gates](docs/clinical_validation/VALIDATION_LOG.md)
 - [Synthetic probe output](reports/clinical_validation/synthetic_ckd_rule_probe.json)
 - [CKD intended-use and validation protocol draft](docs/clinical_validation/CKD_PROTOCOL_DRAFT.md)
+- [Three-disease preprocessing and validation-readiness audit](docs/clinical_validation/THREE_DISEASE_PIPELINE_AUDIT.md)
 - [Project handoff: evidence, blockers, and next steps](HANDOFF_README.md)
 
 ## Table of Contents

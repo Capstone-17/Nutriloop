@@ -115,6 +115,10 @@ Before any deployment claim, resolve applicable CDSCO classification/licensing a
 
 CKD was selected as the first disease to scope. A planning-only [CKD intended-use and validation protocol draft](CKD_PROTOCOL_DRAFT.md) records the source-code evidence, unresolved intended-use decisions, and proposed gated evaluation sequence. The target population, use, outcome, horizon, reference standard, and acceptance criteria remain unapproved; no external patient data should be accessed until these are frozen with clinical, statistical, data-governance, and ethics review.
 
+## Three-disease pipeline review and mapping fixes
+
+Static inspection identified a direct hypertension label leak (`NHANES BPQ020` copied into `BPMeds`) and a diabetes-label handling issue (NHANES borderline `DIQ010=3` mapped to negative). The preprocessing code now maps `BPMeds` only from CDC medication variable `BPQ050A` when available, otherwise leaves it missing; the diabetes label now maps only explicit yes/no codes, leaving borderline and nonresponse values missing for target-row exclusion. Two focused mapping regression tests passed. These source changes have not been used to retrain or reevaluate any disease model. Shared preprocessing-before-split, CV-after-SMOTE, resampled calibration, and test-set threshold tuning remain unresolved. See [Three-Disease Pipeline Audit](THREE_DISEASE_PIPELINE_AUDIT.md).
+
 ## Current decision
 
 **Do not use this desktop app with real patient information or to guide care.** Continue only synthetic software checks and clinical-content review until the blocking findings are resolved. Gates 1–6 remain open; real-patient evaluation cannot begin until appropriate oversight, cohort access, protocol, and regulatory review are in place.
