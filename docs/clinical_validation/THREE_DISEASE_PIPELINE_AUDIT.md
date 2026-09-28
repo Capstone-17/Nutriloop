@@ -18,7 +18,7 @@ Last updated: 2026-09-28
 
 - `scripts/preprocess_data.py` checks local `datasets/raw/chronic+kidney+disease` ARFF/CSV paths, then a `med_dataset` expanded CSV, and finally fetches UCI repository dataset ID 336.
 - It maps `class` values `ckd`/`notckd` to a binary target. UCI describes 400 instances, 24 predictors, missing values, and a class field.
-- The separately inspected local RAR archive contains two 400-row ARFF copies with 248 labeled CKD, 150 labeled non-CKD, and two blank target rows each. Its `.info.txt` claims 250 CKD/150 non-CKD. Do not impute those two labels; this source discrepancy must be resolved or the unlabeled rows excluded. Field names `wbcc`/`rbcc` differ from the info file's `wc`/`rc`.
+- The local RAR archive contains 400 data lines. A corrected parser normalizes two trailing empty delimiters after `ckd` labels and excludes one malformed row with 26 populated values for 25 declared attributes. The exploratory analysis uses the remaining 399 rows (250 CKD / 149 non-CKD). The earlier “two blank labels” note was a parser error and is explicitly corrected in the [data inventory](DATA_SOURCE_INVENTORY.md). Field names `wbcc`/`rbcc` differ from the info file's `wc`/`rc`.
 - The model schema contains 28 inputs: those clinical/source fields plus four engineered features (`BP_ratio`, `pulse_pressure`, `glucose_diabetes`, `creatinine_urea_ratio`).
 - KNN/most-frequent imputers, label encoders, and MinMax scaling are fitted before the random stratified row split. SMOTE is applied to training rows, then `train_and_optimize.py` cross-validates the already-resampled table.
 

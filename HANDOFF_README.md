@@ -36,7 +36,7 @@ Work toward a defensible technical and clinical evaluation for CKD, hypertension
 ## Completed latest iteration — CKD archive contents
 
 - Inspected the local CKD RAR archive read-only with the system `tar` utility; did not extract or modify the source file.
-- Both ARFF members contain 400 records and 25 columns (24 features plus `class`): 248 labeled CKD, 150 labeled not-CKD, and two blank target labels. The accompanying info file reports 250 CKD and 150 not-CKD. The two unlabeled rows remain unknown and must not be silently assigned.
+- Correction after parser verification: both ARFF members contain 400 physical data lines. Two have an extra empty trailing delimiter after a CKD label and are normalized without changing values. One other row has 26 populated fields for 25 declared attributes and is excluded as ambiguous. The 399 rows used by the benchmark contain 250 CKD and 149 non-CKD labels. The initial “two unlabeled rows” note was caused by the earlier parser and is superseded by the corrected inventory.
 - Recorded separate SHA-256 hashes for the archive, both ARFF files, and metadata in the [Public Data Source Inventory](docs/clinical_validation/DATA_SOURCE_INVENTORY.md).
 - The ARFF fields use `wbcc`/`rbcc`; the metadata uses `wc`/`rc`. This naming mismatch must be reconciled in a documented schema mapping.
 - Updated the CKD protocol and pipeline audit with the discrepancy. No model was retrained and no metrics were produced.
@@ -47,6 +47,15 @@ Work toward a defensible technical and clinical evaluation for CKD, hypertension
 - Counted NHANES explicit binary-response rows separately from missing, refusal, and borderline rows: 6,151 hypertension and 8,709 diabetes rows in this unweighted extract. `BPQ050A` remains absent.
 - Updated both disease protocols, the three-disease source audit, README, inventory, and validation log. No imputation, model retraining, or performance evaluation was run.
 - These local-source counts do not establish representative population prevalence; source lineage and licensing remain unresolved, and the extracts are not in the branch.
+
+## Completed latest iteration — fold-local exploratory cohort benchmark
+
+- Added `scripts/evaluate_public_cohorts.py` and generated `reports/clinical_validation/exploratory_public_cohort_benchmark.json` directly from the inventoried local raw files.
+- Evaluated UCI CKD, Framingham hypertension, Pima diabetes, and NHANES self-reported diabetes separately; labels were not pooled. Compared majority-class and plain logistic-regression baselines with balanced logistic regression, balanced random forest, histogram gradient boosting, Gaussian NB, RBF SVM, KNN, stacking, and XGBoost.
+- Imputation, encoding, and scaling are fit within each training fold. No SMOTE/resampling, probability calibration, or threshold tuning is applied. Reports include fold metrics, mean ± standard deviation, per-class precision/recall/F1, sensitivity, specificity, PR-AUC, ROC-AUC, Brier score, confusion matrices, class counts, and exploratory paired Wilcoxon fold comparisons. The JSON records Python and library versions and source-file SHA-256 hashes.
+- NHANES folds use `SEQN` grouping. CKD, Framingham, and Pima files have no record identifier, so stratified row folds are used and person-level independence is explicitly unverified. No survey weights are applied.
+- Corrected CKD ARFF parsing: normalize only empty terminal delimiters; exclude the single row with one extra populated field. Both ARFF variants produce the same 399-row analysis cohort with 250 CKD / 149 non-CKD.
+- Metrics use the fixed generic 0.5 cutoff; no clinically justified operating threshold or probability calibration is established. This is internal cross-validation on small public datasets, not independent or clinical validation. The older production training pipeline still has leakage defects and was not used to create this artifact.
 
 ## Disease-level status
 
@@ -79,7 +88,7 @@ The intended target/outcome choice is open for all three diseases. Freeze each s
 
 ## Next work
 
-1. Establish provenance, license/terms, and reproducible acquisition for each locally inventoried source; inspect/extract CKD archive and fetch/join NHANES `BPQ050A` using `SEQN`.
+1. Establish provenance, license/terms, and reproducible acquisition for each locally inventoried source; fetch/join NHANES `BPQ050A` using `SEQN`.
 2. Recover or reproducibly rebuild BRFSS source tables; inspect row counts, duplicates, synthetic augmentation, missingness, source/site/time fields, feature timing, and direct/indirect target leakage.
 3. Rebuild the hypertension model with corrected `BPQ050A` mapping when available; otherwise retain the feature as missing and document fold-local imputation. Rebuild diabetes with borderline outcomes excluded.
 4. Rebuild a pipeline with patient grouping and all imputers, encoders, scalers, resampling, calibration, and threshold selection confined to development folds. Select threshold on development data, never on the final external test set.
