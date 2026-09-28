@@ -131,6 +131,21 @@ body {
   gap: 16px;
 }
 
+.prototype-warning {
+  flex: 0 0 auto;
+  padding: 8px 18px;
+  color: #fde68a;
+  background: #422006;
+  border-bottom: 1px solid #a16207;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.prototype-warning strong {
+  margin-right: 6px;
+  color: #fef3c7;
+}
+
 .status-pill {
   display: flex;
   align-items: center;

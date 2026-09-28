@@ -1,4 +1,7 @@
 # NutriMed AI (Nutriloop)
+
+> **Research prototype — not validated for clinical use.** Use synthetic inputs only. Scores, interpretations, AI text, and diet plans must not guide diagnosis, treatment, screening, triage, or patient care. See [the clinical validation log](docs/clinical_validation/VALIDATION_LOG.md) for evidence, blockers, and release gates.
+
 ### Precision Clinical Nutrition & Multi-Disease Risk Intelligence Platform
 
 [![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11-3776AB?logo=python&logoColor=white)](https://python.org)
@@ -7,9 +10,16 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Clinical Guidelines](https://img.shields.io/badge/Clinical%20Standards-KDIGO%202024%20%7C%20KDOQI%202020%20%7C%20ADA%202024%20%7C%20DASH-critical)](https://kdigo.org)
 
-**NutriMed AI (Nutriloop)** is an enterprise-grade clinical decision support and personalized medical nutrition therapy (MNT) platform. Engineered for patients managing chronic conditions—specifically **Chronic Kidney Disease (CKD)**, **Essential Hypertension (HTN)**, and **Type 2 Diabetes Mellitus (T2DM)**—the system bridges calibrated machine-learning risk intelligence with guideline-adherent dietary synthesis.
+**NutriMed AI (Nutriloop)** is a research software prototype for exploring multi-disease risk estimation and nutrition recommendations for chronic kidney disease (CKD), hypertension, and type 2 diabetes. Its model outputs, score interpretations, and recommendations have not been clinically validated; see the status and evidence below.
 
 ---
+
+## Clinical Validation Status
+
+This release has only passed source-level inspection and one deterministic synthetic-input behavior probe. No clinical performance, safety, subgroup, prospective, or external-site validation has been established. Do not enter real patient data. The report and probe are linked below; reproduce the probe after installing `requirements.txt` with `python scripts/audit_desktop_clinical_rules.py`.
+
+- [Validation log and required release gates](docs/clinical_validation/VALIDATION_LOG.md)
+- [Synthetic probe output](reports/clinical_validation/synthetic_ckd_rule_probe.json)
 
 ## Table of Contents
 1. [Core Architectural Pillars](#1-core-architectural-pillars)

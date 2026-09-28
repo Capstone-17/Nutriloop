@@ -1,0 +1,59 @@
+{
+  "validation_type": "deterministic synthetic source-behavior probe",
+  "synthetic_only": true,
+  "clinical_performance_evidence": false,
+  "generated_at_utc": "2026-09-28T05:34:32.630705+00:00",
+  "source_snapshot": "Capstone-17/6th_Sem main @ cba57d92ea7271bed8789495be6739b212d4125b",
+  "inputs": {
+    "age_years": 45,
+    "sex": "male",
+    "body_mass_index": 22.0,
+    "systolic_bp_mmhg": 115.0,
+    "diastolic_bp_mmhg": 75.0,
+    "fasting_glucose_mg_dl": 90.0,
+    "hba1c_pct": 5.2,
+    "serum_creatinine_mg_dl": 0.9,
+    "egfr_ml_min": 100.0,
+    "serum_potassium_meq_l": 4.2,
+    "serum_sodium_meq_l": 140.0
+  },
+  "probes": {
+    "ckd": {
+      "raw_classifier_score_0_01_result": 0.053,
+      "raw_classifier_score_0_99_result": 0.053,
+      "score_unchanged_when_raw_classifier_score_changes": true,
+      "first_generated_reason": "Optimal eGFR (100 mL/min): Indicates robust, healthy glomerular filtration capacity (KDIGO Stage 1).",
+      "generated_action_steps": [
+        "Stay Well-Hydrated: Drink pure water regularly throughout the day to help your kidneys flush out metabolic byproducts effortlessly.",
+        "Keep Sodium Balanced (< 2,000 mg/day): Cook primarily with fresh ingredients, herbs, and spices rather than high-sodium packaged seasonings.",
+        "Avoid Overusing NSAID Painkillers: Minimize frequent use of over-the-counter ibuprofen or naproxen, which can cause acute tubular stress.",
+        "Routine Annual Checkups: Have an annual basic metabolic panel (BMP) and urinalysis during routine wellness checkups to ensure kidneys remain healthy."
+      ]
+    },
+    "hypertension": {
+      "raw_classifier_score_0_01_result": 0.022,
+      "raw_classifier_score_0_99_result": 0.99,
+      "score_unchanged_when_raw_classifier_score_changes": false,
+      "first_generated_reason": "Optimal Blood Pressure (115/75 mmHg): Perfectly situated in the ideal AHA/ACC normotensive target (< 120/80 mmHg).",
+      "generated_action_steps": [
+        "Continue DASH-Style Nutrition: Keep enjoying meals rich in fresh vegetables, whole grains, fruits, and lean protein.",
+        "Stay Active: Maintain regular weekly cardiovascular exercise to preserve arterial wall elasticity as you age.",
+        "Preserve Healthy Weight: Keep body weight steady in the normal BMI range through balanced, mindful eating.",
+        "Routine BP Checks: Check blood pressure once every 6 months during routine visits to catch any subtle drift early."
+      ]
+    },
+    "diabetes": {
+      "raw_classifier_score_0_01_result": 0.036,
+      "raw_classifier_score_0_99_result": 0.99,
+      "score_unchanged_when_raw_classifier_score_changes": false,
+      "first_generated_reason": "Optimal Fasting Glucose (90 mg/dL): Demonstrates intact basal insulin secretion and normal hepatic glucose regulation.",
+      "generated_action_steps": [
+        "Continue Balanced Whole Foods: Build meals around unrefined complex carbohydrates, vegetables, and lean protein sources.",
+        "Limit Hidden Added Sugars: Keep sweets, sugary drinks, and processed snacks as occasional treats rather than daily staples.",
+        "Resistance Training + Walking: Strength training preserves skeletal muscle mass, which is your body's largest glucose disposal reservoir.",
+        "Annual Wellness Checkup: Get your fasting glucose and HbA1c tested once a year during routine checkups to detect subtle shifts early."
+      ]
+    }
+  },
+  "interpretation": "A source-level behavior check only. Equal CKD scores despite raw model scores 0.01 and 0.99 show that the CKD score path is driven by hand-coded rules for this input. Hypertension and diabetes scores add hand-set adjustments to the raw score and clip it; this is not evidence of empirical calibration. The probe does not measure discrimination, calibration, safety, or clinical utility."
+}
