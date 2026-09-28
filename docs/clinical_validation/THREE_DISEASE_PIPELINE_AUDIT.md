@@ -9,8 +9,8 @@ Last updated: 2026-09-28
 | Model | Declared training sources / target in code | Main validity blockers | Current status |
 |---|---|---|---|---|
 | CKD | UCI CKD dataset 336 (fallback), local ARFF/CSV, or an “expanded” CSV; target `class` mapped to CKD/not-CKD | Data files absent from target branch; possible same-encounter label/feature circularity; transforms are fit before split; CV happens after SMOTE; displayed rule score ignores classifier probability | Not reproducible / not clinically validated |
-| Hypertension | Framingham `prevalentHyp`, NHANES self-report `BPQ020`, and an unavailable BRFSS-derived table also called `prevalentHyp` | Direct label copy to `BPMeds` patched in source; definitions still differ by source; BRFSS prevalence altered; test set used to tune threshold | Mapping fix not yet retrained; other blockers remain |
-| Type 2 diabetes | Pima `Outcome`, NHANES self-report `DIQ010`, and an unavailable BRFSS-derived `diabetes` label | Outcome definitions differ; NHANES borderline responses are now left missing/excluded from the binary target; current diagnostic glucose is included among predictors for Pima; prevalence altered in BRFSS sampling; test set used to tune threshold | Label mapping corrected, model not retrained; target semantics and evaluation leakage remain |
+| Hypertension | Framingham `prevalentHyp`, NHANES self-report `BPQ020`, and an unavailable BRFSS-derived table also called `prevalentHyp` | Direct label copy to `BPMeds` patched in source; definitions still differ by source; BRFSS prevalence altered; old implementation tuned threshold on test; this was moved to training OOF in the latest iteration | Mapping fix not yet retrained; other blockers remain |
+| Type 2 diabetes | Pima `Outcome`, NHANES self-report `DIQ010`, and an unavailable BRFSS-derived `diabetes` label | Outcome definitions differ; NHANES borderline responses are now left missing/excluded from the binary target; current diagnostic glucose is included among predictors for Pima; prevalence altered in BRFSS sampling; old implementation tuned threshold on test; this was moved to training OOF in the latest iteration | Label mapping corrected, model not retrained; target semantics and evaluation leakage remain |
 
 ## CKD
 
@@ -69,7 +69,7 @@ These counts come from untracked local source extracts, not from the branch's mi
 - The training entry point reads `{disease}_train_smote.csv` and `{disease}_test.csv`; these files are absent from the branch.
 - Candidate cross-validation is run on the SMOTE-resampled training table. Synthetic neighbors can therefore be split between a fold's training and validation portions.
 - `CalibratedClassifierCV` is fit using the resampled training distribution; this alone does not establish probability calibration for the source or intended-use prevalence.
-- `optimize_thresholds(y_test, y_test_probs)` selects the “best” threshold on the held-out test labels. The same test split is then used to report the resulting metrics. Those test results are no longer an unbiased evaluation at a locked threshold.
+- **Corrected in the latest iteration:** the legacy trainer now selects its prototype threshold from out-of-fold training probabilities and evaluates the held-out test split at that fixed threshold. This prevents direct test-label threshold tuning. The training table is still pre-SMOTE-resampled before CV, and its imputation/scaling were fit before splitting, so its CV/holdout metrics remain potentially optimistic and are not treated as valid publication results.
 - The preprocessing functions fit imputers and scalers on the full combined table before splitting. All data-dependent transforms must be fit inside each training fold.
 - Random row splits do not establish patient-level independence, source independence, temporal separation, or protection from repeated records.
 - Threshold selection by macro-F1 does not encode the harms of a missed diagnosis. Clinical operating points must be set before final validation by the clinical team and statistician.
@@ -80,7 +80,7 @@ These counts come from untracked local source extracts, not from the branch's mi
 2. Preserve source and patient/site/time identifiers outside model features so cohort harmonization, grouping, and leakage checks are possible.
 3. Define a separate, clinically meaningful outcome and reference standard for each disease. Do not combine source labels until equivalence is justified.
 4. Split by patient, and hold out source/site or later time periods for external evaluation. Fit imputation, encoding, scaling, feature selection, resampling, and calibration only within development folds.
-5. Move threshold selection to development data; freeze model and threshold before evaluating held-out external data.
+5. Replace the pre-resampled input path with fold-local transforms/resampling and use cohort/record grouping; then freeze any clinician-approved threshold before external evaluation.
 6. Re-evaluate calibration on the target prevalence if probabilities are intended. Report disease-specific prevalence, sensitivity with confidence intervals, specificity, PPV/NPV, PR-AUC, ROC-AUC, Brier/calibration results where appropriate, confusion matrices, and subgroup uncertainty.
 7. The direct `BPMeds = BPQ020` leak is fixed in source. Rebuild and re-audit the fitted hypertension model; map `BPMeds` only from verified `BPQ050A` when present, otherwise keep it missing. Audit remaining features against label source, timing, and deployment availability.
 

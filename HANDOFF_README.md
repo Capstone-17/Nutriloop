@@ -21,7 +21,7 @@ Work toward a defensible technical and clinical evaluation for CKD, hypertension
 - Fixed the hypertension mapping leak: use NHANES `BPQ050A` for `BPMeds` when present; otherwise leave missing. It no longer copies target `BPQ020`.
 - Found incompatible outcome construction in the pooled hypertension and diabetes loaders: cohort-specific labels are concatenated under one target name without evidence that definitions are equivalent.
 - Fixed the diabetes target mapping so NHANES borderline/nonresponse codes remain missing and are excluded by target-row `dropna`, rather than labeled negative.
-- Confirmed shared evaluation defects in the checked-in code: imputers/scalers fit before splitting, cross-validation runs on the already SMOTE-resampled table, calibration uses the resampled distribution, and the “best” threshold is selected on held-out test labels.
+- Confirmed shared evaluation defects in the checked-in code: imputers/scalers fit before splitting, cross-validation runs on the already SMOTE-resampled table, and calibration uses the resampled distribution. A later code change moved provisional threshold selection to training out-of-fold predictions; the split and resampling defects remain.
 - Confirmed expected raw/preprocessed train/test files are absent from the target branch; a reproducible retraining or clinical performance result cannot be generated from this branch alone. Neither model was retrained after mapping fixes.
 
 ## Completed latest iteration — source inventory
@@ -57,13 +57,19 @@ Work toward a defensible technical and clinical evaluation for CKD, hypertension
 - Corrected CKD ARFF parsing: normalize only empty terminal delimiters; exclude the single row with one extra populated field. Both ARFF variants produce the same 399-row analysis cohort with 250 CKD / 149 non-CKD.
 - Metrics use the fixed generic 0.5 cutoff; no clinically justified operating threshold or probability calibration is established. This is internal cross-validation on small public datasets, not independent or clinical validation. The older production training pipeline still has leakage defects and was not used to create this artifact.
 
+## Completed latest iteration — threshold leakage reduction
+
+- Changed `scripts/train_and_optimize.py` to generate out-of-fold probabilities on the training data, select the prototype macro-F1 threshold there, and evaluate the test split at that locked threshold. Test labels are no longer passed into threshold optimization.
+- Deterministic synthetic OOF checks passed for all eight legacy candidate algorithms (including stacking and XGBoost), verifying one finite prediction per training row and valid derived thresholds. The two NHANES mapping regression checks also passed.
+- This is a partial correction only: train inputs are still preprocessed before splitting and already SMOTE-resampled before model CV; calibration still uses those resampled rows. No checked-in train/test inputs were available, so no production model was retrained and no legacy metrics were regenerated. The derived threshold is an engineering threshold, not a clinician-approved operating point.
+
 ## Disease-level status
 
 | Disease | Status | Main blockers |
 |---|---|---|
 | CKD | Protocol draft; target/outcome decision pending | Training files and label provenance absent; displayed score heuristic ignores classifier output; preprocessing/evaluation leakage. |
-| Hypertension | Source mapping fix applied; retraining pending | Source labels differ; BRFSS-derived file absent; threshold tuned on test; provided local merged NHANES extract lacks `BPQ050A`; raw inputs are absent from target branch. |
-| Type 2 diabetes | Source mapping fix applied; retraining pending | Pima/NHANES/BRFSS labels differ; BRFSS-derived file absent; threshold tuned on test. |
+| Hypertension | Source mapping fix applied; retraining pending | Source labels differ; BRFSS-derived file absent; provided local merged NHANES extract lacks `BPQ050A`; raw inputs are absent from target branch. |
+| Type 2 diabetes | Source mapping fix applied; retraining pending | Pima/NHANES/BRFSS labels differ; BRFSS-derived file absent; source-label mismatch and preprocessing/CV leakage remain. |
 
 ## Evidence and limits
 

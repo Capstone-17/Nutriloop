@@ -202,6 +202,26 @@ def optimize_thresholds(y_true: np.ndarray, y_prob: np.ndarray) -> Tuple[float, 
     return mod_thresh, high_thresh, metrics_at_mod
 
 
+def out_of_fold_probabilities(model: Any, X: np.ndarray, y: np.ndarray, cv: StratifiedKFold) -> np.ndarray:
+    """Generate development-only probabilities; never inspect held-out test labels here."""
+    from sklearn.base import clone
+
+    probabilities = np.full(len(y), np.nan, dtype=float)
+    for train_idx, validation_idx in cv.split(X, y):
+        fold_model = clone(model)
+        fold_model.fit(X[train_idx], y[train_idx])
+        if hasattr(fold_model, "predict_proba"):
+            fold_probabilities = fold_model.predict_proba(X[validation_idx])[:, 1]
+        else:
+            scores = fold_model.decision_function(X[validation_idx])
+            fold_probabilities = 1.0 / (1.0 + np.exp(-scores))
+        probabilities[validation_idx] = fold_probabilities
+
+    if not np.isfinite(probabilities).all():
+        raise RuntimeError("Out-of-fold threshold selection did not produce one finite probability per training row.")
+    return probabilities
+
+
 def train_disease(disease: str) -> Tuple[Any, List[str], Dict[str, Any], Dict[str, Any]]:
     """Train, cross-validate, calibrate, and select best model for one disease."""
     log.info(f"========== Training & Optimizing {disease.upper()} ==========")
@@ -260,7 +280,13 @@ def train_disease(disease: str) -> Tuple[Any, List[str], Dict[str, Any], Dict[st
     best_model_obj = candidates[best_name]
     log.info(f"--> Selected Best Candidate for {disease.upper()}: {best_name} (CV F1: {best_cv_score:.4f})")
 
-    # Fit best model on entire 240,000 training split
+    # Select the prototype's data-driven threshold using development OOF
+    # predictions. Clinical thresholds remain unapproved and this does not
+    # repair preprocessing-before-split or CV-after-SMOTE leakage upstream.
+    threshold_oof_probs = out_of_fold_probabilities(best_model_obj, X_cv, y_cv, cv)
+    mod_th, high_th, threshold_training_metrics = optimize_thresholds(y_cv, threshold_oof_probs)
+
+    # Fit best model on the complete training split.
     log.info(f"Fitting {best_name} on entire {len(X_train):,} training records...")
     best_model_obj.fit(X_train, y_train)
 
@@ -280,8 +306,8 @@ def train_disease(disease: str) -> Tuple[Any, List[str], Dict[str, Any], Dict[st
         y_test_probs = final_model.decision_function(X_test)
         y_test_probs = 1.0 / (1.0 + np.exp(-y_test_probs))
 
-    # Optimize risk thresholds
-    mod_th, high_th, test_metrics = optimize_thresholds(y_test, y_test_probs)
+    # Evaluate the untouched test split at the threshold locked on training OOF.
+    test_metrics = evaluate_predictions(y_test, y_test_probs, threshold=mod_th)
 
     log.info(f"  Held-out Test Performance for {disease.upper()}:")
     log.info(f"    Macro F1:    {test_metrics['macro_f1']:.4f}")
@@ -290,7 +316,7 @@ def train_disease(disease: str) -> Tuple[Any, List[str], Dict[str, Any], Dict[st
     log.info(f"    Recall(+):   {test_metrics['recall_pos']:.4f}")
     log.info(f"    Specificity: {test_metrics['specificity']:.4f}")
     log.info(f"    Brier Score: {test_metrics['brier_score']:.4f}")
-    log.info(f"    Thresholds:  Moderate={mod_th:.4f}, High={high_th:.4f}")
+    log.info(f"    Locked thresholds (training OOF macro-F1): Moderate={mod_th:.4f}, High={high_th:.4f}")
 
     # Compute Feature Importances on sample
     try:
@@ -316,6 +342,11 @@ def train_disease(disease: str) -> Tuple[Any, List[str], Dict[str, Any], Dict[st
     disease_profile = {
         "model_name": type(best_model_obj).__name__,
         "thresholds": {"moderate": mod_th, "high": high_th},
+        "threshold_selection": {
+            "data_source": "development training out-of-fold predictions",
+            "objective": "macro-F1; engineering criterion only, not clinician-approved",
+            "metrics_at_selected_threshold": threshold_training_metrics,
+        },
         "metrics": test_metrics,
         "top_factors": top_factors,
     }
