@@ -1,13 +1,7 @@
-"""
-Diet Recommendation Accuracy & Clinical Validation Test Suite
-=============================================================
-Tests:
-  1. Caloric adherence across all 5 regional cuisines (target +/- 5%).
-  2. Macronutrient balance across all 5 dietary types (Veg, Non-Veg, Vegan, Eggetarian, Jain).
-  3. Variety & Rotation: zero consecutive day duplicates across the 7-day schedule.
-  4. Clinical target derivations: Mifflin-St Jeor TDEE, CKD-EPI 2021 eGFR imputation.
-  5. Pharmacopeia cross-checks: SGLT2i carbohydrate floor, Amlodipine citrus ban, ACEi potassium ceiling.
-  6. Zero-tolerance allergen and dislike elimination.
+"""Synthetic software smoke checks for the diet engine.
+
+These examples exercise code paths and explicit request constraints only.
+They do not clinically validate diagnoses, dietary targets, or patient safety.
 """
 
 from __future__ import annotations
@@ -26,10 +20,11 @@ if str(PROJECT_DIR) not in sys.path:
 
 from backend.schemas import WeeklyDietPlanRequest, LatestTestReportInput, PatientPreferencesInput
 from backend.weekly_diet_engine import weekly_diet_engine, derive_clinical_targets
+from backend.rules import calculate_ckd_epi_egfr
 
 
-def test_clinical_targets_and_egfr():
-    print("\n[TEST 1] Clinical Biomarker & eGFR Derivation...")
+def test_egfr_math_and_nutrient_rule_smoke():
+    print("\n[TEST 1] eGFR Formula Arithmetic & Synthetic Nutrient-Rule Smoke Check...")
     # Elderly female, Creatinine 1.2 mg/dL, Age 68, BMI 27.5, No explicit eGFR
     labs = LatestTestReportInput(
         serum_creatinine_mg_dl=1.2,
@@ -45,27 +40,20 @@ def test_clinical_targets_and_egfr():
         medications=["lisinopril", "jardiance"]
     )
     
-    # 2021 CKD-EPI for Female, age 68, creat 1.2:
-    # ratio = 1.2 / 0.7 = 1.714; eGFR = 142 * (1.714^-1.200) * (0.9938^68) * 1.012 ≈ 48.7 ml/min
-    # Thus CKD Stage 3a must be diagnosed!
-    has_ckd = any("CKD" in c for c in conditions)
-    has_htn = any("Hypertension" in c for c in conditions)
-    has_t2dm = any("Diabetes" in c for c in conditions)
-    
-    assert has_ckd, f"Failed: CKD not detected from imputed eGFR. Conditions: {conditions}"
-    assert has_htn, f"Failed: Hypertension not detected. Conditions: {conditions}"
-    assert has_t2dm, f"Failed: Diabetes not detected. Conditions: {conditions}"
+    # Arithmetic check only: one eGFR value does not confirm chronic kidney disease.
+    egfr = calculate_ckd_epi_egfr(1.2, 68.0, "female")
+    assert abs(egfr - 49.3) < 0.1, f"Formula arithmetic changed unexpectedly: {egfr}"
     
     # Check SGLT2i floor
     assert targets["carbohydrate_g"] >= 130.0, f"Failed: SGLT2i carb floor violated: {targets['carbohydrate_g']}"
     assert targets["fluid_intake_ml"] >= 2500, f"Failed: SGLT2i fluid floor violated: {targets['fluid_intake_ml']}"
     # Check Potassium ceiling for CKD + ACEi
     assert targets["potassium_guidance_mg"] <= 2000.0, f"Failed: Potassium ceiling violated: {targets['potassium_guidance_mg']}"
-    print(f"  [PASS] Biomarker targets derived accurately: {targets['calories_kcal']} kcal, {targets['protein_g']}g Protein, conditions: {conditions}")
+    print(f"  [PASS] Formula arithmetic and configured nutrient-rule assertions: {targets['calories_kcal']} kcal, {targets['protein_g']}g Protein")
 
 
 def test_regional_caloric_and_macro_adherence():
-    print("\n[TEST 2] 5-Region 7-Day Caloric & Macronutrient Precision...")
+    print("\n[TEST 2] Synthetic 5-Region Plan Constraint Smoke Check (±5% calories)...")
     regions = ["south_indian", "north_indian", "western_indian", "eastern_indian", "continental"]
     
     for reg in regions:
@@ -103,7 +91,7 @@ def test_regional_caloric_and_macro_adherence():
 
 
 def test_variety_and_no_duplicate_days():
-    print("\n[TEST 3] Variety Audit: Ensuring NO 100% Duplicate Days in Any Region...")
+    print("\n[TEST 3] At Least Five Distinct Lunch/Dinner Title Pairs...")
     regions = ["south_indian", "north_indian", "western_indian", "eastern_indian", "continental"]
     
     for reg in regions:
@@ -137,7 +125,7 @@ def test_dietary_patterns_and_allergens():
     plan = weekly_diet_engine.generate_weekly_plan(req_bengali_veg)
     all_dish_titles = " ".join(inv.meal_title for d in plan.days for inv in d.intervals).lower()
     assert "machh" not in all_dish_titles and "fish" not in all_dish_titles, "Bengali vegetarian received fish dish!"
-    print("  [PASS] Bengali Vegetarian served 100% vegetarian meals (Dhokar Dalna, Cholar Dal, Potol Posto)")
+    print("  [PASS] Bengali vegetarian dish titles passed the fish/machh substring check")
 
     # 2. Test Jain Dietary Pattern (Must not contain onion, garlic, or root vegetables)
     req_jain = WeeklyDietPlanRequest(
@@ -154,19 +142,19 @@ def test_dietary_patterns_and_allergens():
             for item in inv.items:
                 item_lower = item.item_name.lower()
                 assert "peanut" not in item_lower, f"Peanut found in Jain plan: {item.item_name}"
-    print("  [PASS] Jain & peanut-free constraints honored 100%")
+    print("  [PASS] Jain-plan item names passed the peanut substring check")
 
 
 def run_all():
     print("=" * 70)
-    print("      RUNNING CLINICAL DIET RECOMMENDATION ACCURACY TEST SUITE")
+    print("      RUNNING SYNTHETIC DIET-ENGINE SOFTWARE SMOKE CHECKS")
     print("=" * 70)
-    test_clinical_targets_and_egfr()
+    test_egfr_math_and_nutrient_rule_smoke()
     test_regional_caloric_and_macro_adherence()
     test_variety_and_no_duplicate_days()
     test_dietary_patterns_and_allergens()
     print("\n" + "=" * 70)
-    print("      ALL CLINICAL DIET RECOMMENDATION ACCURACY TESTS PASSED!")
+    print("      ALL SYNTHETIC SOFTWARE ASSERTIONS PASSED (NOT CLINICAL VALIDATION)")
     print("=" * 70)
 
 

@@ -71,8 +71,8 @@ The source inventory now also records missingness for the local Framingham and P
 
 1. **Dual In-Process / Client-Server Runtime**: Runs either as a 100% offline desktop application with native Edge WebView2 or as a headless REST microservice.
 2. **Zero Bytecode Clutter**: Configured with `PYTHONDONTWRITEBYTECODE=1` and `sys.dont_write_bytecode = True` across all entry points, guaranteeing zero `__pycache__` footprint.
-3. **Rigorous Clinical Grounding**: Follows KDIGO 2024, KDOQI 2020, ADA 2024, and ACC/AHA DASH clinical guidelines.
-4. **Local-First Privacy**: Patient records, lab values, and chat logs are stored in a dedicated local directory (`Nutriloop_Data/app_data.db`), ensuring HIPAA-aligned data sovereignty.
+3. **Guideline-Informed Prototype**: Some rules cite KDIGO 2024, KDOQI 2020, ADA, and DASH sources; source coverage, clinical correctness, and patient-specific appropriateness have not been independently validated.
+4. **Local Storage with Optional Cloud Providers**: Local records are stored in `Nutriloop_Data/app_data.db`; cloud LLM providers may be used when configured. This is not a HIPAA certification or authorization to enter patient data.
 
 ---
 
@@ -123,7 +123,7 @@ The diet recommendation component generates an authentic, nutritionally balanced
 Unlike basic recipe assemblers that underfeed patients by ~40%, NutriMed AI uses a two-tier dynamic portion scaler:
 - **`scale_dish_items`**: Calculates $R = \text{interval\_target\_kcal} / \text{base\_dish\_kcal}$ (clamped safely between $0.50\times$ and $2.40\times$). Scales calories, proteins, carbohydrates, healthy fats, sodium, and potassium proportionately.
 - **`scale_portion_string`**: Dynamically adjusts human-readable portion strings (`2 idlis` $\to$ `3 idlis`, `1 cup` $\to$ `1.4 cups`, `150 g` $\to$ `210 g`, `2 rotis` $\to$ `3 rotis`) so patient instructions reflect the exact calculated calories.
-- **Caloric Target Adherence**: Consistently achieves **$\pm 0.5\%$** of target calories across all 5 regional cuisines.
+- **Caloric Target Adherence**: A synthetic smoke check currently allows a **±5%** difference from the requested calorie target. This checks generated plan arithmetic only; it does not validate dietary adequacy or clinical suitability.
 
 ### Condition-Scored Dish Prioritization & Biomarker Responsiveness
 Rather than rotating through static menus irrespective of clinical reports, the meal engine actively evaluates patient diagnostic biomarkers and scores available regional recipes:
@@ -134,7 +134,7 @@ Rather than rotating through static menus irrespective of clinical reports, the 
 - **User Preference Matching**: Requested food likes (e.g. rasam, chaas) are prioritized within clinical safety bounds and highlighted with a `[⭐ Preferred Choice]` badge.
 
 ### 5 Cultural Regions (155+ Catalog Dishes)
-Zero duplicate days—every region has at least 7 unique breakfasts, 5 mid-morning snacks, 7 unique lunches, 5 evening snacks, and 7 unique dinners:
+The catalog includes regional options. A synthetic smoke check asserts at least 5 distinct combined lunch/dinner title pairs in one generated 7-day plan per region; it does not prove every dish is unique:
 - 🌴 **South Indian**: Idli with Sambar, Ragi Koozh, Moong Dal Pesarattu, Brown Rice Vegetable Sambar Sadam, Foxtail Millet Khichdi.
 - 🌾 **North Indian**: Methi Thepla, Daliya Khichdi, Besan Chilla, Whole Wheat Roti with Bhindi Masala, Palak Tofu/Paneer with Multigrain Roti.
 - 🌊 **Western Indian**: Jowar Bhakri with Baingan Bharta, Khaman Dhokla, Handvo, Dal Baati (Modified Low GI), Sprouts Usal with Ragi Bhakri.
@@ -143,8 +143,8 @@ Zero duplicate days—every region has at least 7 unique breakfasts, 5 mid-morni
 
 ### Dietary Philosophies & Allergen Elimination
 - **Supported Dietary Types**: `Vegetarian`, `Non-Vegetarian`, `Vegan`, `Eggetarian`, `Jain`.
-- **Strict Jain Compliance**: 0 onion, 0 garlic, 0 root vegetables (no potatoes, carrots, beets, or radishes).
-- **Allergen Filtration**: Hard elimination of peanuts, gluten, dairy, tree nuts, shellfish, or user dislikes across all ingredients.
+- **Jain Dietary Filter**: Intended to filter onion, garlic, and root vegetables; the current smoke test checks only peanut mentions in returned item names, so full Jain compliance is not verified.
+- **Allergen Filtering**: Filtering is implemented in software, but the current smoke test does not verify every allergen across complete ingredient lists; do not rely on it for allergy safety.
 
 ### Smart Craving Strategy
 Permits one structured, scheduled indulgence per week (e.g. Saturday evening snack) while rebalancing surrounding intervals and enforcing strict zero-sugar adherence on Days 1–6.
@@ -398,15 +398,16 @@ The platform exposes **22 REST endpoints**:
 
 ## 11. Verification & Automated Test Suites
 
-### Precision Diet Recommendation Accuracy Suite
+### Synthetic Diet-Engine Software Smoke Checks
 ```bash
 python scripts/test_diet_accuracy.py
 ```
-Validates:
-- **Biomarker & eGFR Derivation**: CKD Stage 3a (48.7 mL/min), SGLT2i carbohydrate floor ($\ge 130$ g), KDOQI Adjusted Body Weight protein targets.
-- **Caloric Precision Across 5 Regions**: South Indian, North Indian, Western Indian, Eastern Indian, and Continental menus meet target calories within $\pm 0.5\%$.
-- **Variety Audit**: Confirms 0 duplicate days across all 5 regions.
-- **Dietary & Allergen Filtering**: 100% compliance for Jain (0 root veg) and allergen elimination.
+
+These checks exercise selected code paths with synthetic requests. They check eGFR formula arithmetic (not CKD diagnosis), hard-coded nutrient constraints, plan calories within ±5% in sample regional plans, at least five distinct lunch/dinner title pairs, a fish/machh substring check for Bengali vegetarian dish titles, and a peanut substring check for item names in a Jain plan. They do **not** validate clinical appropriateness, all ingredients, dietary safety, allergy safety, or patient outcomes. Passing these assertions is not clinical validation.
+
+### Model-metric provenance and limitations
+
+The `/implementation-progress` model-metrics section reads only the generated exploratory cohort report at [`reports/clinical_validation/exploratory_public_cohort_benchmark.json`](reports/clinical_validation/exploratory_public_cohort_benchmark.json). Each returned row includes its cohort, model, fold-mean metrics and standard deviations, class-level results, confusion matrix, source hash, and an explicit exploratory/non-clinical status. The older model-profile metric values were removed from the active profile because their training inputs and evaluation lineage could not be verified. See the [Metric Claim Audit](docs/clinical_validation/METRIC_CLAIM_AUDIT.md) for the quarantined historical values and reasons they cannot be compared directly with the current cohort benchmark. These results do not describe the packaged GUI models or establish clinical performance.
 
 ### Comprehensive REST API Smoke Test Suite
 ```bash

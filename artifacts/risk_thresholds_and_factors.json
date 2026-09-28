@@ -5,16 +5,6 @@
       "moderate": 0.5,
       "high": 0.75
     },
-    "metrics": {
-      "accuracy": 0.8572727737188984,
-      "macro_f1": 0.8572141496713686,
-      "precision_pos": 0.871815066306222,
-      "recall_pos": 0.837515080874384,
-      "specificity": 0.8770066582247458,
-      "roc_auc": 0.9206854897409085,
-      "pr_auc": 0.9238963563380407,
-      "brier_score": 0.10677625747152591
-    },
     "top_factors": [
       {
         "feature": "su",
@@ -156,23 +146,15 @@
         "importance": 0.0,
         "relative_importance": 0.0
       }
-    ]
+    ],
+    "evaluation_status": "NOT_CLINICALLY_VALIDATED",
+    "thresholds_status": "ENGINEERING_DEFAULTS_NOT_CLINICIAN_APPROVED"
   },
   "hypertension": {
     "model_name": "HistGradientBoostingClassifier",
     "thresholds": {
       "moderate": 0.5,
       "high": 0.75
-    },
-    "metrics": {
-      "accuracy": 0.9398991857309035,
-      "macro_f1": 0.9398214197968273,
-      "precision_pos": 0.9433172925785311,
-      "recall_pos": 0.9406558958283097,
-      "specificity": 0.9390836560201669,
-      "roc_auc": 0.9537133627226656,
-      "pr_auc": 0.9429915457590798,
-      "brier_score": 0.053473300917388736
     },
     "top_factors": [
       {
@@ -270,23 +252,15 @@
         "importance": 0.0,
         "relative_importance": 0.0
       }
-    ]
+    ],
+    "evaluation_status": "NOT_CLINICALLY_VALIDATED",
+    "thresholds_status": "ENGINEERING_DEFAULTS_NOT_CLINICIAN_APPROVED"
   },
   "diabetes": {
     "model_name": "HistGradientBoostingClassifier",
     "thresholds": {
       "moderate": 0.5,
       "high": 0.75
-    },
-    "metrics": {
-      "accuracy": 0.9050264353265322,
-      "macro_f1": 0.9040747395110722,
-      "precision_pos": 0.9104683659382471,
-      "recall_pos": 0.8791208791208791,
-      "specificity": 0.9269244510402067,
-      "roc_auc": 0.9276312635998527,
-      "pr_auc": 0.9066443066880361,
-      "brier_score": 0.08098116128350082
     },
     "top_factors": [
       {
@@ -374,6 +348,8 @@
         "importance": 0.0,
         "relative_importance": 0.0
       }
-    ]
+    ],
+    "evaluation_status": "NOT_CLINICALLY_VALIDATED",
+    "thresholds_status": "ENGINEERING_DEFAULTS_NOT_CLINICIAN_APPROVED"
   }
 }

@@ -5,6 +5,15 @@
 - **Last completed iterations:** CKD protocol draft (`b16d1ff`), three-disease audit and mapping fixes (`27747fa`), followed by the source-file inventory in this iteration
 - **Current status:** Research planning and static source audit only; no model is clinically validated or approved for patient use.
 
+## Completed latest iteration — metric provenance and software-claim correction
+
+- Added [Metric Claim Audit](docs/clinical_validation/METRIC_CLAIM_AUDIT.md), including the old unverified profile values, why a numeric before/after comparison is invalid, and README/smoke-test claims corrected to match checked assertions.
+- Removed historical metric fields from `artifacts/risk_thresholds_and_factors.json`; retained its runtime model/feature-factor configuration but marked evaluation and thresholds as unvalidated engineering defaults.
+- Changed `/implementation-progress` metric reporting to read only the generated exploratory cross-validation JSON. It now returns 40 cohort/model rows with fold mean ± standard deviation, class-level metrics, aggregate confusion matrix, source hash, class distribution, split method, and an explicit non-clinical status; there is no fallback to the old metrics.
+- Renamed/reframed the diet test as a synthetic software smoke check, corrected eGFR formula arithmetic to 49.3 for its example input, and removed the assertion that one result establishes CKD. This does not fix the live diet engine's single-measure CKD/HTN/diabetes condition inferences; those remain a clinical-safety blocker for the next disease-level implementation iteration.
+- Verification: Python compile passed; API metric loader returned 40 rows and all included status/class/confusion fields; synthetic diet-engine smoke script passed. No training, patient data, clinical evaluation, or GUI model replacement occurred.
+- Main limitation: exploratory metrics are not from the deployed model bundles. CKD/Framingham/Pima use row-level folds without record IDs, NHANES uses `SEQN` groups but no survey weights, and source lineage remains incomplete.
+
 ## Goal and working rule
 
 Work toward a defensible technical and clinical evaluation for CKD, hypertension, and type 2 diabetes. After each iteration, update the main README with a concise explanation and direct links, update this handoff with evidence/open decisions, and commit/push the finished iteration to `kevivt`.

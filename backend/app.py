@@ -10,7 +10,6 @@ from fastapi import FastAPI, HTTPException, Query
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List, Dict, Any
-import csv
 import json
 
 from backend.db import (
@@ -100,60 +99,41 @@ app = FastAPI(
 
 def _read_project_model_metrics() -> List[dict]:
     base_dir = Path(__file__).resolve().parent.parent
-    csv_path = base_dir / "reports" / "current" / "baseline_model_comparison.csv"
-    if not csv_path.exists():
-        json_path = base_dir / "artifacts" / "risk_thresholds_and_factors.json"
-        if json_path.exists():
-            with open(json_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            rows = []
-            for ds, p in data.items():
-                m = p.get("metrics", {})
-                rows.append({
-                    "dataset": ds,
-                    "model": p.get("model_name", ""),
-                    "accuracy": float(m.get("accuracy", 0.0)),
-                    "macro_f1": float(m.get("macro_f1", 0.0)),
-                    "roc_auc": float(m.get("roc_auc", 0.0)),
-                    "pr_auc": float(m.get("pr_auc", 0.0)),
-                    "precision_pos": float(m.get("precision_pos", 0.0)),
-                    "recall_pos": float(m.get("recall_pos", 0.0)),
-                    "specificity": float(m.get("specificity", 0.0)),
-                    "brier_score": float(m.get("brier_score", 0.0)),
-                })
-            return sorted(rows, key=lambda r: r.get("dataset", ""))
+    report_path = base_dir / "reports" / "clinical_validation" / "exploratory_public_cohort_benchmark.json"
+    if not report_path.exists():
         return []
 
+    with report_path.open("r", encoding="utf-8") as fh:
+        report = json.load(fh)
+
     rows: List[dict] = []
-    with csv_path.open("r", encoding="utf-8") as fh:
-        reader = csv.DictReader(fh)
-        for row in reader:
-            if row.get("model_key") != "project_final_model":
-                continue
-            rows.append(
-                {
-                    "dataset": row.get("dataset", ""),
-                    "model": row.get("model", ""),
-                    "accuracy": float(row.get("accuracy", 0.0)),
-                    "macro_f1": float(row.get("macro_f1", 0.0)),
-                    "roc_auc": float(row.get("roc_auc", 0.0)),
-                    "pr_auc": float(row.get("pr_auc", 0.0)),
-                    "precision_pos": float(row.get("precision_pos", 0.0)),
-                    "recall_pos": float(row.get("recall_pos", 0.0)),
-                    "specificity": float(row.get("specificity", 0.0)),
-                    "brier_score": float(row.get("brier_score", 0.0)),
-                    "ci_macro_f1_lo": float(row.get("ci_macro_f1_lo", 0.0)),
-                    "ci_macro_f1_hi": float(row.get("ci_macro_f1_hi", 0.0)),
-                    "ci_pr_auc_lo": float(row.get("ci_pr_auc_lo", 0.0)),
-                    "ci_pr_auc_hi": float(row.get("ci_pr_auc_hi", 0.0)),
-                    "mcnemar_p_vs_best_baseline": (
-                        float(row["mcnemar_p_vs_best_baseline"])
-                        if row.get("mcnemar_p_vs_best_baseline") not in (None, "")
-                        else None
-                    ),
-                }
-            )
-    rows.sort(key=lambda r: r.get("dataset", ""))
+    for cohort_name, cohort in report.get("cohorts", {}).items():
+        metadata = cohort.get("metadata", {})
+        for model_name, result in cohort.get("model_results", {}).items():
+            summary = result.get("mean_std", {})
+            row: dict[str, Any] = {
+                "dataset": cohort_name,
+                "model": model_name,
+                "evaluation_status": "exploratory_internal_cross_validation_not_clinical_validation",
+                "n_rows": cohort.get("n_rows_evaluated"),
+                "class_counts": metadata.get("class_counts_evaluated"),
+                "positive_prevalence_unweighted": metadata.get("positive_prevalence_unweighted"),
+                "split_method": metadata.get("split_method"),
+                "record_id_grouped": metadata.get("record_id_grouped"),
+                "source_sha256": metadata.get("source_sha256") or metadata.get("member_sha256"),
+                "threshold": report.get("protocol", {}).get("threshold", 0.5),
+                "resampling": metadata.get("resampling"),
+            }
+            for metric in ("accuracy", "macro_precision", "macro_recall", "macro_f1", "sensitivity", "specificity", "pr_auc", "roc_auc", "brier_score"):
+                values = summary.get(metric, {})
+                row[metric] = values.get("mean")
+                row[f"{metric}_std"] = values.get("std")
+            row["precision_pos"] = summary.get("per_class", {}).get("1", {}).get("precision", {}).get("mean")
+            row["recall_pos"] = summary.get("per_class", {}).get("1", {}).get("recall", {}).get("mean")
+            row["per_class"] = summary.get("per_class")
+            row["confusion_matrix_sum_labels_0_1"] = summary.get("confusion_matrix_sum_labels_0_1")
+            rows.append(row)
+    rows.sort(key=lambda row: (row.get("dataset", ""), row.get("model", "")))
     return rows
 
 
