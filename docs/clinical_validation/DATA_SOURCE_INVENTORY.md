@@ -1,6 +1,6 @@
 # Public Data Source Inventory — Three-Disease Prototype
 
-**Inventory date:** 2026-09-28  
+**Inventory date:** 2026-09-28
 **Purpose:** Record which candidate source files are present in the shared development workspace, whether they are in the `kevivt` repository, and what their labels can and cannot support. This is a provenance/readiness record, not a model evaluation.
 
 ## Scope and reproducibility boundary
