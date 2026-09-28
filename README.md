@@ -23,6 +23,8 @@ The source audit found a direct hypertension label leak and ambiguous pooled coh
 - [Validation log and required release gates](docs/clinical_validation/VALIDATION_LOG.md)
 - [Synthetic probe output](reports/clinical_validation/synthetic_ckd_rule_probe.json)
 - [CKD intended-use and validation protocol draft](docs/clinical_validation/CKD_PROTOCOL_DRAFT.md)
+- [Hypertension intended-use and validation protocol draft](docs/clinical_validation/HYPERTENSION_PROTOCOL_DRAFT.md)
+- [Type 2 diabetes intended-use and validation protocol draft](docs/clinical_validation/DIABETES_PROTOCOL_DRAFT.md)
 - [Three-disease preprocessing and validation-readiness audit](docs/clinical_validation/THREE_DISEASE_PIPELINE_AUDIT.md)
 - [Project handoff: evidence, blockers, and next steps](HANDOFF_README.md)
 

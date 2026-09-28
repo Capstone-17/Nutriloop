@@ -9,6 +9,11 @@
 
 Work toward a defensible technical and clinical evaluation for CKD, hypertension, and type 2 diabetes. After each iteration, update the main README with a concise explanation and direct links, update this handoff with evidence/open decisions, and commit/push the finished iteration to `kevivt`.
 
+## Completed protocol iteration
+
+- Added [Hypertension Protocol Draft](docs/clinical_validation/HYPERTENSION_PROTOCOL_DRAFT.md) and [Type 2 Diabetes Protocol Draft](docs/clinical_validation/DIABETES_PROTOCOL_DRAFT.md), linked from the README.
+- Both drafts distinguish current-disease classification from future-risk prediction and mark clinical target/reference-standard decisions as open.
+- No patient data were accessed and no model was retrained in this documentation iteration.
 ## Completed this iteration
 
 - Added [Three-Disease Pipeline Audit](docs/clinical_validation/THREE_DISEASE_PIPELINE_AUDIT.md) and linked it from the README.
@@ -46,7 +51,7 @@ Evidence consists of checked-in source inspection, the prior deterministic synth
 4. Clinician/biostatistician-approved sensitivity, specificity, confidence-interval precision, and threshold acceptance criteria?
 5. Source cohort, patient/site identifiers, dataset access, ethics/privacy review, and consent/waiver process?
 
-The CKD target/outcome choice is the immediate dependency. The other two disease protocols also need their targets frozen before any clinical evaluation. Do not use real patient data or claim future-risk performance while these items are unresolved.
+The intended target/outcome choice is open for all three diseases. Freeze each separately before clinical evaluation. Do not use real patient data or claim future-risk performance while these items are unresolved.
 
 ## Next work
 

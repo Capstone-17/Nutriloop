@@ -119,6 +119,9 @@ CKD was selected as the first disease to scope. A planning-only [CKD intended-us
 
 Static inspection identified a direct hypertension label leak (`NHANES BPQ020` copied into `BPMeds`) and a diabetes-label handling issue (NHANES borderline `DIQ010=3` mapped to negative). The preprocessing code now maps `BPMeds` only from CDC medication variable `BPQ050A` when available, otherwise leaves it missing; the diabetes label now maps only explicit yes/no codes, leaving borderline and nonresponse values missing for target-row exclusion. Two focused mapping regression tests passed. These source changes have not been used to retrain or reevaluate any disease model. Shared preprocessing-before-split, CV-after-SMOTE, resampled calibration, and test-set threshold tuning remain unresolved. See [Three-Disease Pipeline Audit](THREE_DISEASE_PIPELINE_AUDIT.md).
 
+## Hypertension and diabetes protocol focus
+
+Draft intended-use worksheets were added for hypertension and type 2 diabetes. Both distinguish current-condition labels from future-risk outcomes, list the reference-standard and cohort decisions to freeze, and record the source-label and preprocessing blockers. They are planning documents only; no clinical target has been approved. See [Hypertension Protocol Draft](HYPERTENSION_PROTOCOL_DRAFT.md) and [Type 2 Diabetes Protocol Draft](DIABETES_PROTOCOL_DRAFT.md).
 ## Current decision
 
 **Do not use this desktop app with real patient information or to guide care.** Continue only synthetic software checks and clinical-content review until the blocking findings are resolved. Gates 1–6 remain open; real-patient evaluation cannot begin until appropriate oversight, cohort access, protocol, and regulatory review are in place.
