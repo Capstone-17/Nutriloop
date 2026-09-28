@@ -41,6 +41,13 @@ Work toward a defensible technical and clinical evaluation for CKD, hypertension
 - The ARFF fields use `wbcc`/`rbcc`; the metadata uses `wc`/`rc`. This naming mismatch must be reconciled in a documented schema mapping.
 - Updated the CKD protocol and pipeline audit with the discrepancy. No model was retrained and no metrics were produced.
 
+## Completed latest iteration — missingness and label availability
+
+- Added per-field local-source missingness counts for Framingham hypertension and Pima diabetes after applying the repository's documented zero-to-missing rule.
+- Counted NHANES explicit binary-response rows separately from missing, refusal, and borderline rows: 6,151 hypertension and 8,709 diabetes rows in this unweighted extract. `BPQ050A` remains absent.
+- Updated both disease protocols, the three-disease source audit, README, inventory, and validation log. No imputation, model retraining, or performance evaluation was run.
+- These local-source counts do not establish representative population prevalence; source lineage and licensing remain unresolved, and the extracts are not in the branch.
+
 ## Disease-level status
 
 | Disease | Status | Main blockers |

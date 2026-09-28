@@ -133,3 +133,6 @@ On 2026-09-28, a read-only inventory was made of four candidate public-source fi
 
 
 The next read-only check opened the local CKD RAR members using the Windows archive utility and counted records/fields/labels and feature missingness. Both ARFF copies contain 248 CKD, 150 non-CKD, and two blank targets across 400 records. The bundled info text claims 250 CKD and 150 non-CKD. This is an unresolved data-integrity discrepancy; unlabeled targets were not imputed, and no retraining or performance evaluation was run. ARFF fields `wbcc`/`rbcc` also differ from metadata names `wc`/`rc`; see the inventory and CKD protocol draft.
+
+
+A follow-on data-readiness check quantified missing fields and eligible target counts in the locally available, untracked Framingham, Pima, and NHANES CSVs. Framingham has missing glucose in 388/4,240; Pima has missing insulin in 374/768 after the code's zero-to-missing conversion. The NHANES merged extract has 6,151 explicit binary hypertension responses and 8,709 explicit binary diabetes responses; excluded NHANES responses include missing/refusal/unknown and diabetes borderline values. No survey weighting was applied. See `DATA_SOURCE_INVENTORY.md` for details. These counts inform preprocessing planning only and are not clinical validation results.

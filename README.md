@@ -22,6 +22,8 @@ The source audit found a direct hypertension label leak and ambiguous pooled coh
 
 The latest CKD archive inspection found 400-row ARFF files with 248 labeled CKD, 150 labeled non-CKD, and two unlabeled rows, while the included metadata claims 250 CKD/150 non-CKD. The discrepancy is unresolved; no labels were inferred and no retraining was performed. See the [data source inventory](docs/clinical_validation/DATA_SOURCE_INVENTORY.md) and [CKD protocol draft](docs/clinical_validation/CKD_PROTOCOL_DRAFT.md).
 
+The source inventory now also records missingness for the local Framingham and Pima files and the exact NHANES rows excluded by binary target mapping. For example, Pima insulin is missing after the repository's zero-to-missing rule for 374/768 records; NHANES contributes explicit yes/no labels for 6,151 hypertension and 8,709 diabetes records in this extract, without survey weighting. These are source-readiness counts only; see the inventory and disease protocols.
+
 - [Validation log and required release gates](docs/clinical_validation/VALIDATION_LOG.md)
 - [Synthetic probe output](reports/clinical_validation/synthetic_ckd_rule_probe.json)
 - [CKD intended-use and validation protocol draft](docs/clinical_validation/CKD_PROTOCOL_DRAFT.md)

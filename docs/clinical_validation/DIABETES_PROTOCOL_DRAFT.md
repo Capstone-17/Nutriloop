@@ -10,6 +10,7 @@ Last updated: 2026-09-28
 - NHANES `DIQ010` is self-reported history of clinician-diagnosed diabetes. The code now maps explicit yes/no values only; borderline and nonresponse values stay missing and are excluded by the binary-target `dropna` step. [CDC NHANES 2017–2018 variable list](https://wwwn.cdc.gov/nchs/nhanes/search/variablelist.aspx?Component=Questionnaire&Cycle=2017-2018)
 - The Pima input schema includes glucose and glucose-derived interaction features. This may be circular if the target is defined from the same-encounter diagnostic tests; it does not establish future diabetes risk.
 - The BRFSS preprocessing samples up to 20,000 positive rows while retaining all negatives, changing natural prevalence. Its source file is absent. Imputation/scaling happen before row splitting, and threshold selection in the training script uses test labels.
+- The inspected local Pima file has 768 rows (268 positive / 500 negative); after the repository's zero-to-missing rule, insulin is missing in 374 rows, skin thickness in 227, blood pressure in 35, BMI in 11, and glucose in 5. The local NHANES extract has 8,709 explicit yes/no `DIQ010` answers (893 yes / 7,816 no); 545 borderline/nonresponse/missing rows are excluded. These are unweighted source counts, not performance results; hashes and limitations are in the [source inventory](DATA_SOURCE_INVENTORY.md).
 
 ## Candidate question — pending approval
 

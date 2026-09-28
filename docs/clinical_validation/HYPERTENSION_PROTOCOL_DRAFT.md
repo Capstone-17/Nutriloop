@@ -10,6 +10,7 @@ Last updated: 2026-09-28
 - NHANES `BPQ020` asks whether a health professional ever told the participant they had hypertension. It is a self-reported history label, not the same as standardized measurement of current blood pressure. [CDC NHANES BPQ_J codebook](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/BPQ_J.htm)
 - The previous code copied the NHANES target into `BPMeds`. The mapping now uses medication item `BPQ050A` when available; if unavailable it stays missing. The local merged file observed during audit lacks `BPQ050A`, and the target branch does not include that raw extract. The model has not been refit after this correction.
 - The code pools cohort labels, fits imputation/scaling before the row split, changes prevalence in BRFSS sampling, and selects a threshold on test labels. These issues remain unresolved.
+- In the inspected local Framingham CSV (not tracked in this branch), there are 4,240 rows with 1,317 positive and 2,923 negative `prevalentHyp` labels. Missing values include glucose in 388 rows, education in 105, BP medication in 53, and total cholesterol in 50. In the local NHANES extract, 6,151/9,254 rows have explicit `BPQ020` yes/no responses; 3,103 nonresponse/missing rows are excluded, and the required `BPQ050A` medication field is absent. Counts and file hashes are recorded in the [source inventory](DATA_SOURCE_INVENTORY.md); these are development-source counts, not performance validation or a weighted population estimate.
 
 ## Candidate question — pending approval
 

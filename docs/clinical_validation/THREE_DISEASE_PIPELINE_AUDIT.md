@@ -60,6 +60,10 @@ Last updated: 2026-09-28
 - `Outcome`, NHANES self-report, and the missing BRFSS label are not shown to represent the same case definition. Borderline NHANES answers should be handled as a distinct/indeterminate category or by a pre-specified clinical rule, not silently labeled negative.
 - The checked-in branch lacks the Pima, NHANES merged, and BRFSS-derived source files at the paths the script expects. The actual cohort sizes and label distributions cannot be reproduced from this branch.
 
+## Quantified missingness in inspected local sources
+
+These counts come from untracked local source extracts, not from the branch's missing training tables and not from clinical validation. Framingham has 388 missing glucose, 105 education, and 53 BP-medication values among 4,240 rows. Pima, after the repository's zero-to-missing conversion, has 374 missing insulin and 227 missing skin-thickness values among 768 rows. The local NHANES file has explicit binary responses on 6,151 hypertension rows and 8,709 diabetes rows out of 9,254; `BPQ050A` is absent, and 184 borderline `DIQ010` responses remain excluded. Full field counts and hashes are in the [data source inventory](DATA_SOURCE_INVENTORY.md). Imputation must be assessed by source and fitted inside development folds; pooled full-data medians can hide source-specific missingness and leak evaluation information.
+
 ## Shared training/evaluation defects
 
 - The training entry point reads `{disease}_train_smote.csv` and `{disease}_test.csv`; these files are absent from the branch.
