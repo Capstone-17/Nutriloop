@@ -21,6 +21,7 @@ This release has only passed source-level inspection and one deterministic synth
 - [Validation log and required release gates](docs/clinical_validation/VALIDATION_LOG.md)
 - [Synthetic probe output](reports/clinical_validation/synthetic_ckd_rule_probe.json)
 - [CKD intended-use and validation protocol draft](docs/clinical_validation/CKD_PROTOCOL_DRAFT.md)
+- [Project handoff: evidence, blockers, and next steps](HANDOFF_README.md)
 
 ## Table of Contents
 1. [Core Architectural Pillars](#1-core-architectural-pillars)
