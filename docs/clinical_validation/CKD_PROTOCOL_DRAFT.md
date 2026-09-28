@@ -10,6 +10,7 @@ Last updated: 2026-09-28
 - The checked-in model feature schema contains 28 fields: the original clinical fields plus engineered features. The feature list includes age, blood pressure, urine findings, serum creatinine, blood urea, electrolytes, hemoglobin/cell counts, hypertension, diabetes, and engineered ratios/interactions. The deployed raw-input mapper fills omitted features from medians or zero and emits warnings; those defaults need validation against the intended population.
 - The preprocessor fits imputation, categorical encoding, and scaling before its random row split; the training script then cross-validates an already SMOTE-resampled training table. These operations can leak information across evaluation folds. The split is stratified by row and no patient/site identifier or group-aware split is evident in the checked-in feature list.
 - The current CKD score path substitutes a hand-written eGFR/bio-marker heuristic for the raw model score. The synthetic probe showed the displayed result did not change when the raw model score changed from 0.01 to 0.99. The score must not be interpreted as a calibrated probability or used to set a clinical threshold.
+- The weekly diet path previously labeled one eGFR/biomarker result as CKD and an eGFR band as a CKD stage. This conflicts with KDIGO 2024 practice point 1.1.3.2: chronicity must not be assumed from one abnormal eGFR/albumin result; proof of at least three months is required. The current patch changes the displayed wording to a non-diagnostic laboratory flag and adds a regression check. The internal heuristic still uses the same single value to alter nutrition targets, so this mitigates wording only and is not a clinically safe or validated decision path.
 
 ## 2. Candidate research question — pending approval
 
@@ -68,6 +69,7 @@ Any later human-facing workflow study requires independent clinical, ethics, pri
 - The CKD “calibration” is an unvalidated rules formula that ignores the fitted model score; current percentages and risk bands are not clinically interpretable probabilities.
 - The UI calls eGFR ≥90 “healthy” and “KDIGO Stage 1.” Have nephrology review and replace this statement; GFR category alone does not establish CKD status or kidney health.
 - Current treatment/action language has not been reviewed for evidence, context, or contraindications. Do not deliver it as individualized CKD advice.
+- The weekly diet engine still uses a single low eGFR or kidney biomarker to activate CKD-specific nutrient and fluid targets, even though no chronicity or clinician-confirmed diagnosis is collected. Do not interpret those targets as appropriate for an individual. A future implementation must separate confirmed diagnoses from one-time findings and require appropriate clinical review before applying condition-specific prescriptions.
 - No external clinical cohort, approved protocol, or external validation results are attached.
 
 ## 6. Required sign-off before external cohort access
@@ -79,7 +81,7 @@ Any later human-facing workflow study requires independent clinical, ethics, pri
 
 ## 7. Reporting references
 
-- KDIGO 2024 CKD guideline: https://kdigo.org/guidelines/ckd-evaluation-and-management/
+- KDIGO 2024 CKD guideline (including practice points 1.1.3.1–1.1.3.2 on chronicity): https://kdigo.org/guidelines/ckd-evaluation-and-management/
 - UCI Chronic Kidney Disease dataset, ID 336: https://archive.ics.uci.edu/dataset/336/chronic%2Bkidney%2Bdisease
 - ICMR National Ethical Guidelines handbook: https://www.icmr.gov.in/post/handbook-on-national-ethical-guidelines-for-biomedical-and-health-research-involving-human-participants-2018
 - TRIPOD+AI reporting guidance: https://www.bmj.com/content/385/bmj-2023-078378

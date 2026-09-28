@@ -151,8 +151,9 @@ def derive_clinical_targets(
     medications: Optional[List[str]] = None
 ) -> Tuple[Dict[str, Any], List[str]]:
     """
-    Computes precise daily nutritional targets and identifies clinical conditions
-    strictly from laboratory biomarkers, anthropometry (Mifflin-St Jeor), and active medications.
+    Computes prototype daily nutrition targets and rule-based lab flags from
+    biomarkers, anthropometry (Mifflin-St Jeor), and active medications. These
+    flags are not diagnoses and have not been clinically validated.
     """
     detected_conditions = []
     
@@ -213,24 +214,34 @@ def derive_clinical_targets(
         ckd_stage_str = "Biomarker Elevation Profile"
 
     if has_ckd:
-        detected_conditions.append(f"Chronic Kidney Disease (CKD) - {ckd_stage_str}")
+        detected_conditions.append(
+            f"CKD-range laboratory finding ({ckd_stage_str}); a single measurement does not confirm CKD"
+        )
 
     # Hypertension Detection (AHA/ACC 2023)
     has_htn = False
     if (sys_bp is not None and sys_bp >= 130.0) or (dia_bp is not None and dia_bp >= 80.0):
         has_htn = True
         if (sys_bp is not None and sys_bp >= 140.0) or (dia_bp is not None and dia_bp >= 90.0):
-            detected_conditions.append("Hypertension (Stage 2)")
+            detected_conditions.append(
+                "Blood pressure in Stage 2 hypertension range; a single reading does not establish diagnosis"
+            )
         else:
-            detected_conditions.append("Hypertension (Stage 1)")
+            detected_conditions.append(
+                "Blood pressure in Stage 1 hypertension range; a single reading does not establish diagnosis"
+            )
 
     # Diabetes Detection (ADA 2024)
     has_diabetes = False
     if (fbs is not None and fbs >= 126.0) or (a1c is not None and a1c >= 6.5) or (ppbs is not None and ppbs >= 200.0):
         has_diabetes = True
-        detected_conditions.append("Type 2 Diabetes Mellitus")
+        detected_conditions.append(
+            "Diabetes-range laboratory result; one measurement does not establish diagnosis"
+        )
     elif (fbs is not None and 100.0 <= fbs < 126.0) or (a1c is not None and 5.7 <= a1c < 6.5):
-        detected_conditions.append("Prediabetes / Impaired Fasting Glucose")
+        detected_conditions.append(
+            "Prediabetes-range laboratory result; this single measurement is not a diagnosis"
+        )
 
     # Dyslipidemia
     if (chol is not None and chol >= 200.0) or (ldl is not None and ldl >= 130.0) or (tg is not None and tg >= 150.0):
@@ -245,7 +256,9 @@ def derive_clinical_targets(
         detected_conditions.append("Low Serum Potassium (Hypokalemia Risk)")
 
     if not detected_conditions:
-        detected_conditions.append("General Health Maintenance / Normal Range")
+        detected_conditions.append(
+            "No rule-based flag from supplied values; this does not rule out disease"
+        )
 
     # 4. Caloric Target Calculation (Mifflin-St Jeor TDEE Model)
     if override_calories:
@@ -7109,9 +7122,10 @@ class WeeklyDietEngine:
 
         # Clinical Narrative Note
         clinical_notes = (
-            f"7-Day Medical Nutrition Plan calibrated for {req.sex.upper()}, age {req.age_years} (BMI {req.body_mass_index}). "
+            f"Prototype 7-day meal-planning output for {req.sex.upper()}, age {req.age_years} (BMI {req.body_mass_index}); "
+            "not a diagnosis or clinically validated nutrition prescription. "
             f"Grounding cuisine: {regional_cuisine_name} ({req.preferences.dietary_type.upper()}). "
-            f"Identified Clinical Conditions: {', '.join(detected_conditions)}. "
+            f"Rule-based flags from submitted values (not diagnoses): {', '.join(detected_conditions)}. "
             f"Daily targets: Calories ~ {targets['calories_kcal']} kcal (Mifflin-St Jeor TDEE Model), "
             f"Protein ~ {targets['protein_g']} g (KDOQI/ADA adjusted), Sodium <= {targets['sodium_limit_mg']} mg, "
             f"Potassium guidance <= {targets['potassium_guidance_mg']} mg across 5 daily intervals."

@@ -14,6 +14,15 @@
 - Verification: Python compile passed; API metric loader returned 40 rows and all included status/class/confusion fields; synthetic diet-engine smoke script passed. No training, patient data, clinical evaluation, or GUI model replacement occurred.
 - Main limitation: exploratory metrics are not from the deployed model bundles. CKD/Framingham/Pima use row-level folds without record IDs, NHANES uses `SEQN` groups but no survey weights, and source lineage remains incomplete.
 
+## Completed latest iteration — non-diagnostic disease flags
+
+- Updated the weekly diet engine's user-visible output so CKD-range eGFR/biomarker findings, blood-pressure ranges, and diabetes-range laboratory values are explicitly described as non-diagnostic findings that require confirmation. A no-flag result now says it does not rule out disease.
+- Updated the GUI condition heading and chatbot summary to say “Automated lab flags (not diagnoses)” and removed the misleading “None detected (Low Risk)” wording.
+- Reframed generated diet notes as prototype meal-planning output, not a diagnosis or clinically validated nutrition prescription.
+- Added synthetic regression assertions for single-measure flags and user-facing output; updated the CKD protocol with the KDIGO 2024 chronicity requirement and the remaining implementation issue.
+- Critical remaining issue: the same single-reading booleans still select CKD/HTN/diabetes-specific nutrition targets internally. This iteration corrects wording only. Confirmed diagnoses are not separately collected, those targets are unvalidated, and patient use remains prohibited.
+- Verification: Python compilation and `scripts/test_diet_accuracy.py` passed, including checks that single-value CKD/BP/diabetes outputs remain explicitly non-diagnostic and generated meal-plan notes carry the prototype disclaimer. No patient data or external clinical data used.
+
 ## Goal and working rule
 
 Work toward a defensible technical and clinical evaluation for CKD, hypertension, and type 2 diabetes. After each iteration, update the main README with a concise explanation and direct links, update this handoff with evidence/open decisions, and commit/push the finished iteration to `kevivt`.

@@ -43,6 +43,9 @@ def test_egfr_math_and_nutrient_rule_smoke():
     # Arithmetic check only: one eGFR value does not confirm chronic kidney disease.
     egfr = calculate_ckd_epi_egfr(1.2, 68.0, "female")
     assert abs(egfr - 49.3) < 0.1, f"Formula arithmetic changed unexpectedly: {egfr}"
+    assert any("single measurement does not confirm CKD" in c for c in conditions), conditions
+    assert any("single reading does not establish diagnosis" in c for c in conditions), conditions
+    assert any("one measurement does not establish diagnosis" in c for c in conditions), conditions
     
     # Check SGLT2i floor
     assert targets["carbohydrate_g"] >= 130.0, f"Failed: SGLT2i carb floor violated: {targets['carbohydrate_g']}"
@@ -50,6 +53,7 @@ def test_egfr_math_and_nutrient_rule_smoke():
     # Check Potassium ceiling for CKD + ACEi
     assert targets["potassium_guidance_mg"] <= 2000.0, f"Failed: Potassium ceiling violated: {targets['potassium_guidance_mg']}"
     print(f"  [PASS] Formula arithmetic and configured nutrient-rule assertions: {targets['calories_kcal']} kcal, {targets['protein_g']}g Protein")
+    print("  [PASS] Single-value CKD, BP, and diabetes flags are explicitly non-diagnostic")
 
 
 def test_regional_caloric_and_macro_adherence():
@@ -70,6 +74,10 @@ def test_regional_caloric_and_macro_adherence():
             )
         )
         plan = weekly_diet_engine.generate_weekly_plan(req)
+        assert "not a diagnosis or clinically validated nutrition prescription" in plan.clinical_notes
+        assert "Rule-based flags from submitted values (not diagnoses)" in plan.clinical_notes
+        if reg == "south_indian":
+            assert any("single reading does not establish diagnosis" in c for c in plan.detected_conditions)
         target_cal = plan.clinical_targets["calories_kcal"]
         assert target_cal == 1850, f"Custom calorie target override failed: got {target_cal}"
 

@@ -99,7 +99,9 @@ def _build_patient_clinical_dossier(user_id: str) -> str:
         lines.append(f"  - Serum Electrolytes: Potassium {labs.get('serum_potassium_meq_l', 4.2)} mEq/L | Sodium {labs.get('serum_sodium_meq_l', 140)} mEq/L")
 
         conds = latest.get("detected_conditions", []) if latest else []
-        lines.append(f"• Detected Chronic Conditions: {', '.join(conds) if conds else 'None detected (Low Risk)'}")
+        lines.append(
+            f"• Rule-based lab flags (not diagnoses): {', '.join(conds) if conds else 'No flag from supplied values; this does not rule out disease'}"
+        )
 
         ass = latest.get("assessments", {}) if latest else {}
         if ass:

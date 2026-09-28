@@ -2,6 +2,8 @@
 
 > **Research prototype — not validated for clinical use.** Use synthetic inputs only. Scores, interpretations, AI text, and diet plans must not guide diagnosis, treatment, screening, triage, or patient care. See [the clinical validation log](docs/clinical_validation/VALIDATION_LOG.md) for evidence, blockers, and release gates.
 
+Automated CKD, blood-pressure, and glucose findings are labeled as rule-based flags, not diagnoses. A negative flag does not rule out disease. The diet engine still uses some single-value heuristics to alter its prototype targets; those targets are not clinically validated or safe to use for an individual. See the [CKD validation protocol](docs/clinical_validation/CKD_PROTOCOL_DRAFT.md) and [handoff](HANDOFF_README.md).
+
 ### Precision Clinical Nutrition & Multi-Disease Risk Intelligence Platform
 
 [![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11-3776AB?logo=python&logoColor=white)](https://python.org)
