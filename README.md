@@ -20,6 +20,8 @@ This release has only passed source-level inspection and one deterministic synth
 
 The source audit found a direct hypertension label leak and ambiguous pooled cohort labels. The label leak is now patched by using NHANES medication status only from its medication field when present; borderline NHANES diabetes responses are no longer treated as negatives. Two focused mapping regression checks pass, but models have not been retrained. Preprocessing, resampling, calibration, and test-set threshold leakage remain. See the [three-disease pipeline audit](docs/clinical_validation/THREE_DISEASE_PIPELINE_AUDIT.md).
 
+The latest CKD archive inspection found 400-row ARFF files with 248 labeled CKD, 150 labeled non-CKD, and two unlabeled rows, while the included metadata claims 250 CKD/150 non-CKD. The discrepancy is unresolved; no labels were inferred and no retraining was performed. See the [data source inventory](docs/clinical_validation/DATA_SOURCE_INVENTORY.md) and [CKD protocol draft](docs/clinical_validation/CKD_PROTOCOL_DRAFT.md).
+
 - [Validation log and required release gates](docs/clinical_validation/VALIDATION_LOG.md)
 - [Synthetic probe output](reports/clinical_validation/synthetic_ckd_rule_probe.json)
 - [CKD intended-use and validation protocol draft](docs/clinical_validation/CKD_PROTOCOL_DRAFT.md)

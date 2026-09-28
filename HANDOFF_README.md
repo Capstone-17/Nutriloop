@@ -33,6 +33,14 @@ Work toward a defensible technical and clinical evaluation for CKD, hypertension
 - Documented that synthetic oversampling cannot create independent patients or repair missing external validation data; preserve source prevalence and only oversample within development folds.
 - Evidence remains a local source-file inventory plus code audit. Local files are not included in the branch and their redistribution licenses/source provenance are not yet established.
 
+## Completed latest iteration — CKD archive contents
+
+- Inspected the local CKD RAR archive read-only with the system `tar` utility; did not extract or modify the source file.
+- Both ARFF members contain 400 records and 25 columns (24 features plus `class`): 248 labeled CKD, 150 labeled not-CKD, and two blank target labels. The accompanying info file reports 250 CKD and 150 not-CKD. The two unlabeled rows remain unknown and must not be silently assigned.
+- Recorded separate SHA-256 hashes for the archive, both ARFF files, and metadata in the [Public Data Source Inventory](docs/clinical_validation/DATA_SOURCE_INVENTORY.md).
+- The ARFF fields use `wbcc`/`rbcc`; the metadata uses `wc`/`rc`. This naming mismatch must be reconciled in a documented schema mapping.
+- Updated the CKD protocol and pipeline audit with the discrepancy. No model was retrained and no metrics were produced.
+
 ## Disease-level status
 
 | Disease | Status | Main blockers |
