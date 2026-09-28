@@ -125,3 +125,8 @@ Draft intended-use worksheets were added for hypertension and type 2 diabetes. B
 ## Current decision
 
 **Do not use this desktop app with real patient information or to guide care.** Continue only synthetic software checks and clinical-content review until the blocking findings are resolved. Gates 1–6 remain open; real-patient evaluation cannot begin until appropriate oversight, cohort access, protocol, and regulatory review are in place.
+
+
+## Public data source inventory iteration
+
+On 2026-09-28, a read-only inventory was made of four candidate public-source files in the shared development workspace: UCI-style CKD archive, Pima diabetes CSV, Framingham hypertension CSV, and a merged NHANES 2017–2018 extract. Their local-file SHA-256 hashes, row/column counts, available label counts, feature columns, and limitations are in the [Public Data Source Inventory](DATA_SOURCE_INVENTORY.md). None of these raw source files or the expected preprocessed train/test tables is included in the `kevivt` branch. The NHANES extract lacks `BPQ050A`; it includes one unique `SEQN` per row but that is not evidence of independent patient-level validation. No model was retrained and no accuracy/sensitivity/specificity claim was generated. Treat this as a provenance/readiness check only. Local-file provenance and redistribution terms remain unresolved, so do not present these local copies as a reproducible, licensed release dataset.

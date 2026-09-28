@@ -2,7 +2,7 @@
 
 - **Updated:** 2026-09-28
 - **Repository branch:** `kevivt`
-- **Last completed iterations:** CKD protocol draft (`b16d1ff`), three-disease audit, and source-level mapping fixes in this iteration
+- **Last completed iterations:** CKD protocol draft (`b16d1ff`), three-disease audit and mapping fixes (`27747fa`), followed by the source-file inventory in this iteration
 - **Current status:** Research planning and static source audit only; no model is clinically validated or approved for patient use.
 
 ## Goal and working rule
@@ -23,6 +23,15 @@ Work toward a defensible technical and clinical evaluation for CKD, hypertension
 - Fixed the diabetes target mapping so NHANES borderline/nonresponse codes remain missing and are excluded by target-row `dropna`, rather than labeled negative.
 - Confirmed shared evaluation defects in the checked-in code: imputers/scalers fit before splitting, cross-validation runs on the already SMOTE-resampled table, calibration uses the resampled distribution, and the “best” threshold is selected on held-out test labels.
 - Confirmed expected raw/preprocessed train/test files are absent from the target branch; a reproducible retraining or clinical performance result cannot be generated from this branch alone. Neither model was retrained after mapping fixes.
+
+## Completed latest iteration — source inventory
+
+- Added [Public Data Source Inventory](docs/clinical_validation/DATA_SOURCE_INVENTORY.md) and linked it from the README.
+- Fingerprinted the CKD archive, Pima CSV, Framingham CSV, and NHANES merged extract present only in the shared development workspace. The document records dimensions and target counts for the three readable CSVs, variable/reference limitations, and explicit SHA-256 hashes.
+- Confirmed NHANES `BPQ050A` is absent from the local merged file; after the prior mapping fix, `BPMeds` must remain missing for those rows. `SEQN` is unique within the merged file, but no cross-file linkage or patient-level split is established.
+- Confirmed the three disease train/test CSVs and the derived BRFSS files are absent from the branch. No model was trained and no performance result was generated.
+- Documented that synthetic oversampling cannot create independent patients or repair missing external validation data; preserve source prevalence and only oversample within development folds.
+- Evidence remains a local source-file inventory plus code audit. Local files are not included in the branch and their redistribution licenses/source provenance are not yet established.
 
 ## Disease-level status
 
@@ -55,9 +64,9 @@ The intended target/outcome choice is open for all three diseases. Freeze each s
 
 ## Next work
 
-1. Trace and checksum exact training sources and outcome labels for all three disease models.
-2. Audit row counts, duplicates, synthetic augmentation, missingness, source/site/time fields, feature timing, and direct/indirect target leakage.
-3. Rebuild the hypertension model with the corrected `BPQ050A` mapping when that source field exists; otherwise retain the feature as missing and document fold-local imputation. Rebuild diabetes with borderline outcomes excluded.
+1. Establish provenance, license/terms, and reproducible acquisition for each locally inventoried source; inspect/extract CKD archive and fetch/join NHANES `BPQ050A` using `SEQN`.
+2. Recover or reproducibly rebuild BRFSS source tables; inspect row counts, duplicates, synthetic augmentation, missingness, source/site/time fields, feature timing, and direct/indirect target leakage.
+3. Rebuild the hypertension model with corrected `BPQ050A` mapping when available; otherwise retain the feature as missing and document fold-local imputation. Rebuild diabetes with borderline outcomes excluded.
 4. Rebuild a pipeline with patient grouping and all imputers, encoders, scalers, resampling, calibration, and threshold selection confined to development folds. Select threshold on development data, never on the final external test set.
 5. Freeze separate disease-specific protocols and models, then seek appropriately governed independent external cohorts.
 6. Report disease-specific sensitivity with confidence intervals at a locked threshold, specificity, PPV/NPV, prevalence, PR-AUC, ROC-AUC, confusion matrices, and calibration only where probabilities are intended.
