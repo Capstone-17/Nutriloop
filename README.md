@@ -17,13 +17,14 @@
 3. [7-Day / 5-Interval Cultural Meal Engine](#3-7-day--5-interval-cultural-meal-engine)
 4. [Pharmacopeia & Drug-Nutrient Safety Guardrails](#4-pharmacopeia--drug-nutrient-safety-guardrails)
 5. [Multi-Tier Conversational AI Assistant & Clinical Agent](#5-multi-tier-conversational-ai-assistant--clinical-agent)
-6. [System Architecture & Data Flow](#6-system-architecture--data-flow)
-7. [Directory Structure](#7-directory-structure)
-8. [Installation & Setup](#8-installation--setup)
-9. [Desktop Application & Standalone Build](#9-desktop-application--standalone-build)
-10. [REST API Documentation](#10-rest-api-documentation)
-11. [Verification & Automated Test Suites](#11-verification--automated-test-suites)
-12. [Ethical & Regulatory Compliance](#12-ethical--regulatory-compliance)
+6. [Datasets & Population Cohort Scale](#6-datasets--population-cohort-scale)
+7. [System Architecture & Data Flow](#7-system-architecture--data-flow)
+8. [Directory Structure](#8-directory-structure)
+9. [Installation & Setup](#9-installation--setup)
+10. [Desktop Application & Standalone Build](#10-desktop-application--standalone-build)
+11. [REST API Documentation](#11-rest-api-documentation)
+12. [Verification & Automated Test Suites](#12-verification--automated-test-suites)
+13. [Ethical & Regulatory Compliance](#13-ethical--regulatory-compliance)
 
 ---
 
@@ -214,7 +215,45 @@ Nutriloop features a multi-tier conversational medical AI architecture designed 
 
 ---
 
-## 6. System Architecture & Data Flow
+## 6. Datasets & Population Cohort Scale
+
+NutriMed AI is trained and calibrated on large-scale population health cohorts and an exhaustive clinical food knowledge base totaling **691.57 MB** across **1,231,898 total records**:
+
+```
++---------------------------------------------------------------------------------------------------------+
+|                                    NUTRILOOP DATASET ARCHITECTURE                                       |
++------------------------------+---------+------------+----------+----------------------------------------+
+| Dataset Component            | Format  | Size (MB)  | Records  | Clinical Attributes & Target Features  |
++------------------------------+---------+------------+----------+----------------------------------------+
+| Unified Food Knowledge Base  | CSV     | 2.53 MB    | 7,110    | 40 nutritional, glycemic & renal attrs |
+| CKD Preprocessed Cohort      | CSV     | 139.87 MB  | 489,322  | 29 biomarkers (eGFR, Cr, BP, Urea, Na) |
+|   ├── Train Split (SMOTE)    | CSV     | 111.90 MB  | 391,457  | Class-balanced training subset         |
+|   └── Held-out Test Split    | CSV     | 27.96 MB   | 97,865   | Unseen validation cohort               |
+| Diabetes Preprocessed Cohort | CSV     | 103.08 MB  | 335,725  | 18 biomarkers (HbA1c, FBS, BMI, Age)   |
+|   ├── Train Split (SMOTE)    | CSV     | 82.46 MB   | 268,580  | Class-balanced training subset         |
+|   └── Held-out Test Split    | CSV     | 20.61 MB   | 67,145   | Unseen validation cohort               |
+| Hypertension Cohort          | CSV     | 101.58 MB  | 399,741  | 20 hemodynamic indicators (SBP, DBP)   |
+|   ├── Train Split (SMOTE)    | CSV     | 81.26 MB   | 319,792  | Class-balanced training subset         |
+|   └── Held-out Test Split    | CSV     | 20.32 MB   | 79,949   | Unseen validation cohort               |
++------------------------------+---------+------------+----------+----------------------------------------+
+| Total Repository Data Scale  | --      | 691.57 MB  | 1,231,898| Multi-disease & MNT clinical footprint |
++------------------------------+---------+------------+----------+----------------------------------------+
+```
+
+### 1. Unified Food Knowledge Base (`datasets/unified_food_kb.csv`)
+- **Total Scale**: **7,110 items** (2.53 MB).
+- **Attribute Coverage**: 40 distinct chemical, macro/micronutrient, and culinary features per item.
+- **Attributes Tracked**: Calories (kcal), protein (g), total carbohydrates (g), dietary fiber (g), soluble fiber (g), free sugars (g), total fats (g), saturated fats (g), monounsaturated fats (MUFA), polyunsaturated fats (PUFA), sodium (mg), potassium (mg), phosphorus (mg), calcium (mg), magnesium (mg), iron (mg), glycemic index (GI), glycemic load (GL), culinary region (South Indian, North Indian, Western Indian, Eastern Indian, Continental), and dietary classifications (`vegetarian`, `vegan`, `jain`, `eggetarian`, `non-vegetarian`).
+
+### 2. Multi-Disease Clinical Training & Validation Splits (`datasets/preprocessed/`)
+Encompasses **1,224,788 population-scale clinical records** (~689 MB) split into rigorous 80/20 train/test partitions with Synthetic Minority Over-sampling Technique (SMOTE) class balancing applied strictly to training partitions to prevent data leakage:
+- **Chronic Kidney Disease (CKD)**: 489,322 total records (29 attributes including serum creatinine, eGFR, serum potassium, blood urea nitrogen, urine albumin, systolic/diastolic BP, diabetes comorbidity, and cardiovascular history).
+- **Type 2 Diabetes Mellitus (T2DM)**: 335,725 total records (18 attributes including HbA1c, fasting plasma glucose, BMI, physical activity index, lipid profile, and age).
+- **Essential Hypertension (HTN)**: 399,741 total records (20 attributes including systolic BP, diastolic BP, heart rate, sodium intake index, smoking status, and BMI).
+
+---
+
+## 7. System Architecture & Data Flow
 
 ```
                       +-----------------------------+
@@ -246,7 +285,7 @@ Nutriloop features a multi-tier conversational medical AI architecture designed 
 
 ---
 
-## 7. Directory Structure
+## 8. Directory Structure
 
 ```
 Nutriloop/
@@ -277,8 +316,18 @@ Nutriloop/
 │       ├── system_prompt.py          # Clinical prompt engineering & safety guardrails
 │       └── tools.py                  # Guidelines, drug interaction, & plan alteration tools
 ├── bin/                              # Bundled platform binaries (e.g. Ollama for Windows)
-├── datasets/                         # Medical nutrition datasets
-│   └── unified_food_kb.csv           # 1,300+ item nutritional database
+├── datasets/                         # Medical nutrition & clinical cohorts (~691.57 MB)
+│   ├── unified_food_kb.csv           # 7,110 items with 40 nutritional attributes (2.53 MB)
+│   └── preprocessed/                 # 1,224,788 clinical records across 9 splits (689.04 MB)
+│       ├── ckd_preprocessed.csv      # 489,322 patient records (139.87 MB)
+│       ├── ckd_train_smote.csv       # 391,457 balanced training records (111.90 MB)
+│       ├── ckd_test.csv              # 97,865 held-out validation records (27.96 MB)
+│       ├── diabetes_preprocessed.csv # 335,725 patient records (103.08 MB)
+│       ├── diabetes_train_smote.csv  # 268,580 balanced training records (82.46 MB)
+│       ├── diabetes_test.csv         # 67,145 held-out validation records (20.61 MB)
+│       ├── hypertension_preprocessed.csv # 399,741 patient records (101.58 MB)
+│       ├── hypertension_train_smote.csv  # 319,792 balanced training records (81.26 MB)
+│       └── hypertension_test.csv     # 79,949 held-out validation records (20.32 MB)
 ├── gui/                              # Modern dark-mode UI
 │   ├── index.html                    # Single-page interface with Tab 3 AI Engine Toolbar
 │   ├── style.css                     # Responsive CSS design system with Markdown styling
@@ -293,7 +342,7 @@ Nutriloop/
 
 ---
 
-## 8. Installation & Setup
+## 9. Installation & Setup
 
 ### Prerequisites
 - **Python**: 3.10, 3.11, or 3.12 (64-bit)
@@ -330,7 +379,7 @@ Navigate to `http://127.0.0.1:8000/docs` for the interactive Swagger documentati
 
 ---
 
-## 9. Desktop Application & Standalone Build
+## 10. Desktop Application & Standalone Build
 
 NutriMed AI (Nutriloop) packages into a single, standalone Windows `.exe` (~189 MB) with zero external runtime dependencies:
 
@@ -350,7 +399,7 @@ dist/Nutriloop.exe
 
 ---
 
-## 10. REST API Documentation
+## 11. REST API Documentation
 
 The platform exposes **22 REST endpoints**:
 
@@ -374,7 +423,7 @@ The platform exposes **22 REST endpoints**:
 
 ---
 
-## 11. Verification & Automated Test Suites
+## 12. Verification & Automated Test Suites
 
 ### Precision Diet Recommendation Accuracy Suite
 ```bash
@@ -400,7 +449,8 @@ Evaluates Macro-F1, PR-AUC, ROC-AUC, Sensitivity, Specificity, and Brier calibra
 
 ---
 
-## 12. Ethical & Regulatory Compliance
+## 13. Ethical & Regulatory Compliance
 
 - **Clinical Decision Support Notice**: NutriMed AI is designed to assist registered dietitians, nephrologists, and primary care physicians. It provides clinical decision support and does not replace professional medical diagnosis or emergency care.
 - **Privacy & Security**: All inference and persistent data storage occur locally on the user's host machine. No protected health information (PHI) is transmitted to third-party cloud servers.
+
