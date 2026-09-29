@@ -1,11 +1,15 @@
+import os
+import sys
+
+# Globally prevent Python from writing .pyc files or creating __pycache__ directories
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
 import sqlite3
 import json
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Optional, List, Generator
-
-
-import sys
 
 def get_data_dir() -> Path:
     """Return dedicated directory for patient data (database, saved reports, models, logs).

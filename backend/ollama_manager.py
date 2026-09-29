@@ -17,10 +17,16 @@ Guarantees:
 
 from __future__ import annotations
 
+import os
+import sys
+
+# Globally prevent Python from writing .pyc files or creating __pycache__ directories
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
 import atexit
 import json
 import logging
-import os
 import shutil
 import subprocess
 import sys
@@ -233,22 +239,14 @@ class OllamaProcessManager:
                 finally:
                     self._process = None
 
-            # 2. Check if a lingering ollama.exe was spawned
-            if os.name == "nt" and not self.is_service_running():
+            # Only stop the process this manager started and still tracks.
+            # Never terminate every process named ollama.exe: another app or a
+            # user-managed Ollama service may be using it.
+            if pid is None:
+                log.info("[OllamaManager] No app-owned Ollama process to stop.")
                 return
 
-            if os.name == "nt":
-                # Ensure no orphaned ollama processes remain
-                try:
-                    subprocess.run(
-                        ["taskkill", "/F", "/IM", "ollama.exe"],
-                        creationflags=CREATE_NO_WINDOW,
-                        capture_output=True,
-                    )
-                except Exception:
-                    pass
-
-            log.info("[OllamaManager] Ollama service terminated. Zero background processes.")
+            log.info("[OllamaManager] App-owned Ollama process termination requested.")
 
     def schedule_idle_shutdown(self, seconds: Optional[float] = None) -> None:
         """Schedule automatic termination after seconds of no chat activity."""

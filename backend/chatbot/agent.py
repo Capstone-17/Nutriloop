@@ -14,9 +14,15 @@ Key Features:
 
 from __future__ import annotations
 
+import os
+import sys
+
+# Globally prevent Python from writing .pyc files or creating __pycache__ directories
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
 import json
 import logging
-import os
 import re
 import time
 from typing import Any, Dict, List, Optional, Tuple

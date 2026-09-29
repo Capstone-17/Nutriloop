@@ -12,6 +12,13 @@ Generates a clinically validated, culturally authentic 7-day (Monday-Sunday),
 """
 
 from __future__ import annotations
+import os
+import sys
+
+# Globally prevent Python from writing .pyc files or creating __pycache__ directories
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
 import copy
 from datetime import datetime, timezone
 import json

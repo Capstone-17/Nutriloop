@@ -251,6 +251,13 @@ Encompasses **1,224,788 population-scale clinical records** (~689 MB) split into
 - **Type 2 Diabetes Mellitus (T2DM)**: 335,725 total records (18 attributes including HbA1c, fasting plasma glucose, BMI, physical activity index, lipid profile, and age).
 - **Essential Hypertension (HTN)**: 399,741 total records (20 attributes including systolic BP, diastolic BP, heart rate, sodium intake index, smoking status, and BMI).
 
+### 3. Methodological Rigor & Leakage Prevention
+To guarantee publication-grade validity and clinical peer-review compliance, all training and preprocessing pipelines adhere to strict methodological safeguards:
+- **Target Leakage Remediation**: Resolved target leakage in the NHANES hypertension cohort by decoupling `BPMeds` from the outcome label `BPQ020` ("Ever told had high blood pressure") and re-mapping it strictly to `BPQ050A` ("Currently taking prescribed medication").
+- **Indeterminate Code Isolation**: Built `map_nhanes_yes_no()` to strictly isolate binary responses (`1.0` -> 1, `2.0` -> 0), ensuring borderline codes (`3.0`) and non-responses (`7.0`, `9.0`) are treated as missing (`NaN`) rather than falsely counted as disease-free negatives.
+- **Out-of-Fold Threshold Locking**: Decision thresholds (`moderate` and `high`) are derived strictly on training splits using `out_of_fold_probabilities()` across 5-fold cross-validation, locking decision boundaries before evaluating untouched held-out test splits.
+- **Safe Process Isolation**: Ollama background process management uses targeted PID termination (`taskkill /PID <pid>`), guaranteeing that user-managed system-wide Ollama instances are never terminated.
+
 ---
 
 ## 7. System Architecture & Data Flow
@@ -333,11 +340,14 @@ Nutriloop/
 │   ├── style.css                     # Responsive CSS design system with Markdown styling
 │   └── app.js                        # Client state, PyWebView bridge, Markdown parser, & chart rendering
 ├── Nutriloop_Data/                   # Auto-created runtime patient directory (app_data.db, reports)
-└── scripts/                          # Verification & benchmarking tools
+└── scripts/                          # Verification, preprocessing & benchmarking tools
     ├── benchmark_models.py           # Model evaluation suite (F1, PR-AUC, Brier score)
+    ├── evaluate_public_cohorts.py    # Leakage-free benchmark evaluator across 10 ML algorithms
     ├── predict_cli.py                # Command-line prediction tool
+    ├── preprocess_data.py            # Multi-cohort feature engineering & leakage-free mapper
     ├── smoke_test.py                 # 22-endpoint REST API smoke test suite
-    └── test_diet_accuracy.py         # Precision clinical diet accuracy test suite
+    ├── test_diet_accuracy.py         # Precision clinical diet accuracy test suite
+    └── train_and_optimize.py         # Out-of-fold threshold tuning & model serializer
 ```
 
 ---

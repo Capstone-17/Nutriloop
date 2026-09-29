@@ -13,6 +13,13 @@ Framingham Heart Study, UCI CKD, and Pima Indians Diabetes):
 """
 
 from __future__ import annotations
+import os
+import sys
+
+# Globally prevent Python from writing .pyc files or creating __pycache__ directories
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
 import json
 import logging
 from pathlib import Path
@@ -41,6 +48,18 @@ RAW_DIR = PROJECT_DIR / "datasets" / "raw"
 OUT_DIR = PROJECT_DIR / "datasets" / "preprocessed"
 MED_DATA_DIR = PROJECT_DIR / "med_dataset"
 RANDOM_STATE = 42
+
+def map_nhanes_yes_no(series: pd.Series) -> pd.Series:
+    """Map NHANES yes/no codes to 1/0; retain borderline and nonresponse codes as missing."""
+    numeric = pd.to_numeric(series, errors="coerce")
+    return numeric.map({1.0: 1.0, 2.0: 0.0})
+
+
+def nhanes_bp_meds_feature(frame: pd.DataFrame) -> pd.Series:
+    """Map current BP medication only from BPQ050A, never from the BPQ020 outcome."""
+    if "BPQ050A" not in frame.columns:
+        return pd.Series(np.nan, index=frame.index, dtype=float)
+    return map_nhanes_yes_no(frame["BPQ050A"])
 
 
 def parse_arff_file(path: Path) -> pd.DataFrame:
@@ -187,10 +206,10 @@ def load_and_preprocess_hypertension() -> Tuple[pd.DataFrame, pd.DataFrame, pd.D
         df_nh["education"] = df_nh_raw["DMDEDUC2"].fillna(2.0)
         df_nh["currentSmoker"] = (df_nh_raw["SMQ020"] == 1).astype(float)
         df_nh["cigsPerDay"] = df_nh_raw["SMD650"].fillna(0.0)
-        df_nh["BPMeds"] = (df_nh_raw["BPQ020"] == 1).astype(float)
+        df_nh["BPMeds"] = nhanes_bp_meds_feature(df_nh_raw)
         df_nh["prevalentStroke"] = (df_nh_raw["MCQ160F"] == 1).astype(float)
-        df_nh["prevalentHyp"] = df_nh_raw["BPQ020"].map({1.0: 1, 2.0: 0})
-        df_nh["diabetes"] = df_nh_raw["DIQ010"].map({1.0: 1, 2.0: 0, 3.0: 0}).fillna(0)
+        df_nh["prevalentHyp"] = map_nhanes_yes_no(df_nh_raw["BPQ020"])
+        df_nh["diabetes"] = map_nhanes_yes_no(df_nh_raw["DIQ010"])
         df_nh["totChol"] = np.nan
         
         sys_cols = [c for c in ["BPXSY1", "BPXSY2", "BPXSY3"] if c in df_nh_raw.columns]
@@ -319,7 +338,7 @@ def load_and_preprocess_diabetes() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataF
         df_nh["BMI"] = df_nh_raw["BMXBMI"]
         df_nh["DiabetesPedigreeFunction"] = np.nan
         df_nh["Age"] = df_nh_raw["RIDAGEYR"]
-        df_nh["diabetes"] = df_nh_raw["DIQ010"].map({1.0: 1, 2.0: 0, 3.0: 0})
+        df_nh["diabetes"] = map_nhanes_yes_no(df_nh_raw["DIQ010"])
         df_nh = df_nh.dropna(subset=["diabetes"])
         dfs.append(df_nh)
         log.info(f"Loaded NHANES Diabetes cohort: {df_nh.shape}")

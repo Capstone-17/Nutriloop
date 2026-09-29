@@ -156,7 +156,9 @@
         "importance": 0.0,
         "relative_importance": 0.0
       }
-    ]
+    ],
+    "evaluation_status": "NOT_CLINICALLY_VALIDATED",
+    "thresholds_status": "ENGINEERING_DEFAULTS_NOT_CLINICIAN_APPROVED"
   },
   "hypertension": {
     "model_name": "HistGradientBoostingClassifier",
@@ -270,7 +272,9 @@
         "importance": 0.0,
         "relative_importance": 0.0
       }
-    ]
+    ],
+    "evaluation_status": "NOT_CLINICALLY_VALIDATED",
+    "thresholds_status": "ENGINEERING_DEFAULTS_NOT_CLINICIAN_APPROVED"
   },
   "diabetes": {
     "model_name": "HistGradientBoostingClassifier",
@@ -374,6 +378,8 @@
         "importance": 0.0,
         "relative_importance": 0.0
       }
-    ]
+    ],
+    "evaluation_status": "NOT_CLINICALLY_VALIDATED",
+    "thresholds_status": "ENGINEERING_DEFAULTS_NOT_CLINICIAN_APPROVED"
   }
 }
