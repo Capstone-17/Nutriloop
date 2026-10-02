@@ -146,6 +146,18 @@ class DesktopAPI:
         """Trigger background pull of the model. Terminates daemon immediately when completed."""
         return ollama_manager.start_model_download(model_name)
 
+    def pause_model_download(self) -> Dict[str, Any]:
+        """Pause active model download and shut down background Ollama daemon."""
+        return ollama_manager.pause_model_download()
+
+    def resume_model_download(self, model_name: Optional[str] = None) -> Dict[str, Any]:
+        """Resume a paused model download from where it left off."""
+        return ollama_manager.resume_model_download(model_name)
+
+    def cancel_model_download(self) -> Dict[str, Any]:
+        """Cancel model download, delete partial files, and shut down daemon."""
+        return ollama_manager.cancel_model_download()
+
     def get_model_download_progress(self) -> Dict[str, Any]:
         """Return real-time pull status for UI progress bars."""
         return ollama_manager.get_download_progress()

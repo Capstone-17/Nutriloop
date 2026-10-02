@@ -71,19 +71,25 @@ class OllamaProcessManager:
         self._idle_timer: Optional[threading.Timer] = None
         self._idle_timeout_s = 60.0  # Terminate daemon after 60s of inactivity
 
-        # Background download state
+        # Background download state and control
         self._download_lock = threading.Lock()
+        self._pause_requested = False
+        self._cancel_requested = False
+        self._current_client: Optional[httpx.Client] = None
+        self._download_state_file = self.models_dir / "download_state.json"
         self._download_state: Dict[str, Any] = {
             "status": "idle",
             "percent": 0.0,
             "completed_bytes": 0,
             "total_bytes": 0,
+            "model": None,
             "message": "Ready to install",
             "error": None,
         }
+        self._load_persisted_state()
 
-        # Ensure cleanup on process exit
-        atexit.register(self.terminate_service)
+        # Ensure cleanup and pause persistence on process exit
+        atexit.register(self._on_app_exit)
         log.info("[OllamaManager] Initialized. Binary: %s", self.binary_path)
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -278,6 +284,98 @@ class OllamaProcessManager:
     # Model Download with Mandatory Post-Download Termination
     # ──────────────────────────────────────────────────────────────────────────
 
+    # ──────────────────────────────────────────────────────────────────────────
+    # Model Download, Pause, Resume, and Cancellation Management
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def _load_persisted_state(self) -> None:
+        """Load any paused or interrupted download state from disk on startup."""
+        try:
+            if self._download_state_file.exists():
+                data = json.loads(self._download_state_file.read_text(encoding="utf-8"))
+                saved_status = data.get("status")
+                # If app exited while downloading or starting, treat as paused
+                if saved_status in ("downloading", "starting", "paused"):
+                    pct = float(data.get("percent", 0.0))
+                    comp = int(data.get("completed_bytes", 0))
+                    tot = int(data.get("total_bytes", 0))
+                    mod = data.get("model", self.recommended_model)
+                    mb_done = round(comp / (1024 * 1024), 1)
+                    mb_tot = round(tot / (1024 * 1024), 1)
+                    tot_str = f" ({mb_done} MB / {mb_tot} MB)" if mb_tot > 0 else ""
+                    self._download_state = {
+                        "status": "paused",
+                        "percent": pct,
+                        "completed_bytes": comp,
+                        "total_bytes": tot,
+                        "model": mod,
+                        "message": f"Download paused at {pct}%{tot_str}. Click Resume to continue.",
+                        "error": None,
+                    }
+                    log.info("[OllamaManager] Restored paused download state for %s at %.1f%%", mod, pct)
+                elif saved_status == "success":
+                    self._clear_persisted_state()
+        except Exception as exc:
+            log.warning("[OllamaManager] Failed to load persisted download state: %s", exc)
+
+    def _save_persisted_state(self, state: Dict[str, Any]) -> None:
+        """Atomically persist current download state to disk."""
+        try:
+            temp_file = self._download_state_file.with_suffix(".tmp")
+            payload = {
+                "status": state.get("status", "idle"),
+                "percent": state.get("percent", 0.0),
+                "completed_bytes": state.get("completed_bytes", 0),
+                "total_bytes": state.get("total_bytes", 0),
+                "model": state.get("model") or self.recommended_model,
+                "message": state.get("message", ""),
+                "timestamp": time.time(),
+            }
+            temp_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            temp_file.replace(self._download_state_file)
+        except Exception as exc:
+            log.debug("[OllamaManager] Could not save download state: %s", exc)
+
+    def _clear_persisted_state(self) -> None:
+        """Remove persisted download state file."""
+        try:
+            if self._download_state_file.exists():
+                self._download_state_file.unlink(missing_ok=True)
+        except Exception as exc:
+            log.debug("[OllamaManager] Could not remove download state file: %s", exc)
+
+    def _clean_partial_blobs(self) -> None:
+        """Clean any partial layer files (*-partial*) in models/blobs directory."""
+        try:
+            blobs_dir = self.models_dir / "blobs"
+            if blobs_dir.exists():
+                for p in blobs_dir.glob("*-partial*"):
+                    try:
+                        p.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+        except Exception as exc:
+            log.warning("[OllamaManager] Exception while cleaning partial blobs: %s", exc)
+
+    def _on_app_exit(self) -> None:
+        """Invoked on application exit: save pause state if in progress and ensure daemon termination."""
+        try:
+            with self._download_lock:
+                if self._download_state.get("status") in ("downloading", "starting"):
+                    self._download_state["status"] = "paused"
+                    pct = self._download_state.get("percent", 0.0)
+                    comp = self._download_state.get("completed_bytes", 0)
+                    tot = self._download_state.get("total_bytes", 0)
+                    mb_done = round(comp / (1024 * 1024), 1)
+                    mb_tot = round(tot / (1024 * 1024), 1)
+                    tot_str = f" ({mb_done} MB / {mb_tot} MB)" if mb_tot > 0 else ""
+                    self._download_state["message"] = f"Download paused at {pct}%{tot_str}. Click Resume to continue."
+                    self._save_persisted_state(self._download_state)
+                    log.info("[OllamaManager] Application exiting during download; saved state as paused.")
+        except Exception:
+            pass
+        self.terminate_service()
+
     def start_model_download(self, model_name: Optional[str] = None) -> Dict[str, Any]:
         """Trigger background pull of model. Terminates daemon immediately when finished."""
         target_model = model_name or self.recommended_model
@@ -285,14 +383,19 @@ class OllamaProcessManager:
             if self._download_state["status"] in ("downloading", "starting"):
                 return {"status": "busy", "message": "Model installation already in progress."}
 
+            self._pause_requested = False
+            self._cancel_requested = False
+
             self._download_state = {
                 "status": "starting",
                 "percent": 0.0,
                 "completed_bytes": 0,
                 "total_bytes": 0,
+                "model": target_model,
                 "message": f"Starting embedded Ollama daemon to install {target_model}...",
                 "error": None,
             }
+            self._save_persisted_state(self._download_state)
 
             pull_thread = threading.Thread(
                 target=self._run_download_worker,
@@ -302,26 +405,141 @@ class OllamaProcessManager:
             pull_thread.start()
             return {"status": "started", "model": target_model}
 
+    def pause_model_download(self) -> Dict[str, Any]:
+        """Gracefully pause active model download and terminate Ollama daemon immediately."""
+        with self._download_lock:
+            cur_status = self._download_state.get("status")
+            if cur_status == "paused":
+                return {"status": "paused", "state": dict(self._download_state)}
+
+            if cur_status not in ("downloading", "starting"):
+                return {"status": "not_downloading", "message": "No active download to pause."}
+
+            self._pause_requested = True
+            self._cancel_requested = False
+
+            self._download_state["status"] = "paused"
+            pct = self._download_state.get("percent", 0.0)
+            comp = self._download_state.get("completed_bytes", 0)
+            tot = self._download_state.get("total_bytes", 0)
+            mb_done = round(comp / (1024 * 1024), 1)
+            mb_tot = round(tot / (1024 * 1024), 1)
+            tot_str = f" ({mb_done} MB / {mb_tot} MB)" if mb_tot > 0 else ""
+            self._download_state["message"] = f"Download paused at {pct}%{tot_str}. Click Resume to continue."
+            self._save_persisted_state(self._download_state)
+
+            client = self._current_client
+            if client:
+                try:
+                    client.close()
+                except Exception:
+                    pass
+
+        # Terminate background Ollama daemon immediately - NO background processes running!
+        log.info("[OllamaManager] Pausing download and terminating background daemon.")
+        self.terminate_service()
+
+        with self._download_lock:
+            return {"status": "paused", "state": dict(self._download_state)}
+
+    def resume_model_download(self, model_name: Optional[str] = None) -> Dict[str, Any]:
+        """Resume a paused or interrupted model download from where it left off."""
+        with self._download_lock:
+            cur_status = self._download_state.get("status")
+            if cur_status in ("downloading", "starting"):
+                return {"status": "busy", "message": "Download is already in progress."}
+
+            target_model = model_name or self._download_state.get("model") or self.recommended_model
+            self._pause_requested = False
+            self._cancel_requested = False
+
+            pct = self._download_state.get("percent", 0.0)
+            self._download_state.update({
+                "status": "starting",
+                "model": target_model,
+                "message": f"Resuming download of {target_model} from {pct}%...",
+                "error": None,
+            })
+            self._save_persisted_state(self._download_state)
+
+            pull_thread = threading.Thread(
+                target=self._run_download_worker,
+                args=(target_model,),
+                daemon=True,
+            )
+            pull_thread.start()
+            return {"status": "resumed", "model": target_model}
+
+    def cancel_model_download(self) -> Dict[str, Any]:
+        """Cancel the download, remove partial downloads from disk, and terminate daemon."""
+        with self._download_lock:
+            self._cancel_requested = True
+            self._pause_requested = False
+
+            client = self._current_client
+            if client:
+                try:
+                    client.close()
+                except Exception:
+                    pass
+
+            self._download_state = {
+                "status": "cancelled",
+                "percent": 0.0,
+                "completed_bytes": 0,
+                "total_bytes": 0,
+                "model": None,
+                "message": "Download cancelled. Ready to install.",
+                "error": None,
+            }
+            self._clear_persisted_state()
+
+        # Clean partial files from disk
+        self._clean_partial_blobs()
+
+        # Terminate background Ollama daemon immediately - NO background processes running!
+        log.info("[OllamaManager] Download cancelled. Terminating background daemon.")
+        self.terminate_service()
+
+        with self._download_lock:
+            # Set to idle so subsequent install can start freshly
+            self._download_state["status"] = "idle"
+            return {"status": "cancelled", "state": dict(self._download_state)}
+
     def _run_download_worker(self, model_name: str) -> None:
-        """Worker thread: starts daemon, streams pull, and terminates daemon immediately."""
+        """Worker thread: starts daemon, streams pull with HTTP Range support, and terminates daemon immediately."""
         try:
-            # 1. Start daemon
+            if self._cancel_requested or self._pause_requested:
+                return
+
             ready = self.start_service(timeout_s=15.0)
             if not ready:
+                if self._cancel_requested or self._pause_requested:
+                    return
                 self._set_download_error("Could not launch embedded Ollama background service.")
                 return
 
-            # 2. Stream pull
-            url = f"{self.base_url}/api/pull"
-            self._download_state["message"] = f"Connecting to pull {model_name}..."
+            if self._cancel_requested or self._pause_requested:
+                return
 
-            with httpx.Client(timeout=1800.0) as client:
+            url = f"{self.base_url}/api/pull"
+            with self._download_lock:
+                self._download_state["message"] = f"Connecting to pull {model_name}..."
+
+            client = httpx.Client(timeout=1800.0)
+            with self._download_lock:
+                self._current_client = client
+
+            try:
                 with client.stream("POST", url, json={"name": model_name, "stream": True}) as resp:
                     if resp.status_code != 200:
-                        self._set_download_error(f"HTTP {resp.status_code}: {resp.text}")
+                        if not (self._cancel_requested or self._pause_requested):
+                            self._set_download_error(f"HTTP {resp.status_code}: {resp.text}")
                         return
 
                     for line in resp.iter_lines():
+                        if self._cancel_requested or self._pause_requested:
+                            break
                         if not line:
                             continue
                         try:
@@ -336,7 +554,7 @@ class OllamaProcessManager:
                                 mb_tot = round(total / (1024 * 1024), 1)
                                 msg = f"Downloading {model_name}: {pct}% ({mb_done} MB / {mb_tot} MB)"
                             else:
-                                pct = 0.0
+                                pct = self._download_state.get("percent", 0.0)
                                 msg = status
 
                             is_success = "success" in status.lower()
@@ -346,28 +564,68 @@ class OllamaProcessManager:
                                     "percent": 100.0 if is_success else pct,
                                     "completed_bytes": completed,
                                     "total_bytes": total,
+                                    "model": model_name,
                                     "message": f"Model {model_name} successfully installed!" if is_success else msg,
                                 })
+                                if total > 0:
+                                    self._save_persisted_state(self._download_state)
 
                             if is_success:
                                 log.info("[OllamaManager] Download complete: %s", model_name)
+                                self._clear_persisted_state()
                                 break
                         except Exception:
                             pass
+            finally:
+                with self._download_lock:
+                    self._current_client = None
+                try:
+                    client.close()
+                except Exception:
+                    pass
 
         except Exception as exc:
+            if self._pause_requested or self._cancel_requested:
+                log.info("[OllamaManager] Download worker cleanly interrupted by pause/cancel.")
+                return
             log.exception("[OllamaManager] Download worker error: %s", exc)
             err_str = str(exc)
             if "unexpected EOF" in err_str or "streaming" in err_str or "Timeout" in err_str:
-                err_msg = "Model download was interrupted by a network timeout or connection reset. Note: Dr. Nutriloop's Clinical Knowledge Base is already fully functional without it! You can retry the download whenever you have a stable high-speed internet connection."
+                err_msg = "Model download was interrupted by a network timeout or connection reset. Note: Dr. Nutriloop's Clinical Knowledge Base is already fully functional without it! You can retry or resume the download whenever you have a stable high-speed internet connection."
             else:
                 err_msg = err_str
             self._set_download_error(err_msg)
         finally:
-            # 3. CRITICAL REQUIREMENT:
-            # "Once downloaded, the background ollama process should be terminated."
-            # "Make sure there are no unnecessary background processes running at any time."
-            log.info("[OllamaManager] Terminating background daemon post-download.")
+            if self._pause_requested:
+                with self._download_lock:
+                    self._download_state["status"] = "paused"
+                    pct = self._download_state.get("percent", 0.0)
+                    comp = self._download_state.get("completed_bytes", 0)
+                    tot = self._download_state.get("total_bytes", 0)
+                    mb_done = round(comp / (1024 * 1024), 1)
+                    mb_tot = round(tot / (1024 * 1024), 1)
+                    tot_str = f" ({mb_done} MB / {mb_tot} MB)" if mb_tot > 0 else ""
+                    self._download_state["message"] = f"Download paused at {pct}%{tot_str}. Click Resume to continue."
+                    self._save_persisted_state(self._download_state)
+                log.info("[OllamaManager] Download marked paused.")
+            elif self._cancel_requested:
+                with self._download_lock:
+                    self._download_state = {
+                        "status": "idle",
+                        "percent": 0.0,
+                        "completed_bytes": 0,
+                        "total_bytes": 0,
+                        "model": None,
+                        "message": "Download cancelled. Ready to install.",
+                        "error": None,
+                    }
+                    self._clear_persisted_state()
+                self._clean_partial_blobs()
+                log.info("[OllamaManager] Download marked cancelled and partial blobs purged.")
+
+            # Ensure background daemon is terminated immediately:
+            # "no background processes running when application shuts off / pauses / completes"
+            log.info("[OllamaManager] Terminating background daemon post-worker.")
             self.terminate_service()
 
     def _set_download_error(self, err_msg: str) -> None:

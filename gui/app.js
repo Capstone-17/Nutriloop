@@ -289,6 +289,8 @@ function setupEventListeners() {
 
   document.getElementById("btn-refresh-ollama").addEventListener("click", refreshOllamaStatus);
   document.getElementById("btn-install-model").addEventListener("click", installOllamaModel);
+  document.getElementById("btn-pause-model")?.addEventListener("click", pauseOllamaDownload);
+  document.getElementById("btn-cancel-model")?.addEventListener("click", cancelOllamaDownload);
 
   // Delete Test Button
   document.getElementById("btn-delete-test")?.addEventListener("click", runDeleteActiveTest);
@@ -724,9 +726,9 @@ async function runWeeklyDiet() {
   btn.disabled = true;
   btn.textContent = "⏳ Assembling Personalized 7-Day Plan...";
 
-  const likes = document.getElementById("diet-likes").value.split(",").map((s) => s.trim()).filter(Boolean);
-  const dislikesRaw = document.getElementById("diet-dislikes").value.split(",").map((s) => s.trim()).filter(Boolean);
-  const meds = document.getElementById("diet-meds").value.split(",").map((s) => s.trim()).filter(Boolean);
+  const likes = document.getElementById("diet-likes").value.split(/[,;/+&]|\band\b/i).map((s) => s.trim()).filter(Boolean);
+  const dislikesRaw = document.getElementById("diet-dislikes").value.split(/[,;/+&]|\band\b/i).map((s) => s.trim()).filter(Boolean);
+  const meds = document.getElementById("diet-meds").value.split(/[,;/+&]|\band\b/i).map((s) => s.trim()).filter(Boolean);
   const craving = document.getElementById("diet-craving")?.value.trim() || "";
 
   const payload = {
@@ -862,7 +864,7 @@ function renderWeeklyDietResults(plan) {
 
     const tot = day.daily_total_nutrients || {};
     strip.innerHTML = `
-      <div class="day-strip-header" onclick="this.parentElement.classList.toggle('open')">
+      <div class="day-strip-header">
         <div style="font-weight: 700; color: #ffffff;">
           Day ${day.day_number}: ${day.day_name}
         </div>
@@ -1218,8 +1220,77 @@ async function refreshOllamaStatus() {
         installBtn.textContent = "⬇️ 1-Click Install llama3.2:3b Model";
       }
     }
+
+    // Also sync download progress state (handles startup recovery of paused downloads)
+    try {
+      const dlState = await window.pywebview.api.get_model_download_progress();
+      if (dlState) {
+        if (dlState.status === "downloading" || dlState.status === "starting") {
+          pollDownloadProgress();
+        } else {
+          updateDownloadUI(dlState);
+        }
+      }
+    } catch (_) {}
   } catch (err) {
     console.error("Failed to check Ollama:", err);
+  }
+}
+
+function updateDownloadUI(state) {
+  const fill = document.getElementById("model-progress-fill");
+  const text = document.getElementById("model-progress-text");
+  const installBtn = document.getElementById("btn-install-model");
+  const pauseBtn = document.getElementById("btn-pause-model");
+  const cancelBtn = document.getElementById("btn-cancel-model");
+
+  if (!fill || !text || !installBtn) return;
+
+  const pct = typeof state.percent === "number" ? Math.max(0, Math.min(100, state.percent)) : 0;
+
+  if (state.status === "downloading" || state.status === "starting") {
+    fill.style.width = `${Math.max(pct, 2)}%`;
+    text.textContent = state.message || "Downloading model...";
+    installBtn.style.display = "none";
+    if (pauseBtn) {
+      pauseBtn.style.display = "inline-flex";
+      pauseBtn.disabled = false;
+      pauseBtn.textContent = "⏸️ Pause";
+    }
+    if (cancelBtn) {
+      cancelBtn.style.display = "inline-flex";
+      cancelBtn.disabled = false;
+      cancelBtn.textContent = "🛑 Cancel";
+    }
+  } else if (state.status === "paused") {
+    fill.style.width = `${pct}%`;
+    text.textContent = state.message || `Download paused at ${pct}%. Click Resume to continue.`;
+    installBtn.style.display = "inline-flex";
+    installBtn.disabled = false;
+    installBtn.textContent = `▶️ Resume Download (${pct}%)`;
+    if (pauseBtn) pauseBtn.style.display = "none";
+    if (cancelBtn) {
+      cancelBtn.style.display = "inline-flex";
+      cancelBtn.disabled = false;
+      cancelBtn.textContent = "🛑 Cancel";
+    }
+  } else if (state.status === "success") {
+    fill.style.width = "100%";
+    text.textContent = state.message || "✅ Model llama3.2:3b successfully installed and ready.";
+    installBtn.style.display = "inline-flex";
+    installBtn.disabled = false;
+    installBtn.textContent = "✅ llama3.2:3b Installed";
+    if (pauseBtn) pauseBtn.style.display = "none";
+    if (cancelBtn) cancelBtn.style.display = "none";
+  } else {
+    // idle, cancelled, error
+    fill.style.width = state.status === "cancelled" ? "0%" : `${pct}%`;
+    text.textContent = state.message || "Status: Ready";
+    installBtn.style.display = "inline-flex";
+    installBtn.disabled = false;
+    installBtn.textContent = "⬇️ 1-Click Install llama3.2:3b Model";
+    if (pauseBtn) pauseBtn.style.display = "none";
+    if (cancelBtn) cancelBtn.style.display = "none";
   }
 }
 
@@ -1229,45 +1300,93 @@ async function installOllamaModel() {
   btn.disabled = true;
 
   try {
-    const res = await window.pywebview.api.start_model_download("llama3.2:3b");
-    if (res.status === "started") {
+    const progress = await window.pywebview.api.get_model_download_progress();
+    let res;
+    if (progress && progress.status === "paused") {
+      res = await window.pywebview.api.resume_model_download("llama3.2:3b");
+    } else {
+      res = await window.pywebview.api.start_model_download("llama3.2:3b");
+    }
+
+    if (res.status === "started" || res.status === "resumed" || res.status === "busy") {
       pollDownloadProgress();
     } else {
-      alert("Download status: " + res.message);
+      alert("Download status: " + (res.message || res.status));
       btn.disabled = false;
     }
   } catch (err) {
-    alert("Failed to start download: " + err);
+    alert("Failed to start/resume download: " + err);
     btn.disabled = false;
+  }
+}
+
+async function pauseOllamaDownload() {
+  if (!window.pywebview?.api) return;
+  const pauseBtn = document.getElementById("btn-pause-model");
+  if (pauseBtn) {
+    pauseBtn.disabled = true;
+    pauseBtn.textContent = "⏳ Pausing...";
+  }
+  if (downloadPollTimer) {
+    clearInterval(downloadPollTimer);
+    downloadPollTimer = null;
+  }
+  try {
+    const res = await window.pywebview.api.pause_model_download();
+    if (res && res.state) {
+      updateDownloadUI(res.state);
+    } else {
+      const state = await window.pywebview.api.get_model_download_progress();
+      updateDownloadUI(state || { status: "paused" });
+    }
+  } catch (err) {
+    console.error("Failed to pause download:", err);
+  }
+}
+
+async function cancelOllamaDownload() {
+  if (!window.pywebview?.api) return;
+  const cancelBtn = document.getElementById("btn-cancel-model");
+  if (cancelBtn) {
+    cancelBtn.disabled = true;
+    cancelBtn.textContent = "⏳ Cancelling...";
+  }
+  if (downloadPollTimer) {
+    clearInterval(downloadPollTimer);
+    downloadPollTimer = null;
+  }
+  try {
+    await window.pywebview.api.cancel_model_download();
+    const state = await window.pywebview.api.get_model_download_progress();
+    updateDownloadUI(state || { status: "idle" });
+  } catch (err) {
+    console.error("Failed to cancel download:", err);
   }
 }
 
 function pollDownloadProgress() {
   if (downloadPollTimer) clearInterval(downloadPollTimer);
 
-  const fill = document.getElementById("model-progress-fill");
-  const text = document.getElementById("model-progress-text");
-  const btn = document.getElementById("btn-install-model");
-
   downloadPollTimer = setInterval(async () => {
     try {
       const state = await window.pywebview.api.get_model_download_progress();
-      fill.style.width = `${state.percent}%`;
-      text.textContent = state.message;
+      updateDownloadUI(state);
 
       if (state.status === "success") {
         clearInterval(downloadPollTimer);
-        btn.disabled = false;
-        btn.textContent = "✅ Model Installed (llama3.2:3b)";
+        downloadPollTimer = null;
         refreshOllamaStatus();
       } else if (state.status === "error") {
         clearInterval(downloadPollTimer);
-        btn.disabled = false;
+        downloadPollTimer = null;
         alert("Download failed: " + (state.error || state.message));
+      } else if (state.status === "paused" || state.status === "idle" || state.status === "cancelled") {
+        clearInterval(downloadPollTimer);
+        downloadPollTimer = null;
       }
     } catch (err) {
       clearInterval(downloadPollTimer);
-      btn.disabled = false;
+      downloadPollTimer = null;
     }
   }, 600);
 }

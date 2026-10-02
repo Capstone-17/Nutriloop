@@ -6750,11 +6750,44 @@ class WeeklyDietEngine:
         raw_grocery_items = []
         dietary_type = str(req.preferences.dietary_type or "vegetarian").lower().replace("-", "_")
 
-        # Parse user food preferences and likes
-        clean_likes = [k.strip().lower() for k in (req.preferences.interests_and_likes or []) if k.strip()]
+        # Parse user food preferences and likes with delimiter splitting and synonym expansion
+        raw_tokens = []
+        for k in (req.preferences.interests_and_likes or []):
+            if not k:
+                continue
+            for part in re.split(r'[,;/+&]|\band\b', str(k).lower()):
+                tok = part.strip()
+                if tok and len(tok) >= 2:
+                    raw_tokens.append(tok)
+
+        syn_map = {
+            "paneer": ["paneer", "cottage cheese", "tofu"],
+            "tofu": ["tofu", "paneer"],
+            "chicken": ["chicken", "poultry", "murgh"],
+            "fish": ["fish", "salmon", "meen", "machli"],
+            "egg": ["egg", "eggs", "omelet", "omelette", "anda", "bhurji"],
+            "dosa": ["dosa", "dosai", "pesarattu", "cheela", "chilla"],
+            "idli": ["idli", "idly"],
+            "ragi": ["ragi", "nachni", "finger millet", "millet"],
+            "oats": ["oats", "oatmeal", "rolled oats"],
+            "khichdi": ["khichdi", "khichri", "pongal"],
+            "dalia": ["dalia", "broken wheat", "cracked wheat"],
+            "sprouts": ["sprout", "sprouts", "moong sprout"],
+            "curd": ["curd", "dahi", "raita", "yogurt"],
+            "millet": ["millet", "ragi", "jowar", "bajra", "foxtail"],
+            "chapati": ["chapati", "roti", "phulka"],
+            "roti": ["roti", "chapati", "phulka"],
+        }
+        clean_likes = list(set(raw_tokens))
+        expanded_likes = set(clean_likes)
+        for t in clean_likes:
+            for k_syn, syns in syn_map.items():
+                if k_syn in t or t in k_syn:
+                    expanded_likes.update(syns)
+        expanded_likes = [w for w in expanded_likes if len(w) >= 2]
 
         # If user explicitly requested custom favorites like Maggi / Noodles, synthesize safe MNT formulation
-        has_maggi_like = any(any(m in lk for m in ["maggi", "noodle", "ramen"]) for lk in clean_likes)
+        has_maggi_like = any(any(m in lk for m in ["maggi", "noodle", "ramen"]) for lk in expanded_likes)
         maggi_lunch_template = {
             "title": "Clinically Formulated Vegetable Atta Maggi with Sautéed Tofu & Bell Peppers",
             "items": [
@@ -6844,6 +6877,20 @@ class WeeklyDietEngine:
                 if not pool:
                     pool = list(fallback_dishes.get(cat_key, []))
 
+                # Inject cross-regional catalog dishes if user has preferred choices not in native catalog
+                if expanded_likes:
+                    added_titles = {d.get("title", "").lower() for d in pool}
+                    for other_reg, other_cat in self.catalog.items():
+                        for candidate in other_cat.get(cat_key, []):
+                            c_title = candidate.get("title", "").lower()
+                            if c_title in added_titles:
+                                continue
+                            c_items_str = " ".join(it.get("name", "").lower() for it in candidate.get("items", []))
+                            c_text = f"{c_title} {c_items_str}"
+                            if any(lk in c_text for lk in expanded_likes):
+                                pool.append(candidate)
+                                added_titles.add(c_title)
+
                 # Inject custom Maggi formulation if requested by user
                 if has_maggi_like and cat_key in ("lunch", "dinner"):
                     pool = [maggi_lunch_template] + pool
@@ -6868,12 +6915,12 @@ class WeeklyDietEngine:
                     carb_cal_ratio = (total_carbs * 4.0) / total_cal
 
                     # 1. User preferences bonus (likes/interests)
-                    if clean_likes:
-                        for lk in clean_likes:
+                    if expanded_likes:
+                        for lk in expanded_likes:
                             if lk in t_low:
-                                score += 50.0
+                                score += 150.0
                             elif lk in i_str:
-                                score += 30.0
+                                score += 80.0
 
                     # 2. Diabetic & Prediabetic Clinical MNT Rules
                     if has_diabetes_cond or has_prediabetes_cond:
@@ -6932,13 +6979,37 @@ class WeeklyDietEngine:
                 # Sort by clinical appropriateness
                 available.sort(key=_score_clinical_suitability, reverse=True)
 
-                # Ensure weekly variety: rotate among top clinical candidates
-                num_top = max(1, min(6, len(available)))
-                top_candidates = available[:num_top]
-                raw_template = top_candidates[(day_idx - 1) % len(top_candidates)]
+                # Prioritize preferred dishes across multiple days while maintaining variety
+                preferred_pool = []
+                other_pool = []
+                if expanded_likes:
+                    for d in available:
+                        d_title = d.get("title", "").lower()
+                        d_items = " ".join(it.get("name", "").lower() for it in d.get("items", []))
+                        if any(lk in d_title or lk in d_items for lk in expanded_likes):
+                            preferred_pool.append(d)
+                        else:
+                            other_pool.append(d)
+
+                if preferred_pool:
+                    if len(preferred_pool) >= 3:
+                        # Rich selection of preferred dishes: rotate preferred pool across all 7 days
+                        raw_template = preferred_pool[(day_idx - 1) % len(preferred_pool)]
+                    else:
+                        # 1 or 2 preferred dishes: feature on alternating days (Days 1, 3, 5, 7) for prominence + variety
+                        if day_idx % 2 == 1 or not other_pool:
+                            pref_idx = ((day_idx - 1) // 2) % len(preferred_pool)
+                            raw_template = preferred_pool[pref_idx]
+                        else:
+                            other_candidates = other_pool[:min(4, len(other_pool))]
+                            raw_template = other_candidates[((day_idx - 2) // 2) % len(other_candidates)]
+                else:
+                    num_top = max(1, min(6, len(available)))
+                    top_candidates = available[:num_top]
+                    raw_template = top_candidates[(day_idx - 1) % len(top_candidates)]
 
                 is_preferred_dish = False
-                if clean_likes and any(lk in raw_template.get("title", "").lower() or any(lk in it.get("name", "").lower() for it in raw_template.get("items", [])) for lk in clean_likes):
+                if expanded_likes and any(lk in raw_template.get("title", "").lower() or any(lk in it.get("name", "").lower() for it in raw_template.get("items", [])) for lk in expanded_likes):
                     is_preferred_dish = True
 
                 # Apply zero-tolerance allergen and dislike scrubber

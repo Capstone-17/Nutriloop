@@ -434,9 +434,15 @@
               Status: Ready
             </div>
 
-            <div style="display: flex; gap: 10px;">
-              <button id="btn-install-model" class="btn btn-primary" style="flex: 1;">
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <button id="btn-install-model" class="btn btn-primary" style="flex: 2; min-width: 180px;">
                 ⬇️ 1-Click Install llama3.2:3b Model
+              </button>
+              <button id="btn-pause-model" class="btn btn-secondary" style="flex: 1; min-width: 100px; display: none; background: #334155; color: #f1f5f9; border: 1px solid #475569;">
+                ⏸️ Pause
+              </button>
+              <button id="btn-cancel-model" class="btn btn-secondary" style="flex: 1; min-width: 100px; display: none; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35);">
+                🛑 Cancel
               </button>
             </div>
           </div>
