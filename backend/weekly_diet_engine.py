@@ -23,6 +23,7 @@ import copy
 from datetime import datetime, timezone
 import json
 import math
+import random
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -6672,11 +6673,18 @@ class WeeklyDietEngine:
         regional_cuisine_name = cuisine_display_names.get(region_key, "Regional Cuisine")
 
         # 4. Check medication alerts (all 31 medications)
-        med_alerts = check_medication_warnings(req.preferences.active_medications, targets)
+        valid_meds = [
+            m.strip() for m in (req.preferences.active_medications or [])
+            if m and m.strip().lower() not in ("", "none", "no", "n/a", "nil", "null", "none prescribed")
+        ]
+        med_alerts = check_medication_warnings(valid_meds, targets)
 
         # 5. Compile Zero-Tolerance Exclusions (Allergies + Dislikes + Drug Contraindications)
-        meds_lower = [m.lower().strip() for m in (req.preferences.active_medications or [])]
-        raw_exclusions = list(req.preferences.allergies or []) + list(req.preferences.dislikes or [])
+        meds_lower = [m.lower().strip() for m in valid_meds]
+        raw_exclusions = [
+            x.strip() for x in (list(req.preferences.allergies or []) + list(req.preferences.dislikes or []))
+            if x and x.strip().lower() not in ("", "none", "no", "n/a", "nil", "null")
+        ]
 
         # Drug-specific mandatory exclusions
         if any(m in meds_lower for m in ["amlodipine", "norvasc", "nifedipine", "felodipine", "diltiazem", "verapamil", "atorvastatin", "simvastatin"]):
@@ -6860,6 +6868,9 @@ class WeeklyDietEngine:
             or (parsed_labs.diastolic_bp_mmhg is not None and parsed_labs.diastolic_bp_mmhg >= 80.0)
         )
 
+        # Per-generation rotational offsets ensure fresh, distinct plans on repeated clicks while preserving intra-week variety
+        cat_variety_offsets = {c[2]: random.randint(0, 15) for c in intervals_config}
+
         for day_idx, day_name in enumerate(self.DAY_NAMES, start=1):
             day_intervals: List[SingleMealInterval] = []
             day_nutrients = {
@@ -6991,22 +7002,23 @@ class WeeklyDietEngine:
                         else:
                             other_pool.append(d)
 
+                cat_offset = cat_variety_offsets.get(cat_key, 0)
                 if preferred_pool:
                     if len(preferred_pool) >= 3:
-                        # Rich selection of preferred dishes: rotate preferred pool across all 7 days
-                        raw_template = preferred_pool[(day_idx - 1) % len(preferred_pool)]
+                        # Rich selection of preferred dishes: rotate preferred pool with variety offset across 7 days
+                        raw_template = preferred_pool[(day_idx - 1 + cat_offset) % len(preferred_pool)]
                     else:
                         # 1 or 2 preferred dishes: feature on alternating days (Days 1, 3, 5, 7) for prominence + variety
                         if day_idx % 2 == 1 or not other_pool:
-                            pref_idx = ((day_idx - 1) // 2) % len(preferred_pool)
+                            pref_idx = ((day_idx - 1) // 2 + cat_offset) % len(preferred_pool)
                             raw_template = preferred_pool[pref_idx]
                         else:
-                            other_candidates = other_pool[:min(4, len(other_pool))]
-                            raw_template = other_candidates[((day_idx - 2) // 2) % len(other_candidates)]
+                            other_candidates = other_pool[:min(5, len(other_pool))]
+                            raw_template = other_candidates[((day_idx - 2) // 2 + cat_offset) % len(other_candidates)]
                 else:
-                    num_top = max(1, min(6, len(available)))
+                    num_top = max(1, min(7, len(available)))
                     top_candidates = available[:num_top]
-                    raw_template = top_candidates[(day_idx - 1) % len(top_candidates)]
+                    raw_template = top_candidates[(day_idx - 1 + cat_offset) % len(top_candidates)]
 
                 is_preferred_dish = False
                 if expanded_likes and any(lk in raw_template.get("title", "").lower() or any(lk in it.get("name", "").lower() for it in raw_template.get("items", [])) for lk in expanded_likes):
@@ -7115,7 +7127,11 @@ class WeeklyDietEngine:
                                 f"Intra-day complex carbohydrates in Breakfast and Lunch were precision-rebalanced by -{int(rebalance_carbs)}g "
                                 f"so Sunday strictly respects your daily metabolic targets ({targets['calories_kcal']} kcal)."
                             )
-                            inv.prep_tips = "Measure portion carefully with kitchen scale / standard cup to maintain clinical metabolic control."
+                            inv.prep_tips = (
+                                "Enjoy your portion mindfully to maintain balanced energy and vitality."
+                                if (detected_conditions == ["General Health Maintenance / Normal Range"])
+                                else "Measure portion carefully with kitchen scale / standard cup to maintain clinical metabolic control."
+                            )
                             inv.substitutions.insert(0, {"standard": f"Unregulated {craving_raw.title()}", "substitute": indulgence_title})
 
                     # Recompute Sunday's total nutrients
@@ -7186,12 +7202,18 @@ class WeeklyDietEngine:
         flat_grocery_list = sorted(set(flat_grocery_list))
 
         # Clinical Narrative Note
+        is_normal_health = (detected_conditions == ["General Health Maintenance / Normal Range"])
+        if is_normal_health:
+            condition_phrase = "Health Profile: Optimal Vitality & Long-Term Preventive Wellness"
+        else:
+            condition_phrase = f"Identified Clinical Conditions: {', '.join(detected_conditions)}"
+
         clinical_notes = (
             f"7-Day Medical Nutrition Plan calibrated for {req.sex.upper()}, age {req.age_years} (BMI {req.body_mass_index}). "
             f"Grounding cuisine: {regional_cuisine_name} ({req.preferences.dietary_type.upper()}). "
-            f"Identified Clinical Conditions: {', '.join(detected_conditions)}. "
+            f"{condition_phrase}. "
             f"Daily targets: Calories ~ {targets['calories_kcal']} kcal (Mifflin-St Jeor TDEE Model), "
-            f"Protein ~ {targets['protein_g']} g (KDOQI/ADA adjusted), Sodium <= {targets['sodium_limit_mg']} mg, "
+            f"Protein ~ {targets['protein_g']} g, Sodium <= {targets['sodium_limit_mg']} mg, "
             f"Potassium guidance <= {targets['potassium_guidance_mg']} mg across 5 daily intervals."
         )
         if excluded_terms:

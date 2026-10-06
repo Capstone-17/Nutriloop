@@ -53,6 +53,22 @@ def get_html_path() -> Path:
     return html_file
 
 
+def get_icon_path() -> Optional[Path]:
+    """Resolve Nutriloop_1.ico path for the standalone desktop window icon."""
+    if getattr(sys, "_MEIPASS", None):
+        base_dir = Path(sys._MEIPASS)
+    else:
+        base_dir = Path(__file__).resolve().parent
+
+    for candidate in [
+        base_dir / "Assets" / "Nutriloop_1.ico",
+        base_dir / "gui" / "assets" / "Nutriloop_1.ico",
+    ]:
+        if candidate.exists():
+            return candidate
+    return None
+
+
 def main() -> None:
     log.info("Initializing Nutriloop Desktop Application...")
     api = DesktopAPI()
@@ -63,6 +79,8 @@ def main() -> None:
         registry.ensure_model_loaded(disease)
         
     html_path = get_html_path()
+    icon_path = get_icon_path()
+    icon_str = str(icon_path) if icon_path else None
 
     window = webview.create_window(
         title="Nutriloop",
@@ -71,14 +89,14 @@ def main() -> None:
         width=1240,
         height=840,
         min_size=(960, 640),
-        background_color="#0a0e17",
+        background_color="#0c0608",
     )
 
     # Ensure background daemon is terminated immediately when user closes window
     window.events.closing += lambda: api.terminate_ollama()
 
-    log.info("Starting Desktop Window...")
-    webview.start(debug=False)
+    log.info("Starting Desktop Window (face icon: %s)...", icon_str)
+    webview.start(icon=icon_str, debug=False)
 
 
 if __name__ == "__main__":

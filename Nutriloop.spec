@@ -19,6 +19,7 @@ datas = [
     (str(REPO_ROOT / "bin"), "bin"),
     (str(REPO_ROOT / "datasets" / "unified_food_kb.csv"), "datasets"),
     (str(REPO_ROOT / "gui"), "gui"),
+    (str(REPO_ROOT / "Assets"), "Assets"),
 ] + collect_data_files("sklearn")
 
 # Hidden imports required by dynamic reflection / C-extensions
@@ -104,4 +105,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=str(REPO_ROOT / "Assets" / "Nutriloop_1.ico"),
 )

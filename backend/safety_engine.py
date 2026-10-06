@@ -87,6 +87,15 @@ class MedicalGuidelines:
         "saturated_fat_g": {"max": 13, "critical": 16, "guideline": "AHA: Saturated fat <13g/day"},
     }
     
+    # General Population Health Guidelines (USDA / WHO Healthy Eating)
+    GENERAL_CONSTRAINTS = {
+        "sodium_mg": {"max": 2300, "critical": 3000, "guideline": "Dietary Guidelines: Sodium <2300mg/day"},
+        "potassium_mg": {"min": 2600, "max": 4700, "guideline": "Dietary Guidelines: Balanced potassium intake"},
+        "fiber_g_day": {"min": 25, "guideline": "Dietary Guidelines: 25-35g fiber daily"},
+        "sugar_g_day": {"max": 50, "critical": 75, "guideline": "WHO: Free sugars <10% total calories"},
+        "saturated_fat_g": {"max": 20, "critical": 30, "guideline": "Dietary Guidelines: Saturated fat <10% calories"},
+    }
+    
     @classmethod
     def get_constraints(cls, disease: str) -> Dict[str, Dict[str, Any]]:
         """Get constraints for a specific disease or merged comorbidity profile"""
@@ -95,6 +104,10 @@ class MedicalGuidelines:
             "ckd": cls.CKD_CONSTRAINTS,
             "diabetes": cls.DIABETES_CONSTRAINTS,
             "hypertension": cls.HYPERTENSION_CONSTRAINTS,
+            "general": cls.GENERAL_CONSTRAINTS,
+            "none": cls.GENERAL_CONSTRAINTS,
+            "normal": cls.GENERAL_CONSTRAINTS,
+            "normal range": cls.GENERAL_CONSTRAINTS,
         }
         if d_lower in disease_map:
             return disease_map[d_lower]
@@ -102,7 +115,7 @@ class MedicalGuidelines:
         # Comorbidity constraint intersection
         diseases = [d for d in ["ckd", "hypertension", "diabetes"] if d in d_lower]
         if not diseases:
-            return cls.CKD_CONSTRAINTS
+            return cls.GENERAL_CONSTRAINTS
 
         merged: Dict[str, Dict[str, Any]] = {}
         for d in diseases:

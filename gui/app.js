@@ -1,12 +1,38 @@
 /**
- * Nutriloop - Desktop GUI Frontend Logic
- * Interfaces with Python backend via window.pywebview.api
+ * Nutriloop - Royal Clinical Desktop Frontend Engine
+ * Primary: Maroon Reddish | Secondary: Golden Yellow
+ * Full Slider-Driven Real-Time Health Monitor Logic
  */
 
 // Global State
 let currentWeeklyPlan = null;
 let chatHistory = [];
 let downloadPollTimer = null;
+let currentAssessmentData = null;
+let activeExplainDisease = "ckd";
+let activeSelectedTest = { is_latest: true, date: null, id: null };
+let modalTargetField = null;
+let confirmCallback = null;
+
+// Curated 45+ Alliterative Fun Animal Titles
+const ALLITERATIVE_NAMES = [
+  "Sorcerer Swan", "Beauty Bee", "Clever Cheetah", "Daring Dolphin",
+  "Fearless Falcon", "Gentle Giraffe", "Heroic Hawk", "Jolly Jaguar",
+  "Kind Koala", "Luminous Lynx", "Mighty Monkey", "Noble Narwhal",
+  "Peppy Penguin", "Quick Quail", "Radiant Raven", "Stellar Starling",
+  "Valiant Viper", "Wise Walrus", "Mystic Moose", "Astral Alpaca",
+  "Brave Bear", "Cosmic Crane", "Dynamic Deer", "Epic Eagle",
+  "Gallant Gecko", "Harmonious Hummingbird", "Infinite Iguana", "Jovial Jackal",
+  "Keen Kingfisher", "Loyal Leopard", "Majestic Mustang", "Nimble Newt",
+  "Optimistic Otter", "Peaceful Panda", "Quantum Quokka", "Royal Rhino",
+  "Serene Seal", "Thunder Tiger", "Unique Unicorn", "Victorious Vulture",
+  "Witty Wolf", "Xenon X-Ray Tetra", "Youthful Yak", "Zen Zebra"
+];
+
+function getRandomAlliterativeName() {
+  const idx = Math.floor(Math.random() * ALLITERATIVE_NAMES.length);
+  return ALLITERATIVE_NAMES[idx];
+}
 
 // Wait for pywebview bridge readiness
 window.addEventListener("pywebviewready", () => {
@@ -17,7 +43,6 @@ window.addEventListener("pywebviewready", () => {
 // Fallback initialization if opened directly
 window.addEventListener("DOMContentLoaded", () => {
   setupTabs();
-  // If pywebview isn't ready in 500ms, check if api is already attached
   setTimeout(() => {
     if (window.pywebview && window.pywebview.api) {
       initApp();
@@ -32,6 +57,7 @@ async function initApp() {
   await refreshSavedReports();
   await loadAiSettings();
   setupEventListeners();
+  updateHealthGaugesFromInputs();
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -64,17 +90,17 @@ function switchTab(tabId) {
    System Info & Patient Test History
    ────────────────────────────────────────────────────────────────────────── */
 
-let activeSelectedTest = { is_latest: true, date: null, id: null };
-
 async function loadSystemInfo() {
   if (!window.pywebview?.api) return;
   try {
     const info = await window.pywebview.api.get_system_info();
     const dataDir = info.user_data_dir || "./";
-    const dirLabel = document.getElementById("data-dir-label");
-    if (dirLabel) dirLabel.textContent = dataDir.length > 25 ? "..." + dataDir.slice(-22) : dataDir;
-    if (document.getElementById("settings-data-dir")) document.getElementById("settings-data-dir").value = dataDir;
-    if (document.getElementById("settings-db-path")) document.getElementById("settings-db-path").value = info.db_path || "app_data.db";
+    if (document.getElementById("settings-data-dir")) {
+      document.getElementById("settings-data-dir").value = dataDir;
+    }
+    if (document.getElementById("settings-db-path")) {
+      document.getElementById("settings-db-path").value = info.db_path || "app_data.db";
+    }
   } catch (err) {
     console.error("Failed to load system info:", err);
   }
@@ -82,9 +108,11 @@ async function loadSystemInfo() {
 
 function applySafeClinicalDefaults() {
   const userEl = document.getElementById("p-user-id");
-  if (userEl) userEl.value = "John Doe";
+  if (userEl && (!userEl.value || userEl.value === "John Doe")) {
+    userEl.value = getRandomAlliterativeName();
+  }
   if (document.getElementById("p-age")) document.getElementById("p-age").value = 45;
-  if (document.getElementById("p-sex")) document.getElementById("p-sex").value = "male";
+  setSexValue("male");
   if (document.getElementById("p-bmi")) document.getElementById("p-bmi").value = 22.0;
 
   if (document.getElementById("p-sbp")) document.getElementById("p-sbp").value = 115;
@@ -100,12 +128,13 @@ function applySafeClinicalDefaults() {
 
   activeSelectedTest = { is_latest: true, date: null, id: null };
   updateDietHistoricalWarning();
+  updateHealthGaugesFromInputs();
 }
 
 async function populatePatientTestHistory(userId = null, selectTestId = null) {
   if (!window.pywebview?.api) return;
   try {
-    const currentId = userId || document.getElementById("p-user-id").value || "";
+    const currentId = userId || document.getElementById("p-user-id")?.value || "";
     const historyList = await window.pywebview.api.list_patient_tests(currentId);
     const selector = document.getElementById("preset-selector");
     const deleteBtn = document.getElementById("btn-delete-test");
@@ -143,7 +172,7 @@ async function populatePatientTestHistory(userId = null, selectTestId = null) {
 async function checkAndLoadInitialPatient() {
   if (!window.pywebview?.api) return;
   try {
-    const currentId = document.getElementById("p-user-id").value || "";
+    const currentId = document.getElementById("p-user-id")?.value || "";
     const res = await window.pywebview.api.get_latest_test(currentId);
     if (res && res.found) {
       populateFormWithPatient(res);
@@ -152,12 +181,13 @@ async function checkAndLoadInitialPatient() {
         currentAssessmentData = res.assessments;
         renderAssessmentResults({ assessments: res.assessments, detected_conditions: res.detected_conditions });
         selectExplainDisease(activeExplainDisease);
-        document.getElementById("assessment-status-badge").style.display = "inline-block";
+        const badge = document.getElementById("assessment-status-badge");
+        if (badge) badge.style.display = "inline-block";
       }
       activeSelectedTest = { is_latest: true, date: res.created_at, id: res.id };
     } else {
       applySafeClinicalDefaults();
-      await populatePatientTestHistory(document.getElementById("p-user-id").value);
+      await populatePatientTestHistory(document.getElementById("p-user-id")?.value);
     }
     updateDietHistoricalWarning();
   } catch (err) {
@@ -183,27 +213,273 @@ function updateDietHistoricalWarning() {
 
 function populateFormWithPatient(p) {
   if (p.user_id) document.getElementById("p-user-id").value = p.user_id;
-  if (p.age_years) document.getElementById("p-age").value = p.age_years;
-  if (p.sex) document.getElementById("p-sex").value = p.sex.toLowerCase();
-  if (p.body_mass_index) document.getElementById("p-bmi").value = p.body_mass_index;
+  if (p.age_years != null && document.getElementById("p-age")) document.getElementById("p-age").value = p.age_years;
+  if (p.sex && document.getElementById("p-sex")) {
+    setSexValue(p.sex.toLowerCase());
+  }
+  if (p.body_mass_index != null && document.getElementById("p-bmi")) document.getElementById("p-bmi").value = p.body_mass_index;
 
   const labs = p.test_reports || p.raw_inputs || p;
-  if (labs.systolic_bp_mmhg != null) document.getElementById("p-sbp").value = labs.systolic_bp_mmhg;
-  if (labs.diastolic_bp_mmhg != null) document.getElementById("p-dbp").value = labs.diastolic_bp_mmhg;
-  if (labs.fasting_glucose_mg_dl != null) document.getElementById("p-fbg").value = labs.fasting_glucose_mg_dl;
-  if (labs.hba1c_pct != null) document.getElementById("p-hba1c").value = labs.hba1c_pct;
-  if (labs.serum_creatinine_mg_dl != null) document.getElementById("p-creat").value = labs.serum_creatinine_mg_dl;
-  if (labs.egfr_ml_min != null) document.getElementById("p-egfr").value = labs.egfr_ml_min;
-  if (labs.serum_potassium_meq_l != null) document.getElementById("p-pot").value = labs.serum_potassium_meq_l;
+  if (labs.systolic_bp_mmhg != null && document.getElementById("p-sbp")) document.getElementById("p-sbp").value = labs.systolic_bp_mmhg;
+  if (labs.diastolic_bp_mmhg != null && document.getElementById("p-dbp")) document.getElementById("p-dbp").value = labs.diastolic_bp_mmhg;
+  if (labs.fasting_glucose_mg_dl != null && document.getElementById("p-fbg")) document.getElementById("p-fbg").value = labs.fasting_glucose_mg_dl;
+  if (labs.hba1c_pct != null && document.getElementById("p-hba1c")) document.getElementById("p-hba1c").value = labs.hba1c_pct;
+  if (labs.serum_creatinine_mg_dl != null && document.getElementById("p-creat")) document.getElementById("p-creat").value = labs.serum_creatinine_mg_dl;
+  if (labs.egfr_ml_min != null && document.getElementById("p-egfr")) document.getElementById("p-egfr").value = labs.egfr_ml_min;
+  if (labs.serum_potassium_meq_l != null && document.getElementById("p-pot")) document.getElementById("p-pot").value = labs.serum_potassium_meq_l;
+  if (labs.serum_sodium_meq_l != null && document.getElementById("p-sod")) document.getElementById("p-sod").value = labs.serum_sodium_meq_l;
   const sumEl = document.getElementById("p-summary");
   if (sumEl && labs.report_summary_text != null) sumEl.value = labs.report_summary_text;
+  updateHealthGaugesFromInputs();
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Sex Toggle Handler
+   ────────────────────────────────────────────────────────────────────────── */
+
+function setSexValue(sex) {
+  const hiddenSex = document.getElementById("p-sex");
+  if (hiddenSex) hiddenSex.value = sex;
+
+  const btnMale = document.getElementById("btn-sex-male");
+  const btnFemale = document.getElementById("btn-sex-female");
+  if (btnMale) btnMale.classList.toggle("active", sex === "male");
+  if (btnFemale) btnFemale.classList.toggle("active", sex === "female");
+
+  const valEl = document.getElementById("gauge-sex-val");
+  const badgeEl = document.getElementById("gauge-sex-badge");
+  if (valEl) valEl.textContent = sex === "female" ? "Female" : "Male";
+  if (badgeEl) badgeEl.textContent = sex === "female" ? "Female Baseline" : "Male Baseline";
+
+  updateHealthGaugesFromInputs();
+}
+window.setSexValue = setSexValue;
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Real-Time Health Gauges & Active Patient Synchronization
+   ────────────────────────────────────────────────────────────────────────── */
+
+function updateHealthGaugesFromInputs() {
+  const age = parseFloat(document.getElementById("p-age")?.value) || 45;
+  const bmi = parseFloat(document.getElementById("p-bmi")?.value) || 22.0;
+  const sbp = parseFloat(document.getElementById("p-sbp")?.value) || 115;
+  const dbp = parseFloat(document.getElementById("p-dbp")?.value) || 75;
+  const fbg = parseFloat(document.getElementById("p-fbg")?.value) || 90;
+  const hba1c = parseFloat(document.getElementById("p-hba1c")?.value) || 5.2;
+  const creat = parseFloat(document.getElementById("p-creat")?.value) || 0.9;
+  const egfr = parseFloat(document.getElementById("p-egfr")?.value) || 100;
+  const pot = parseFloat(document.getElementById("p-pot")?.value) || 4.2;
+  const sod = parseFloat(document.getElementById("p-sod")?.value) || 140;
+
+  // 1. Sidebar Patient Name & Initials
+  let userEl = document.getElementById("p-user-id");
+  let userId = userEl?.value?.trim();
+  if (!userId) {
+    userId = getRandomAlliterativeName();
+    if (userEl) userEl.value = userId;
+  }
+  const avatarEl = document.getElementById("sidebar-patient-avatar");
+  if (avatarEl) {
+    avatarEl.title = `Patient: ${userId}`;
+    if (!avatarEl.querySelector("img")) {
+      avatarEl.innerHTML = '<img src="assets/Nutriloop_1.png" alt="NutriLoop Logo" class="patient-avatar-logo">';
+    }
+  }
+
+  // 2. Sync Regional Cuisine select and hidden input
+  const cuisineEl = document.getElementById("diet-cuisine");
+  const regionHidden = document.getElementById("diet-region");
+  if (cuisineEl && regionHidden) {
+    regionHidden.value = cuisineEl.value;
+  }
+
+  const C = 301.6; // 2 * Math.PI * 48
+
+  const setGauge = (strokeId, valId, badgeId, rawValText, min, max, val, statusText, statusClass, strokeColorClass) => {
+    const strokeEl = document.getElementById(strokeId);
+    const valEl = document.getElementById(valId);
+    const badgeEl = document.getElementById(badgeId);
+
+    if (valEl) valEl.textContent = rawValText;
+    if (strokeEl) {
+      const pct = Math.max(3, Math.min(100, ((val - min) / (max - min)) * 100));
+      const offset = C - (pct / 100) * C;
+      strokeEl.style.strokeDashoffset = `${offset}`;
+      strokeEl.className.baseVal = `gauge-stroke ${strokeColorClass}`;
+    }
+    if (badgeEl) {
+      badgeEl.textContent = statusText;
+      badgeEl.className = `gauge-status-badge ${statusClass}`;
+    }
+  };
+
+  // 1. Age (18 - 100)
+  const ageStatus = age < 45 ? "Young Adult" : age < 65 ? "Mature Adult" : "Senior Adult";
+  setGauge("gauge-age-stroke", "gauge-age-val", "gauge-age-badge", Math.round(age), 18, 100, age, ageStatus, "badge-normal", "stroke-gold");
+
+  // 2. BMI (10.0 - 60.0)
+  let bmiStatus = "Normal";
+  let bmiClass = "badge-normal";
+  let bmiStroke = "stroke-emerald";
+  if (bmi >= 30.0) {
+    bmiStatus = "Obesity";
+    bmiClass = "badge-danger";
+    bmiStroke = "stroke-maroon";
+  } else if (bmi >= 25.0) {
+    bmiStatus = "Overweight";
+    bmiClass = "badge-warning";
+    bmiStroke = "stroke-amber";
+  } else if (bmi < 18.5) {
+    bmiStatus = "Underweight";
+    bmiClass = "badge-warning";
+    bmiStroke = "stroke-amber";
+  }
+  setGauge("gauge-bmi-stroke", "gauge-bmi-val", "gauge-bmi-badge", bmi.toFixed(1), 10.0, 60.0, bmi, bmiStatus, bmiClass, bmiStroke);
+
+  // 3. Systolic BP (70 - 240)
+  let sbpStatus = "Optimal";
+  let sbpClass = "badge-normal";
+  let sbpStroke = "stroke-emerald";
+  if (sbp >= 140) {
+    sbpStatus = "Stage 2 HTN";
+    sbpClass = "badge-danger";
+    sbpStroke = "stroke-rose";
+  } else if (sbp >= 130) {
+    sbpStatus = "Stage 1 HTN";
+    sbpClass = "badge-danger";
+    sbpStroke = "stroke-maroon";
+  } else if (sbp >= 120) {
+    sbpStatus = "Elevated";
+    sbpClass = "badge-warning";
+    sbpStroke = "stroke-amber";
+  }
+  setGauge("gauge-sbp-stroke", "gauge-sbp-val", "gauge-sbp-badge", Math.round(sbp), 70, 240, sbp, sbpStatus, sbpClass, sbpStroke);
+
+  // 4. Diastolic BP (40 - 140)
+  let dbpStatus = "Optimal";
+  let dbpClass = "badge-normal";
+  let dbpStroke = "stroke-emerald";
+  if (dbp >= 90) {
+    dbpStatus = "Stage 2 HTN";
+    dbpClass = "badge-danger";
+    dbpStroke = "stroke-rose";
+  } else if (dbp >= 80) {
+    dbpStatus = "Stage 1 HTN";
+    dbpClass = "badge-danger";
+    dbpStroke = "stroke-maroon";
+  } else if (dbp >= 80) {
+    dbpStatus = "Borderline";
+    dbpClass = "badge-warning";
+    dbpStroke = "stroke-amber";
+  }
+  setGauge("gauge-dbp-stroke", "gauge-dbp-val", "gauge-dbp-badge", Math.round(dbp), 40, 140, dbp, dbpStatus, dbpClass, dbpStroke);
+
+  // 5. Fasting Glucose (50 - 350)
+  let fbgStatus = "Normal";
+  let fbgClass = "badge-normal";
+  let fbgStroke = "stroke-emerald";
+  if (fbg >= 126) {
+    fbgStatus = "Elevated";
+    fbgClass = "badge-danger";
+    fbgStroke = "stroke-maroon";
+  } else if (fbg >= 100) {
+    fbgStatus = "Prediabetes";
+    fbgClass = "badge-warning";
+    fbgStroke = "stroke-amber";
+  } else if (fbg < 70) {
+    fbgStatus = "Low Glucose";
+    fbgClass = "badge-warning";
+    fbgStroke = "stroke-amber";
+  }
+  setGauge("gauge-fbg-stroke", "gauge-fbg-val", "gauge-fbg-badge", Math.round(fbg), 50, 350, fbg, fbgStatus, fbgClass, fbgStroke);
+
+  // 6. HbA1c (3.5 - 16.0)
+  let hba1cStatus = "Normal";
+  let hba1cClass = "badge-normal";
+  let hba1cStroke = "stroke-emerald";
+  if (hba1c >= 6.5) {
+    hba1cStatus = "Diabetic";
+    hba1cClass = "badge-danger";
+    hba1cStroke = "stroke-maroon";
+  } else if (hba1c >= 5.7) {
+    hba1cStatus = "Prediabetes";
+    hba1cClass = "badge-warning";
+    hba1cStroke = "stroke-amber";
+  }
+  setGauge("gauge-hba1c-stroke", "gauge-hba1c-val", "gauge-hba1c-badge", hba1c.toFixed(1), 3.5, 16.0, hba1c, hba1cStatus, hba1cClass, hba1cStroke);
+
+  // 7. Serum Creatinine (0.2 - 10.0)
+  let creatStatus = "Normal";
+  let creatClass = "badge-normal";
+  let creatStroke = "stroke-emerald";
+  if (creat > 1.5) {
+    creatStatus = "Elevated";
+    creatClass = "badge-danger";
+    creatStroke = "stroke-maroon";
+  } else if (creat > 1.2) {
+    creatStatus = "Borderline";
+    creatClass = "badge-warning";
+    creatStroke = "stroke-amber";
+  }
+  setGauge("gauge-creat-stroke", "gauge-creat-val", "gauge-creat-badge", creat.toFixed(1), 0.2, 10.0, creat, creatStatus, creatClass, creatStroke);
+
+  // 8. eGFR (5 - 140)
+  let egfrStatus = "Optimal";
+  let egfrClass = "badge-normal";
+  let egfrStroke = "stroke-gold";
+  if (egfr < 30) {
+    egfrStatus = "Severe CKD";
+    egfrClass = "badge-danger";
+    egfrStroke = "stroke-rose";
+  } else if (egfr < 60) {
+    egfrStatus = "Moderate CKD";
+    egfrClass = "badge-danger";
+    egfrStroke = "stroke-maroon";
+  } else if (egfr < 90) {
+    egfrStatus = "Mild Reduct.";
+    egfrClass = "badge-warning";
+    egfrStroke = "stroke-amber";
+  }
+  setGauge("gauge-egfr-stroke", "gauge-egfr-val", "gauge-egfr-badge", Math.round(egfr), 5, 140, egfr, egfrStatus, egfrClass, egfrStroke);
+
+  // 9. Serum Potassium (2.5 - 7.5)
+  let potStatus = "Normal";
+  let potClass = "badge-normal";
+  let potStroke = "stroke-emerald";
+  if (pot > 5.5) {
+    potStatus = "Hyperkalemia";
+    potClass = "badge-danger";
+    potStroke = "stroke-maroon";
+  } else if (pot > 5.0) {
+    potStatus = "Mild High";
+    potClass = "badge-warning";
+    potStroke = "stroke-amber";
+  } else if (pot < 3.5) {
+    potStatus = "Hypokalemia";
+    potClass = "badge-warning";
+    potStroke = "stroke-amber";
+  }
+  setGauge("gauge-pot-stroke", "gauge-pot-val", "gauge-pot-badge", pot.toFixed(1), 2.5, 7.5, pot, potStatus, potClass, potStroke);
+
+  // 10. Serum Sodium (110 - 170)
+  let sodStatus = "Normal";
+  let sodClass = "badge-normal";
+  let sodStroke = "stroke-emerald";
+  if (sod > 145) {
+    sodStatus = "Elevated";
+    sodClass = "badge-danger";
+    sodStroke = "stroke-maroon";
+  } else if (sod < 135) {
+    sodStatus = "Low Sodium";
+    sodClass = "badge-warning";
+    sodStroke = "stroke-amber";
+  }
+  setGauge("gauge-sod-stroke", "gauge-sod-val", "gauge-sod-badge", Math.round(sod), 110, 170, sod, sodStatus, sodClass, sodStroke);
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
    Custom Confirmation Modal Card
    ────────────────────────────────────────────────────────────────────────── */
-
-let confirmCallback = null;
 
 function showConfirmModal({ title, message, confirmText = "Delete Report", isDanger = true, onConfirm }) {
   const modal = document.getElementById("confirm-modal");
@@ -264,22 +540,22 @@ function runDeleteActiveTest() {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Multi-Disease Risk Assessment
+   Multi-Disease Risk Assessment & Event Listeners
    ────────────────────────────────────────────────────────────────────────── */
 
 function setupEventListeners() {
-  document.getElementById("btn-assess-patient").addEventListener("click", runAssessment);
-  document.getElementById("btn-transfer-diet").addEventListener("click", () => {
+  document.getElementById("btn-assess-patient")?.addEventListener("click", runAssessment);
+  document.getElementById("btn-transfer-diet")?.addEventListener("click", () => {
     switchTab("tab-diet");
   });
 
-  document.getElementById("btn-generate-diet").addEventListener("click", runWeeklyDiet);
-  document.getElementById("btn-save-diet").addEventListener("click", saveWeeklyDiet);
-  document.getElementById("btn-open-folder-diet").addEventListener("click", openReportsFolder);
-  document.getElementById("btn-open-folder").addEventListener("click", openReportsFolder);
+  document.getElementById("btn-generate-diet")?.addEventListener("click", runWeeklyDiet);
+  document.getElementById("btn-save-diet")?.addEventListener("click", saveWeeklyDiet);
+  document.getElementById("btn-open-folder-diet")?.addEventListener("click", openReportsFolder);
+  document.getElementById("btn-open-folder")?.addEventListener("click", openReportsFolder);
 
-  document.getElementById("btn-chat-send").addEventListener("click", sendChatMessage);
-  document.getElementById("chat-input-text").addEventListener("keydown", (e) => {
+  document.getElementById("btn-chat-send")?.addEventListener("click", sendChatMessage);
+  document.getElementById("chat-input-text")?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") sendChatMessage();
   });
   document.getElementById("btn-save-ai-key")?.addEventListener("click", saveAiSettings);
@@ -287,8 +563,8 @@ function setupEventListeners() {
     saveAiSettings();
   });
 
-  document.getElementById("btn-refresh-ollama").addEventListener("click", refreshOllamaStatus);
-  document.getElementById("btn-install-model").addEventListener("click", installOllamaModel);
+  document.getElementById("btn-refresh-ollama")?.addEventListener("click", refreshOllamaStatus);
+  document.getElementById("btn-install-model")?.addEventListener("click", installOllamaModel);
   document.getElementById("btn-pause-model")?.addEventListener("click", pauseOllamaDownload);
   document.getElementById("btn-cancel-model")?.addEventListener("click", cancelOllamaDownload);
 
@@ -304,9 +580,34 @@ function setupEventListeners() {
     if (cb) cb();
   });
 
-  // User ID Change updates history dropdown for that patient
-  document.getElementById("p-user-id")?.addEventListener("change", () => {
-    populatePatientTestHistory(document.getElementById("p-user-id").value || "John Doe");
+  // User ID Change updates history dropdown for that patient and recomputes avatar
+  const userEl = document.getElementById("p-user-id");
+  if (userEl) {
+    userEl.addEventListener("change", () => {
+      populatePatientTestHistory(userEl.value || "John Doe");
+      updateHealthGaugesFromInputs();
+    });
+    userEl.addEventListener("input", updateHealthGaugesFromInputs);
+  }
+
+  // Sex Toggle Buttons
+  document.getElementById("btn-sex-male")?.addEventListener("click", () => setSexValue("male"));
+  document.getElementById("btn-sex-female")?.addEventListener("click", () => setSexValue("female"));
+
+  // Biomarker Range Sliders live input listeners
+  const sliderIds = ["p-age", "p-bmi", "p-sbp", "p-dbp", "p-fbg", "p-hba1c", "p-creat", "p-egfr", "p-pot", "p-sod"];
+  sliderIds.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("input", updateHealthGaugesFromInputs);
+      el.addEventListener("change", updateHealthGaugesFromInputs);
+    }
+  });
+
+  // Synchronize Regional Cuisine selector
+  document.getElementById("diet-cuisine")?.addEventListener("change", () => {
+    const regEl = document.getElementById("diet-region");
+    if (regEl) regEl.value = document.getElementById("diet-cuisine").value;
   });
 
   // History Selector Change Handler
@@ -322,7 +623,8 @@ function setupEventListeners() {
         currentAssessmentData = testData.assessments;
         renderAssessmentResults({ assessments: testData.assessments, detected_conditions: testData.detected_conditions });
         selectExplainDisease(activeExplainDisease);
-        document.getElementById("assessment-status-badge").style.display = "inline-block";
+        const badge = document.getElementById("assessment-status-badge");
+        if (badge) badge.style.display = "inline-block";
       }
       const isLatest = e.target.selectedIndex === 0 || e.target.options[e.target.selectedIndex].textContent.includes("(Latest)");
       activeSelectedTest = { is_latest: isLatest, date: testData.created_at, id: testData.id };
@@ -349,8 +651,6 @@ function setupEventListeners() {
    Clinical Validation Modal
    ────────────────────────────────────────────────────────────────────────── */
 
-let modalTargetField = null;
-
 function showClinicalModal(message, targetFieldId = null) {
   const modal = document.getElementById("clinical-modal");
   const msgBox = document.getElementById("clinical-modal-message");
@@ -376,136 +676,34 @@ function closeClinicalModal() {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Multi-Disease Risk Assessment & Explainability
+   Multi-Disease Risk Assessment Computation
    ────────────────────────────────────────────────────────────────────────── */
-
-let currentAssessmentData = null;
-let activeExplainDisease = "ckd";
 
 async function runAssessment() {
   if (!window.pywebview?.api) return;
   const btn = document.getElementById("btn-assess-patient");
 
-  const age = parseFloat(document.getElementById("p-age").value);
-  const bmi = parseFloat(document.getElementById("p-bmi").value);
-  const sbp = parseFloat(document.getElementById("p-sbp").value);
-  const dbp = parseFloat(document.getElementById("p-dbp").value);
-  const fbg = parseFloat(document.getElementById("p-fbg").value);
-  const hba1c = parseFloat(document.getElementById("p-hba1c").value);
-  const creat = parseFloat(document.getElementById("p-creat").value);
-  const egfr = parseFloat(document.getElementById("p-egfr").value);
-  const pot = parseFloat(document.getElementById("p-pot").value);
-  const sod = parseFloat(document.getElementById("p-sod").value);
+  const age = parseFloat(document.getElementById("p-age")?.value) || 45;
+  const sex = document.getElementById("p-sex")?.value || "male";
+  const bmi = parseFloat(document.getElementById("p-bmi")?.value) || 22.0;
+  const sbp = parseFloat(document.getElementById("p-sbp")?.value) || 115;
+  const dbp = parseFloat(document.getElementById("p-dbp")?.value) || 75;
+  const fbg = parseFloat(document.getElementById("p-fbg")?.value) || 90;
+  const hba1c = parseFloat(document.getElementById("p-hba1c")?.value) || 5.2;
+  const creat = parseFloat(document.getElementById("p-creat")?.value) || 0.9;
+  const egfr = parseFloat(document.getElementById("p-egfr")?.value) || 100;
+  const pot = parseFloat(document.getElementById("p-pot")?.value) || 4.2;
+  const sod = parseFloat(document.getElementById("p-sod")?.value) || 140;
 
-  // 1. Proactive Physiological Boundary Checks with Medical Rationale
-  if (!isNaN(fbg) && fbg < 40) {
-    showClinicalModal(
-      `Fasting Blood Glucose (${fbg} mg/dL) is physiologically impossible for outpatient clinical assessment.\n\n` +
-      `Clinically, a fasting glucose below 40 mg/dL represents severe, life-threatening neuroglycopenic hypoglycemia ` +
-      `(diabetic shock / neuroglycopenic coma) requiring immediate emergency medical resuscitation, not routine chronic disease diet planning.\n\n` +
-      `Please check if this was a typographical data-entry error (e.g. intended 120 or 200 mg/dL).\n` +
-      `• Permitted clinical range: 40 to 450 mg/dL\n` +
-      `• Normal fasting reference: 70 to 99 mg/dL`,
-      "p-fbg"
-    );
-    return;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "⏳ Computing Risk Diagnostics...";
   }
-  if (!isNaN(fbg) && fbg > 450) {
-    showClinicalModal(
-      `Fasting Blood Glucose (${fbg} mg/dL) exceeds outpatient laboratory limits (> 450 mg/dL).\n\n` +
-      `A level above 450 mg/dL indicates an acute Hyperosmolar Hyperglycemic State (HHS) or severe Diabetic Ketoacidosis (DKA) ` +
-      `demanding urgent emergency hospital admission.\n\n` +
-      `• Permitted clinical range: 40 to 450 mg/dL`,
-      "p-fbg"
-    );
-    return;
-  }
-  if (!isNaN(sbp) && (sbp < 70 || sbp > 260)) {
-    showClinicalModal(
-      `Systolic Blood Pressure (${sbp} mmHg) is outside physiological boundaries.\n\n` +
-      (sbp < 70 ? "Systolic pressure below 70 mmHg indicates acute circulatory collapse / cardiogenic shock." : "Systolic pressure above 260 mmHg is an acute Hypertensive Emergency with imminent danger of intracranial hemorrhage or aortic dissection.") +
-      `\n\n• Permitted clinical range: 70 to 260 mmHg\n• Ideal normotensive target: < 120 mmHg`,
-      "p-sbp"
-    );
-    return;
-  }
-  if (!isNaN(dbp) && (dbp < 40 || dbp > 160)) {
-    showClinicalModal(
-      `Diastolic Blood Pressure (${dbp} mmHg) is outside physiological boundaries.\n\n` +
-      (dbp < 40 ? "Diastolic pressure below 40 mmHg compromises vital organ coronary perfusion." : "Diastolic pressure above 160 mmHg reflects malignant hypertensive vascular resistance.") +
-      `\n\n• Permitted clinical range: 40 to 160 mmHg\n• Ideal normotensive target: < 80 mmHg`,
-      "p-dbp"
-    );
-    return;
-  }
-  if (!isNaN(creat) && (creat < 0.1 || creat > 25.0)) {
-    showClinicalModal(
-      `Serum Creatinine (${creat} mg/dL) is outside clinical parameters.\n\n` +
-      (creat < 0.1 ? "Values below 0.1 mg/dL fall beneath human metabolic muscle turnover." : "Values above 25 mg/dL indicate end-stage anuric renal failure requiring acute hemodialysis.") +
-      `\n\n• Permitted clinical range: 0.1 to 25.0 mg/dL\n• Normal adult reference: 0.6 to 1.2 mg/dL`,
-      "p-creat"
-    );
-    return;
-  }
-  if (!isNaN(age) && (age < 18 || age > 100)) {
-    showClinicalModal(
-      `Patient Age (${age} years) is outside the calibrated adult assessment scope.\n\n` +
-      `This clinical nutrition software is calibrated for adult patients aged 18 to 100 years. Pediatric patients require specialized pediatric nephrology protocols.`,
-      "p-age"
-    );
-    return;
-  }
-  if (!isNaN(bmi) && (bmi < 10.0 || bmi > 90.0)) {
-    showClinicalModal(
-      `Body Mass Index (${bmi} kg/m²) is out of bounds (valid range: 10.0 to 90.0 kg/m²). Please verify patient height and weight.`,
-      "p-bmi"
-    );
-    return;
-  }
-  if (!isNaN(sod) && (sod < 100 || sod > 180)) {
-    showClinicalModal(
-      `Serum Sodium (${sod} mEq/L) is outside human physiological boundaries (100 to 180 mEq/L).\n\n` +
-      `A blood serum sodium of ${sod} mEq/L is biologically impossible in outpatient clinical medicine.\n\n` +
-      `• Normal adult blood sodium: 135 to 145 mEq/L (healthy baseline is ~140 mEq/L).\n` +
-      `• Did you enter dietary sodium in milligrams (e.g. 1000 mg salt) instead of blood Serum Sodium (mEq/L)?\n\n` +
-      `Please enter a valid laboratory blood test result between 100 and 180 mEq/L.`,
-      "p-sod"
-    );
-    return;
-  }
-  if (!isNaN(pot) && (pot < 2.0 || pot > 8.5)) {
-    showClinicalModal(
-      `Serum Potassium (${pot} mEq/L) is outside human physiological boundaries (2.0 to 8.5 mEq/L).\n\n` +
-      (pot < 2.0 ? "Potassium below 2.0 mEq/L induces severe cardiac arrhythmias and flaccid muscle paralysis." : "Potassium above 8.5 mEq/L induces fatal cardiac conduction arrest (asystole).") +
-      `\n\n• Normal reference range: 3.5 to 5.0 mEq/L`,
-      "p-pot"
-    );
-    return;
-  }
-  if (!isNaN(hba1c) && (hba1c < 3.0 || hba1c > 20.0)) {
-    showClinicalModal(
-      `HbA1c (${hba1c}%) is outside clinical laboratory limits (3.0% to 20.0%).\n\n` +
-      `• Normal reference: < 5.7%\n• Prediabetes: 5.7% to 6.4%\n• Diabetes: ≥ 6.5%`,
-      "p-hba1c"
-    );
-    return;
-  }
-  if (!isNaN(egfr) && (egfr < 5.0 || egfr > 160.0)) {
-    showClinicalModal(
-      `Estimated GFR (${egfr} mL/min) is outside valid clinical limits (5 to 160 mL/min).\n\n` +
-      `• Optimal healthy clearance: ≥ 90 mL/min\n• Stage 3 CKD: 30 to 59 mL/min\n• Stage 5 Kidney Failure: < 15 mL/min`,
-      "p-egfr"
-    );
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = "⏳ Computing Risk Diagnostics...";
 
   const payload = {
-    user_id: document.getElementById("p-user-id").value,
+    user_id: document.getElementById("p-user-id")?.value?.trim() || "John Doe",
     age_years: isNaN(age) ? 45 : age,
-    sex: document.getElementById("p-sex").value,
+    sex: sex,
     body_mass_index: isNaN(bmi) ? 22.0 : bmi,
     test_reports: {
       systolic_bp_mmhg: isNaN(sbp) ? 115 : sbp,
@@ -529,9 +727,9 @@ async function runAssessment() {
       currentAssessmentData = res.assessments;
       renderAssessmentResults(res);
       selectExplainDisease(activeExplainDisease);
-      document.getElementById("assessment-status-badge").style.display = "inline-block";
+      const badge = document.getElementById("assessment-status-badge");
+      if (badge) badge.style.display = "inline-block";
 
-      // Refresh patient test history dropdown with new test selected as latest
       if (res.saved_test_id) {
         await populatePatientTestHistory(payload.user_id, res.saved_test_id);
         activeSelectedTest = { is_latest: true, date: res.timestamp, id: res.saved_test_id };
@@ -547,37 +745,38 @@ async function runAssessment() {
   } catch (err) {
     showClinicalModal("Clinical assessment could not be processed:\n" + err);
   } finally {
-    btn.disabled = false;
-    btn.textContent = "⚡ Run Multi-Disease Risk Assessment";
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "⚡ Run Multi-Disease Risk Assessment";
+    }
   }
 }
 
 function renderAssessmentResults(res) {
   const ass = res.assessments;
 
-  // CKD
   updateRiskMeter("ckd", ass.ckd);
-  // Hypertension
   updateRiskMeter("hypertension", ass.hypertension);
-  // Diabetes
   updateRiskMeter("diabetes", ass.diabetes);
 
-  // Conditions Tags
   const condContainer = document.getElementById("detected-conditions-tags");
-  condContainer.innerHTML = "";
-  if (res.detected_conditions && res.detected_conditions.length > 0) {
-    res.detected_conditions.forEach((c) => {
-      const tag = document.createElement("span");
-      tag.className = "brand-badge";
-      tag.style.background = "rgba(244, 63, 94, 0.15)";
-      tag.style.borderColor = "var(--accent-rose)";
-      tag.style.color = "var(--accent-rose)";
-      tag.textContent = "⚠️ " + c;
-      condContainer.appendChild(tag);
-    });
-  } else {
-    condContainer.innerHTML = '<span class="risk-badge badge-low">✅ No High Clinical Comorbidities Detected</span>';
+  if (condContainer) {
+    condContainer.innerHTML = "";
+    if (res.detected_conditions && res.detected_conditions.length > 0) {
+      res.detected_conditions.forEach((c) => {
+        const tag = document.createElement("span");
+        tag.className = "brand-badge";
+        tag.style.background = "rgba(244, 63, 94, 0.18)";
+        tag.style.borderColor = "var(--accent-rose)";
+        tag.style.color = "var(--accent-rose)";
+        tag.textContent = "⚠️ " + c;
+        condContainer.appendChild(tag);
+      });
+    } else {
+      condContainer.innerHTML = '<span class="risk-badge badge-low">✅ No High Clinical Comorbidities Detected</span>';
+    }
   }
+  updateHealthGaugesFromInputs();
 }
 
 function selectExplainDisease(dis) {
@@ -605,7 +804,7 @@ function renderExplainability(dis) {
 
   if (!currentAssessmentData || !currentAssessmentData[dis]) {
     container.innerHTML = `
-      <div style="color: var(--text-subtle); font-size: 12px; padding: 16px; text-align: center;">
+      <div style="color: var(--text-muted); font-size: 12.5px; padding: 14px; text-align: center;">
         Awaiting patient evaluation. Run assessment to view tailored clinical explanations and actionable recommendations.
       </div>`;
     return;
@@ -614,7 +813,7 @@ function renderExplainability(dis) {
   const item = currentAssessmentData[dis];
   if (item.error) {
     container.innerHTML = `
-      <div class="explain-section level-high-why">
+      <div class="explain-section">
         <div class="explain-section-header">⚠️ Clinical Evaluation Notice</div>
         <div style="font-size: 12.5px; color: #fca5a5; line-height: 1.5;">${item.error}</div>
       </div>`;
@@ -662,18 +861,14 @@ function renderExplainability(dis) {
   const actionStepsHtml = actionSteps.map((s) => `<li>${s}</li>`).join("");
 
   container.innerHTML = `
-    <!-- Top Disease & Status Summary Bar -->
     <div class="explain-meta-bar">
-      <div class="explain-disease-title">
-        ${dName}
-      </div>
+      <div class="explain-disease-title">${dName}</div>
       <span class="risk-badge badge-${level}">
         ${statusIcon} ${level.toUpperCase()} RISK (${pct}%)
       </span>
     </div>
 
-    <!-- 1. Result Explanation: Why is it so / What is working well -->
-    <div class="explain-section level-${level}-why">
+    <div class="explain-section">
       <div class="explain-section-header">
         <span>${whyIcon} ${whyTitle}</span>
       </div>
@@ -682,8 +877,7 @@ function renderExplainability(dis) {
       </ul>
     </div>
 
-    <!-- 2. Action Plan: What to do / How to reduce it / Steps to preserve it -->
-    <div class="explain-section level-${level}-action">
+    <div class="explain-section">
       <div class="explain-section-header">
         <span>${actionIcon} ${actionTitle}</span>
       </div>
@@ -698,6 +892,8 @@ function updateRiskMeter(disease, data) {
   const card = document.getElementById(`meter-${disease}`);
   const scoreNum = document.getElementById(`score-${disease}`);
   const badge = document.getElementById(`badge-${disease}`);
+
+  if (!card || !scoreNum || !badge) return;
 
   if (!data || data.error) {
     scoreNum.textContent = "ERR";
@@ -723,35 +919,46 @@ function updateRiskMeter(disease, data) {
 async function runWeeklyDiet() {
   if (!window.pywebview?.api) return;
   const btn = document.getElementById("btn-generate-diet");
-  btn.disabled = true;
-  btn.textContent = "⏳ Assembling Personalized 7-Day Plan...";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "⏳ Assembling Personalized 7-Day Plan...";
+  }
 
-  const likes = document.getElementById("diet-likes").value.split(/[,;/+&]|\band\b/i).map((s) => s.trim()).filter(Boolean);
-  const dislikesRaw = document.getElementById("diet-dislikes").value.split(/[,;/+&]|\band\b/i).map((s) => s.trim()).filter(Boolean);
-  const meds = document.getElementById("diet-meds").value.split(/[,;/+&]|\band\b/i).map((s) => s.trim()).filter(Boolean);
-  const craving = document.getElementById("diet-craving")?.value.trim() || "";
+  const likes = (document.getElementById("diet-likes")?.value || "").split(/[,;/+&]|\band\b/i).map((s) => s.trim()).filter(Boolean);
+  const dislikesRaw = (document.getElementById("diet-dislikes")?.value || "").split(/[,;/+&]|\band\b/i).map((s) => s.trim()).filter(Boolean);
+  const meds = (document.getElementById("diet-meds")?.value || "").split(/[,;/+&]|\band\b/i).map((s) => s.trim()).filter(Boolean);
+  const craving = document.getElementById("diet-craving")?.value?.trim() || "";
+
+  const cuisineEl = document.getElementById("diet-cuisine") || document.getElementById("diet-region");
+  const cuisine = cuisineEl ? cuisineEl.value : "South Indian";
+
+  const typeEl = document.getElementById("diet-type");
+  const type = typeEl ? (typeEl.value || "vegetarian").replace("-", "_") : "vegetarian";
+
+  const caloriesEl = document.getElementById("diet-calories");
+  const calories = (caloriesEl && caloriesEl.value && caloriesEl.value.trim()) ? parseInt(caloriesEl.value, 10) : null;
 
   const payload = {
-    user_id: document.getElementById("p-user-id").value,
-    age_years: parseFloat(document.getElementById("p-age").value) || 45,
-    sex: document.getElementById("p-sex").value,
-    body_mass_index: parseFloat(document.getElementById("p-bmi").value) || 22.0,
+    user_id: document.getElementById("p-user-id")?.value?.trim() || "John Doe",
+    age_years: parseFloat(document.getElementById("p-age")?.value) || 45,
+    sex: document.getElementById("p-sex")?.value || "male",
+    body_mass_index: parseFloat(document.getElementById("p-bmi")?.value) || 22.0,
     test_reports: {
-      systolic_bp_mmhg: parseFloat(document.getElementById("p-sbp").value) || 115,
-      diastolic_bp_mmhg: parseFloat(document.getElementById("p-dbp").value) || 75,
-      fasting_glucose_mg_dl: parseFloat(document.getElementById("p-fbg").value) || 90,
-      hba1c_pct: parseFloat(document.getElementById("p-hba1c").value) || 5.2,
-      serum_creatinine_mg_dl: parseFloat(document.getElementById("p-creat").value) || 0.9,
-      egfr_ml_min: parseFloat(document.getElementById("p-egfr").value) || 100,
-      serum_potassium_meq_l: parseFloat(document.getElementById("p-pot").value) || 4.2,
-      serum_sodium_meq_l: parseFloat(document.getElementById("p-sod").value) || 140,
+      systolic_bp_mmhg: parseFloat(document.getElementById("p-sbp")?.value) || 115,
+      diastolic_bp_mmhg: parseFloat(document.getElementById("p-dbp")?.value) || 75,
+      fasting_glucose_mg_dl: parseFloat(document.getElementById("p-fbg")?.value) || 90,
+      hba1c_pct: parseFloat(document.getElementById("p-hba1c")?.value) || 5.2,
+      serum_creatinine_mg_dl: parseFloat(document.getElementById("p-creat")?.value) || 0.9,
+      egfr_ml_min: parseFloat(document.getElementById("p-egfr")?.value) || 100,
+      serum_potassium_meq_l: parseFloat(document.getElementById("p-pot")?.value) || 4.2,
+      serum_sodium_meq_l: parseFloat(document.getElementById("p-sod")?.value) || 140,
       report_summary_text: document.getElementById("p-summary")?.value || "",
     },
     preferences: {
-      native_place_region: document.getElementById("diet-region").value,
-      dietary_type: (document.getElementById("diet-type").value || "vegetarian").replace("-", "_"),
-      calorie_target_kcal: document.getElementById("diet-calories").value.trim() ? parseInt(document.getElementById("diet-calories").value, 10) : null,
-      calorie_target_override: document.getElementById("diet-calories").value.trim() ? parseInt(document.getElementById("diet-calories").value, 10) : null,
+      native_place_region: cuisine,
+      dietary_type: type,
+      calorie_target_kcal: calories,
+      calorie_target_override: calories,
       interests_and_likes: likes,
       allergies: dislikesRaw,
       dislikes: dislikesRaw,
@@ -771,14 +978,20 @@ async function runWeeklyDiet() {
   } catch (err) {
     showClinicalModal("Weekly Diet Generation Failed:\n\n" + err);
   } finally {
-    btn.disabled = false;
-    btn.textContent = "✨ Generate 7-Day Medical Nutrition Plan";
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "🥗 Generate Personalized 7-Day Regional Diet";
+    }
   }
 }
 
 function renderWeeklyDietResults(plan) {
   const container = document.getElementById("weekly-plan-results");
-  container.style.display = "block";
+  if (container) container.style.display = "block";
+  const placeholder = document.getElementById("diet-placeholder");
+  if (placeholder) placeholder.style.display = "none";
+  const saveBtn = document.getElementById("btn-save-diet");
+  if (saveBtn) saveBtn.disabled = false;
 
   // Smart Craving Strategy Box
   const cravingBox = document.getElementById("diet-craving-box");
@@ -787,10 +1000,10 @@ function renderWeeklyDietResults(plan) {
       const cs = plan.smart_craving_strategy;
       cravingBox.style.display = "block";
       cravingBox.innerHTML = `
-        <h4>🎯 Smart Craving Optimization <span class="craving-badge">${cs.requested_craving}</span></h4>
+        <h4 style="color:#fbbf24; margin-bottom: 6px;">🎯 Smart Craving Optimization <span class="craving-badge">${cs.requested_craving}</span></h4>
         <p style="margin-bottom: 6px;"><strong>Scheduled Indulgence:</strong> ${cs.scheduled_day} (${cs.scheduled_meal}) — <em>${cs.indulgence_title}</em></p>
         <p style="font-size: 12.5px; opacity: 0.9; margin-bottom: 4px;">⚖️ <strong>Weekly Metabolic Balance:</strong> ${cs.metabolic_rebalance_note}</p>
-        <p style="font-size: 12px; color: #93c5fd;">🔒 <strong>Strict Non-Treat Days:</strong> Days 1–6 are strictly optimized with zero sugar / zero indulgence to protect your metabolic targets.</p>
+        <p style="font-size: 12px; color: #fbbf24;">🔒 <strong>Strict Non-Treat Days:</strong> Days 1–6 are strictly optimized with zero sugar / zero indulgence to protect your metabolic targets.</p>
       `;
     } else {
       cravingBox.style.display = "none";
@@ -799,126 +1012,134 @@ function renderWeeklyDietResults(plan) {
 
   // Medication Alerts
   const medAlertsBox = document.getElementById("diet-med-alerts");
-  const medAlerts = plan.medication_alerts || plan.active_medication_alerts || [];
-  if (medAlerts.length > 0) {
-    medAlertsBox.style.display = "block";
-    let alertsHtml = "<h4>⚠️ Critical Pharmacopeia & Medication Contraindications</h4><ul>";
-    medAlerts.forEach((a) => {
-      alertsHtml += `<li>${a}</li>`;
-    });
-    alertsHtml += "</ul>";
-    medAlertsBox.innerHTML = alertsHtml;
-  } else {
-    medAlertsBox.style.display = "none";
+  if (medAlertsBox) {
+    const medAlerts = plan.medication_alerts || plan.active_medication_alerts || [];
+    if (medAlerts.length > 0) {
+      medAlertsBox.style.display = "block";
+      let alertsHtml = "<h4 style='color:#fca5a5; margin-bottom:6px;'>⚠️ Critical Pharmacopeia & Medication Contraindications</h4><ul>";
+      medAlerts.forEach((a) => {
+        alertsHtml += `<li>${a}</li>`;
+      });
+      alertsHtml += "</ul>";
+      medAlertsBox.innerHTML = alertsHtml;
+    } else {
+      medAlertsBox.style.display = "none";
+    }
   }
 
   // Targets Row
   const targetsRow = document.getElementById("diet-targets-row");
-  const t = plan.clinical_targets || {};
-  targetsRow.innerHTML = `
-    <div class="target-badge">
-      <div class="target-value">${t.calories_kcal || 1800} kcal</div>
-      <div class="target-label">Caloric Target</div>
-    </div>
-    <div class="target-badge">
-      <div class="target-value">${t.protein_g || 60} g</div>
-      <div class="target-label">Protein Target</div>
-    </div>
-    <div class="target-badge">
-      <div class="target-value">${t.carbohydrate_g || 220} g</div>
-      <div class="target-label">Carbohydrate Floor</div>
-    </div>
-    <div class="target-badge">
-      <div class="target-value">${t.fat_g || 50} g</div>
-      <div class="target-label">Healthy Fats</div>
-    </div>
-    <div class="target-badge">
-      <div class="target-value">&ge; ${t.fiber_target_g || 28} g</div>
-      <div class="target-label">Dietary Fiber</div>
-    </div>
-    <div class="target-badge">
-      <div class="target-value">&le; ${t.sodium_limit_mg || 1500} mg</div>
-      <div class="target-label">Sodium Limit</div>
-    </div>
-    <div class="target-badge">
-      <div class="target-value">&le; ${t.potassium_guidance_mg || 2000} mg</div>
-      <div class="target-label">Potassium Guidance</div>
-    </div>
-    <div class="target-badge">
-      <div class="target-value">${t.fluid_intake_ml || 2000} ml</div>
-      <div class="target-label">Fluid Intake</div>
-    </div>
-    <div class="target-badge">
-      <div class="target-value">${plan.regional_cuisine || "Regional"}</div>
-      <div class="target-label">Cuisine Tradition</div>
-    </div>
-  `;
+  if (targetsRow) {
+    const t = plan.clinical_targets || {};
+    targetsRow.innerHTML = `
+      <div class="target-badge">
+        <div class="target-value">${t.calories_kcal || 1800} kcal</div>
+        <div class="target-label">Caloric Target</div>
+      </div>
+      <div class="target-badge">
+        <div class="target-value">${t.protein_g || 60} g</div>
+        <div class="target-label">Protein Target</div>
+      </div>
+      <div class="target-badge">
+        <div class="target-value">${t.carbohydrate_g || 220} g</div>
+        <div class="target-label">Carbohydrate Floor</div>
+      </div>
+      <div class="target-badge">
+        <div class="target-value">${t.fat_g || 50} g</div>
+        <div class="target-label">Healthy Fats</div>
+      </div>
+      <div class="target-badge">
+        <div class="target-value">&ge; ${t.fiber_target_g || 28} g</div>
+        <div class="target-label">Dietary Fiber</div>
+      </div>
+      <div class="target-badge">
+        <div class="target-value">&le; ${t.sodium_limit_mg || 1500} mg</div>
+        <div class="target-label">Sodium Limit</div>
+      </div>
+      <div class="target-badge">
+        <div class="target-value">&le; ${t.potassium_guidance_mg || 2000} mg</div>
+        <div class="target-label">Potassium Guidance</div>
+      </div>
+      <div class="target-badge">
+        <div class="target-value">${t.fluid_intake_ml || 2000} ml</div>
+        <div class="target-label">Fluid Intake</div>
+      </div>
+      <div class="target-badge">
+        <div class="target-value">${plan.regional_cuisine || "Regional"}</div>
+        <div class="target-label">Cuisine Tradition</div>
+      </div>
+    `;
+  }
 
   // Render 7 Days
   const daysList = document.getElementById("diet-days-list");
-  daysList.innerHTML = "";
+  if (daysList && plan.days) {
+    daysList.innerHTML = "";
 
-  plan.days.forEach((day, idx) => {
-    const strip = document.createElement("div");
-    strip.className = `day-strip ${idx === 0 ? "open" : ""}`;
+    plan.days.forEach((day, idx) => {
+      const strip = document.createElement("div");
+      strip.className = `day-strip ${idx === 0 ? "open" : ""}`;
 
-    const tot = day.daily_total_nutrients || {};
-    strip.innerHTML = `
-      <div class="day-strip-header">
-        <div style="font-weight: 700; color: #ffffff;">
-          Day ${day.day_number}: ${day.day_name}
+      const tot = day.daily_total_nutrients || {};
+      strip.innerHTML = `
+        <div class="day-strip-header">
+          <div style="font-weight: 700; color: #ffffff;">
+            Day ${day.day_number}: ${day.day_name}
+          </div>
+          <div style="font-size: 12.5px; color: var(--text-muted); font-family: var(--font-mono);">
+            ${tot.calories || "-"} kcal | P: ${tot.protein_g || "-"}g | Na: ${tot.sodium_mg || "-"}mg | K: ${tot.potassium_mg || "-"}mg
+          </div>
         </div>
-        <div style="font-size: 12.5px; color: var(--text-muted);">
-          ${tot.calories || "-"} kcal | P: ${tot.protein_g || "-"}g | Na: ${tot.sodium_mg || "-"}mg | K: ${tot.potassium_mg || "-"}mg
+        <div class="day-intervals-container" style="${idx === 0 ? 'display:flex;' : 'display:none;'}">
+          ${renderDayIntervals(day.intervals)}
         </div>
-      </div>
-      <div class="day-intervals-container" style="${idx === 0 ? 'display:flex;' : 'display:none;'}">
-        ${renderDayIntervals(day.intervals)}
-      </div>
-    `;
+      `;
 
-    // Toggle logic
-    const header = strip.querySelector(".day-strip-header");
-    header.addEventListener("click", () => {
-      const container = strip.querySelector(".day-intervals-container");
-      if (strip.classList.contains("open")) {
-        strip.classList.remove("open");
-        container.style.display = "none";
-      } else {
-        strip.classList.add("open");
-        container.style.display = "flex";
-      }
+      const header = strip.querySelector(".day-strip-header");
+      header.addEventListener("click", () => {
+        const c = strip.querySelector(".day-intervals-container");
+        if (strip.classList.contains("open")) {
+          strip.classList.remove("open");
+          c.style.display = "none";
+        } else {
+          strip.classList.add("open");
+          c.style.display = "flex";
+        }
+      });
+
+      daysList.appendChild(strip);
     });
-
-    daysList.appendChild(strip);
-  });
+  }
 
   // Grocery Checklist
   const groceryContainer = document.getElementById("diet-grocery-list");
-  if (plan.categorized_grocery_checklist && Object.keys(plan.categorized_grocery_checklist).length > 0) {
-    let catHtml = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; width: 100%;">`;
-    for (const [catName, items] of Object.entries(plan.categorized_grocery_checklist)) {
-      if (items && items.length > 0) {
-        catHtml += `
-          <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(148, 163, 184, 0.15); border-radius: 8px; padding: 12px 14px;">
-            <div style="font-weight: 700; color: #60a5fa; font-size: 13px; margin-bottom: 8px;">${catName}</div>
-            <ul style="margin: 0; padding-left: 18px; line-height: 1.6; font-size: 12.5px; color: #cbd5e1;">
-              ${items.map((it) => `<li>${it}</li>`).join("")}
-            </ul>
-          </div>
-        `;
+  const grocerySection = document.getElementById("diet-grocery-container");
+  if (groceryContainer && grocerySection) {
+    grocerySection.style.display = "block";
+    if (plan.categorized_grocery_checklist && Object.keys(plan.categorized_grocery_checklist).length > 0) {
+      let catHtml = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; width: 100%;">`;
+      for (const [catName, items] of Object.entries(plan.categorized_grocery_checklist)) {
+        if (items && items.length > 0) {
+          catHtml += `
+            <div style="background: rgba(30, 15, 24, 0.6); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px 14px;">
+              <div style="font-weight: 700; color: #fbbf24; font-size: 13px; margin-bottom: 8px;">${catName}</div>
+              <ul style="margin: 0; padding-left: 18px; line-height: 1.6; font-size: 12.5px; color: #f1f5f9;">
+                ${items.map((it) => `<li>${it}</li>`).join("")}
+              </ul>
+            </div>
+          `;
+        }
       }
+      catHtml += `</div>`;
+      groceryContainer.innerHTML = catHtml;
+    } else if (plan.grocery_checklist && plan.grocery_checklist.length > 0) {
+      groceryContainer.innerHTML = plan.grocery_checklist.map((g) => `<span class="brand-badge" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3); color: #fbbf24;">${g}</span>`).join(" ");
     }
-    catHtml += `</div>`;
-    groceryContainer.innerHTML = catHtml;
-    groceryContainer.style.columns = "unset";
-  } else if (plan.grocery_checklist && plan.grocery_checklist.length > 0) {
-    groceryContainer.style.columns = "2";
-    groceryContainer.innerHTML = plan.grocery_checklist.map((g) => `<li>${g}</li>`).join("");
   }
 }
 
 function renderDayIntervals(intervals) {
+  if (!intervals) return "";
   return intervals
     .map((inv) => {
       const nut = inv.total_nutrients || {};
@@ -929,11 +1150,11 @@ function renderDayIntervals(intervals) {
       const isStarred = (inv.meal_title || "").startsWith("⭐");
       const cleanTitle = (inv.meal_title || "").replace(/^⭐\s*/, "");
       const starBadge = isStarred
-        ? `<span class="craving-badge" style="background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fbbf24; font-size: 11px; padding: 2px 7px; margin-left: 8px;">⭐ Preferred Choice</span>`
+        ? `<span class="craving-badge" style="background: rgba(245, 158, 11, 0.25); border: 1px solid #f59e0b; color: #fbbf24; font-size: 11px; padding: 2px 7px; margin-left: 8px;">⭐ Preferred Choice</span>`
         : "";
 
       return `
-      <div class="interval-box" style="${isStarred ? 'border-left: 3px solid #f59e0b;' : ''}">
+      <div class="interval-box" style="${isStarred ? 'border-left: 3px solid #fbbf24;' : ''}">
         <div class="interval-header">
           <span class="interval-title">${inv.interval_name} (${inv.time_window}): <strong>${cleanTitle}</strong>${starBadge}</span>
           <span class="interval-nutri">${nut.calories || "-"} kcal | P: ${nut.protein_g || "-"}g | Na: ${nut.sodium_mg || "-"}mg</span>
@@ -948,7 +1169,7 @@ function renderDayIntervals(intervals) {
 
 async function saveWeeklyDiet() {
   if (!currentWeeklyPlan || !window.pywebview?.api) return;
-  const pid = document.getElementById("p-user-id").value || "patient";
+  const pid = document.getElementById("p-user-id")?.value || "patient";
   try {
     const res = await window.pywebview.api.save_weekly_diet_report(currentWeeklyPlan, pid);
     if (res.status === "saved") {
@@ -1014,27 +1235,18 @@ async function saveAiSettings() {
 function renderMarkdown(rawText) {
   if (!rawText) return "";
 
-  // Escape HTML tags to protect integrity
   let safe = rawText
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
-  // Bold **text** or __text__
   safe = safe.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
   safe = safe.replace(/__(.*?)__/g, "<strong>$1</strong>");
-
-  // Italic *text* or _text_
   safe = safe.replace(/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/g, "<em>$1</em>");
-
-  // Inline code `code`
   safe = safe.replace(/`([^`]+)`/g, "<code>$1</code>");
-
-  // Headers
   safe = safe.replace(/^### (.*$)/gim, "<h4>$1</h4>");
   safe = safe.replace(/^## (.*$)/gim, "<h3>$1</h3>");
 
-  // Process lines for lists and paragraphs
   const lines = safe.split("\n");
   let inList = false;
   let html = "";
@@ -1065,39 +1277,19 @@ function renderMarkdown(rawText) {
       }
     }
   }
-  if (inList) {
-    html += "</ul>";
-  }
+  if (inList) html += "</ul>";
 
-  // Clean empty paragraphs and repeated breaks
   html = html.replace(/<p><\/p>/g, "").replace(/(<br>\s*){3,}/g, "<br><br>");
   return html;
 }
 
 function sendQuickPrompt(promptText) {
-  document.getElementById("chat-input-text").value = promptText;
+  switchTab("tab-chat");
+  const input = document.getElementById("chat-input-text");
+  if (input) input.value = promptText;
   sendChatMessage();
 }
-
-function updateChatGating(isModelInstalled) {
-  const input = document.getElementById("chat-input-text");
-  const sendBtn = document.getElementById("btn-chat-send");
-  const chips = document.querySelectorAll(".chat-chips .chip-btn");
-
-  if (input) {
-    input.disabled = false;
-    input.placeholder = "Ask about recipes, nutrients, safe meal ideas, or substitutions...";
-  }
-
-  if (sendBtn) {
-    sendBtn.disabled = false;
-  }
-
-  chips.forEach((c) => {
-    c.style.pointerEvents = "auto";
-    c.style.opacity = "1";
-  });
-}
+window.sendQuickPrompt = sendQuickPrompt;
 
 async function sendChatMessage() {
   const input = document.getElementById("chat-input-text");
@@ -1105,14 +1297,12 @@ async function sendChatMessage() {
   if (!msg) return;
 
   const btn = document.getElementById("btn-chat-send");
-  btn.disabled = true;
+  if (btn) btn.disabled = true;
   input.value = "";
 
-  // Append user bubble
   appendChatBubble("user", msg);
 
-  // Prepare payload
-  const userId = document.getElementById("p-user-id").value || "patient_local";
+  const userId = document.getElementById("p-user-id")?.value?.trim() || "patient_local";
   const disease = "ckd_t2dm_htn";
 
   const engineSelect = document.getElementById("ai-engine-select");
@@ -1134,7 +1324,6 @@ async function sendChatMessage() {
 
     appendChatBubble("assistant", res.reply, res.engine_mode, res.escalated);
 
-    // If Dr. Nutriloop approved and altered the 7-day diet plan live
     if (res.updated_diet_plan) {
       currentWeeklyPlan = res.updated_diet_plan;
       renderWeeklyDietResults(res.updated_diet_plan);
@@ -1143,62 +1332,85 @@ async function sendChatMessage() {
   } catch (err) {
     appendChatBubble("assistant", "Chat service error: " + err, "Error", false);
   } finally {
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
   }
 }
 
 function appendChatBubble(role, text, engineMode, isEscalated = false) {
-  const container = document.getElementById("chat-messages-container");
+  const container = document.getElementById("chat-history") || document.getElementById("chat-messages-container");
+  if (!container) return;
+
   const msgDiv = document.createElement("div");
-  msgDiv.className = `chat-msg ${role} ${isEscalated ? "escalated" : ""}`;
+  msgDiv.className = `chat-msg ${role}`;
+
+  const avatar = document.createElement("div");
+  avatar.className = "chat-avatar";
+  avatar.textContent = role === "user" ? "👤" : "🤖";
 
   const bubble = document.createElement("div");
   bubble.className = "chat-bubble";
-  bubble.innerHTML = renderMarkdown(text);
-  msgDiv.appendChild(bubble);
 
-  const meta = document.createElement("div");
-  meta.className = "chat-meta";
   if (role === "assistant") {
-    const modeBadge = document.createElement("span");
-    modeBadge.className = isEscalated ? "risk-badge badge-high" : "brand-badge";
-    modeBadge.style.fontSize = "10px";
-    modeBadge.textContent = isEscalated ? "🚨 Emergency Escalation" : (engineMode || "Nutriloop");
-    meta.appendChild(modeBadge);
+    bubble.innerHTML = renderMarkdown(text);
+    if (engineMode) {
+      const modeTag = document.createElement("div");
+      modeTag.style.fontSize = "10.5px";
+      modeTag.style.color = "var(--secondary-gold)";
+      modeTag.style.marginTop = "8px";
+      modeTag.style.fontWeight = "600";
+      modeTag.textContent = `Mode: ${engineMode}${isEscalated ? " (Supervisor Escalation)" : ""}`;
+      bubble.appendChild(modeTag);
+    }
+  } else {
+    bubble.textContent = text;
   }
-  msgDiv.appendChild(meta);
 
+  msgDiv.appendChild(avatar);
+  msgDiv.appendChild(bubble);
   container.appendChild(msgDiv);
+
+  const scrollArea = container.closest(".chat-messages-scroll-area") || container;
+  scrollArea.scrollTop = scrollArea.scrollHeight;
   container.scrollTop = container.scrollHeight;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Ollama Manager & Saved Reports
+   Ollama Local AI Management
    ────────────────────────────────────────────────────────────────────────── */
 
 async function refreshOllamaStatus() {
   if (!window.pywebview?.api) return;
   try {
-    const status = await window.pywebview.api.check_ollama();
-    const dot = document.getElementById("ollama-dot");
-    const text = document.getElementById("ollama-text");
+    const status = await window.pywebview.api.check_ollama_status();
     const srvText = document.getElementById("ollama-service-status");
     const installedBadge = document.getElementById("ollama-installed-badge");
     const installBtn = document.getElementById("btn-install-model");
+    const chatDot = document.getElementById("ollama-dot");
+    const chatText = document.getElementById("ollama-text");
 
-    // Enforce Chat Section Gating
-    updateChatGating(status.model_installed);
-
-    if (dot) dot.className = status.model_installed ? "status-dot" : "status-dot offline";
-    if (text) text.textContent = status.model_installed ? "Dr. Nutriloop AI (llama3.2:3b)" : "Model Not Installed";
+    if (chatDot && chatText) {
+      if (status.model_installed) {
+        chatDot.className = "status-dot";
+        chatText.textContent = "Local Clinical AI Ready";
+      } else if (status.running) {
+        chatDot.className = "status-dot offline";
+        chatText.textContent = "Model Missing (Install in Settings)";
+      } else {
+        chatDot.className = "status-dot offline";
+        chatText.textContent = "Offline Medical Rules Active";
+      }
+    }
 
     if (srvText) {
       if (status.model_installed) {
         srvText.textContent = "Ready (llama3.2:3b Installed)";
         srvText.style.color = "var(--accent-emerald)";
+      } else if (status.running) {
+        srvText.textContent = "Running (Model not yet downloaded)";
+        srvText.style.color = "var(--secondary-light)";
       } else {
-        srvText.textContent = "Model Missing";
-        srvText.style.color = "var(--accent-amber)";
+        srvText.textContent = "Standalone Ready (Auto-starts on demand)";
+        srvText.style.color = "var(--secondary-light)";
       }
     }
 
@@ -1221,7 +1433,6 @@ async function refreshOllamaStatus() {
       }
     }
 
-    // Also sync download progress state (handles startup recovery of paused downloads)
     try {
       const dlState = await window.pywebview.api.get_model_download_progress();
       if (dlState) {
@@ -1283,7 +1494,6 @@ function updateDownloadUI(state) {
     if (pauseBtn) pauseBtn.style.display = "none";
     if (cancelBtn) cancelBtn.style.display = "none";
   } else {
-    // idle, cancelled, error
     fill.style.width = state.status === "cancelled" ? "0%" : `${pct}%`;
     text.textContent = state.message || "Status: Ready";
     installBtn.style.display = "inline-flex";
@@ -1297,7 +1507,7 @@ function updateDownloadUI(state) {
 async function installOllamaModel() {
   if (!window.pywebview?.api) return;
   const btn = document.getElementById("btn-install-model");
-  btn.disabled = true;
+  if (btn) btn.disabled = true;
 
   try {
     const progress = await window.pywebview.api.get_model_download_progress();
@@ -1312,11 +1522,11 @@ async function installOllamaModel() {
       pollDownloadProgress();
     } else {
       alert("Download status: " + (res.message || res.status));
-      btn.disabled = false;
+      if (btn) btn.disabled = false;
     }
   } catch (err) {
     alert("Failed to start/resume download: " + err);
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -1391,14 +1601,19 @@ function pollDownloadProgress() {
   }, 600);
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Saved Reports Management
+   ────────────────────────────────────────────────────────────────────────── */
+
 async function refreshSavedReports() {
   if (!window.pywebview?.api) return;
   try {
     const reports = await window.pywebview.api.list_saved_reports();
     const container = document.getElementById("saved-reports-list");
+    if (!container) return;
 
     if (!reports || reports.length === 0) {
-      container.innerHTML = '<div style="font-size: 12px; color: var(--text-subtle);">No saved reports yet.</div>';
+      container.innerHTML = '<div style="font-size: 12px; color: var(--text-muted);">No saved reports yet.</div>';
       return;
     }
 
