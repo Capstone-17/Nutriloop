@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="Assets/Nutriloop_1.png" alt="NutriLoop Logo" width="360" style="margin-bottom: 16px;" />
+<img src="gui/assets/Nutriloop_1.png" alt="NutriLoop Logo" width="360" style="margin-bottom: 16px;" />
 
 # NutriLoop
 

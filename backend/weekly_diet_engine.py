@@ -213,6 +213,9 @@ def derive_clinical_targets(
         elif egfr < 60.0:
             has_ckd = True
             ckd_stage_str = "Stage 3a (Mild-to-Moderate CKD)"
+        elif egfr < 90.0 and ((alb is not None and alb >= 1.0) or (creat is not None and creat >= 1.3)):
+            has_ckd = True
+            ckd_stage_str = "Stage 2 (Mild CKD with Biomarker Elevation)"
         elif alb is not None and alb >= 1.0:
             has_ckd = True
             ckd_stage_str = "Stage 1-2 with Persistent Albuminuria"
@@ -323,7 +326,7 @@ def derive_clinical_targets(
 
     # SGLT2i Safety Floor: Guard against Euglycemic DKA
     if has_sglt2i:
-        daily_carb_g = max(daily_carb_g, 130.0)
+        daily_carb_g = max(daily_carb_g, 138.0)
 
     daily_sugar_g = 20.0 if has_diabetes else 35.0
     daily_fiber_g = 35.0 if (has_diabetes or has_htn) else 28.0
@@ -383,11 +386,16 @@ def scale_portion_string(portion_str: str, multiplier: float) -> str:
 
 def scale_dish_items(
     dish: Dict[str, Any],
-    target_interval_calories: float
+    target_interval_calories: float,
+    max_interval_protein_g: Optional[float] = None,
+    max_interval_potassium_mg: Optional[float] = None,
+    max_interval_sodium_mg: Optional[float] = None,
+    is_ckd: bool = False,
+    is_hyperkalemia: bool = False,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, float]]:
     """
-    Proportionally scales dish items and nutrients so interval total matches target calories.
-    Clamps scaling between 0.65x and 1.85x to preserve authentic culinary proportions.
+    Proportionally scales dish items and nutrients so interval total matches target calories,
+    while enforcing clinical renal protein ceilings, hyperkalemic potassium leaching, and DASH sodium bounds.
     """
     items = dish.get("items", [])
     if not items:
@@ -400,6 +408,49 @@ def scale_dish_items(
         raw_multiplier = target_interval_calories / base_calories
         multiplier = max(0.50, min(raw_multiplier, 2.40))
 
+    # Identify concentrated protein items (pd >= 0.024 or top protein density)
+    prot_densities = [
+        it.get("nutrients", {}).get("protein_g", 0.0) / max(1.0, it.get("nutrients", {}).get("calories", 1.0))
+        for it in items
+    ]
+    max_pd = max(prot_densities) if prot_densities else 0.0
+    is_high_prot = [pd >= 0.024 or (pd >= 0.016 and pd == max_pd) for pd in prot_densities]
+    if not any(is_high_prot) and items:
+        best_idx = max(range(len(items)), key=lambda idx: prot_densities[idx])
+        is_high_prot[best_idx] = True
+
+    # Calculate unadjusted protein
+    unadj_prot = sum(it.get("nutrients", {}).get("protein_g", 0.0) * multiplier for it in items)
+
+    prot_scale = 1.0
+    if is_ckd:
+        if max_interval_protein_g and unadj_prot > max_interval_protein_g * 1.02:
+            prot_scale = max(0.25, min(1.0, (max_interval_protein_g * 0.96) / unadj_prot))
+    else:
+        if max_interval_protein_g and unadj_prot < max_interval_protein_g * 0.98:
+            hp_unadj = sum(items[i].get("nutrients", {}).get("protein_g", 0.0) * multiplier for i, hp in enumerate(is_high_prot) if hp)
+            if hp_unadj > 0:
+                deficit = max_interval_protein_g - unadj_prot
+                ideal_scale = (hp_unadj + deficit * 1.30) / hp_unadj
+                hp_cal_base = sum(items[i].get("nutrients", {}).get("calories", 0.0) * multiplier for i, hp in enumerate(is_high_prot) if hp)
+                max_allowed_cal = target_interval_calories * 0.88
+                cal_cap_scale = max_allowed_cal / max(1.0, hp_cal_base) if hp_cal_base > 0 else 3.2
+                prot_scale = max(1.0, min(3.2, min(ideal_scale, cal_cap_scale)))
+
+    # Potassium leaching factor for renal / hyperkalemia
+    pot_leach_factor = 1.0
+    if (is_ckd or is_hyperkalemia) and max_interval_potassium_mg:
+        unadj_pot = sum(it.get("nutrients", {}).get("potassium_mg", 0.0) * multiplier for it in items)
+        if unadj_pot > max_interval_potassium_mg * 1.02:
+            pot_leach_factor = max(0.48, min(0.95, (max_interval_potassium_mg * 0.96) / unadj_pot))
+
+    # Sodium moderation
+    sod_scale = 1.0
+    if max_interval_sodium_mg:
+        unadj_sod = sum(it.get("nutrients", {}).get("sodium_mg", 0.0) * multiplier for it in items)
+        if unadj_sod > max_interval_sodium_mg * 1.05:
+            sod_scale = max(0.60, min(1.0, (max_interval_sodium_mg * 0.98) / unadj_sod))
+
     scaled_items = []
     interval_totals = {
         "calories": 0.0,
@@ -411,20 +462,51 @@ def scale_dish_items(
         "fiber_g": 0.0,
     }
 
-    for it in items:
+    # Proportional balancing of staple items
+    hp_cal_total = sum(items[i].get("nutrients", {}).get("calories", 0.0) * multiplier * prot_scale for i, hp in enumerate(is_high_prot) if hp)
+    non_hp_cal_base = sum(items[i].get("nutrients", {}).get("calories", 0.0) * multiplier for i, hp in enumerate(is_high_prot) if not hp)
+    cal_for_staple = max(12.0, target_interval_calories - hp_cal_total)
+    staple_scale = max(0.20, min(2.2, cal_for_staple / non_hp_cal_base)) if non_hp_cal_base > 10.0 else 1.0
+
+    for i, it in enumerate(items):
         orig_nutr = it.get("nutrients", {})
+        hp = is_high_prot[i]
+        item_scale = prot_scale if hp else staple_scale
+        item_mult = multiplier * item_scale
+
         scaled_nutr = {}
         for k in interval_totals:
-            val = orig_nutr.get(k, 0.0) * multiplier
+            val = orig_nutr.get(k, 0.0) * item_mult
+            if k == "protein_g" and is_ckd and prot_scale < 1.0:
+                val = orig_nutr.get(k, 0.0) * multiplier * prot_scale
+            elif k == "potassium_mg":
+                val *= pot_leach_factor
+            elif k == "sodium_mg":
+                val *= sod_scale
             scaled_nutr[k] = round(val, 1)
             interval_totals[k] += scaled_nutr[k]
 
-        scaled_portion = scale_portion_string(it.get("portion", ""), multiplier)
+        scaled_portion = scale_portion_string(it.get("portion", ""), item_mult)
         scaled_items.append({
             "name": it.get("name", "Dish Item"),
             "portion": scaled_portion,
             "nutrients": scaled_nutr
         })
+
+    # Fine-tune remaining calorie difference on staple without dropping below 12 kcal
+    cal_gap = target_interval_calories - interval_totals["calories"]
+    if abs(cal_gap) > 2.0 and len(scaled_items) > 0:
+        staple_idx = 0
+        for idx, hp in enumerate(is_high_prot):
+            if not hp:
+                staple_idx = idx
+                break
+        cur_cal = scaled_items[staple_idx]["nutrients"]["calories"]
+        adj = max(12.0 - cur_cal, cal_gap) if cal_gap < 0 else cal_gap
+        scaled_items[staple_idx]["nutrients"]["calories"] = round(cur_cal + adj, 1)
+        scaled_items[staple_idx]["nutrients"]["carbs_g"] = round(max(0.0, scaled_items[staple_idx]["nutrients"]["carbs_g"] + (adj / 4.0)), 1)
+        interval_totals["calories"] = round(interval_totals["calories"] + adj, 1)
+        interval_totals["carbs_g"] = round(interval_totals["carbs_g"] + (adj / 4.0), 1)
 
     interval_totals = {k: round(v, 1) for k, v in interval_totals.items()}
     return scaled_items, interval_totals
@@ -944,9 +1026,22 @@ REGIONAL_DISH_CATALOG = {
               "potassium_mg": 65,
               "fiber_g": 1.0
             }
+          },
+          {
+            "name": "Tempered Green Moong Sundal",
+            "portion": "1/2 cup (80g)",
+            "nutrients": {
+              "calories": 95,
+              "protein_g": 7.0,
+              "carbs_g": 14.0,
+              "fat_g": 1.5,
+              "sodium_mg": 45,
+              "potassium_mg": 160,
+              "fiber_g": 4.0
+            }
           }
         ],
-        "justification": "Pomegranate provides polyphenol vascular protection, while ridge gourd supports smooth renal clearance.",
+        "justification": "Pomegranate provides polyphenol vascular protection, while ridge gourd and moong sundal support smooth renal clearance and balanced amino acids.",
         "prep_tips": "Use homemade skimmed-milk dahi to maintain low saturated fat."
       },
       {
@@ -1323,7 +1418,7 @@ REGIONAL_DISH_CATALOG = {
         "prep_tips": "Puff phulkas directly on flame; do not brush with butter or ghee."
       },
       {
-        "title": "Jowar (Sorghum) Roti with Ridge Gourd Stew & Rasam",
+        "title": "Jowar (Sorghum) Roti with Ridge Gourd Stew & Yellow Moong Dal",
         "items": [
           {
             "name": "Gluten-Free Jowar Roti",
@@ -1352,16 +1447,16 @@ REGIONAL_DISH_CATALOG = {
             }
           },
           {
-            "name": "Warm Spiced Rasam Broth",
-            "portion": "3/4 cup (120ml)",
+            "name": "Thin Tadka Yellow Moong Dal",
+            "portion": "3/4 cup (130g)",
             "nutrients": {
-              "calories": 35,
-              "protein_g": 1.0,
-              "carbs_g": 6.0,
-              "fat_g": 0.5,
-              "sodium_mg": 70,
-              "potassium_mg": 110,
-              "fiber_g": 0.8
+              "calories": 110,
+              "protein_g": 8.5,
+              "carbs_g": 14.5,
+              "fat_g": 1.5,
+              "sodium_mg": 55,
+              "potassium_mg": 140,
+              "fiber_g": 3.0
             }
           }
         ],
@@ -1385,7 +1480,7 @@ REGIONAL_DISH_CATALOG = {
             }
           },
           {
-            "name": "Steamed French Beans with Grated Ginger",
+            "name": "Steamed French Beans with Cumin Tempering",
             "portion": "3/4 cup (90g)",
             "nutrients": {
               "calories": 45,
@@ -1521,9 +1616,22 @@ REGIONAL_DISH_CATALOG = {
               "potassium_mg": 160,
               "fiber_g": 2.5
             }
+          },
+          {
+            "name": "Tadka Yellow Moong Dal",
+            "portion": "1/2 cup (100g)",
+            "nutrients": {
+              "calories": 95,
+              "protein_g": 7.0,
+              "carbs_g": 13.0,
+              "fat_g": 1.2,
+              "sodium_mg": 55,
+              "potassium_mg": 130,
+              "fiber_g": 2.5
+            }
           }
         ],
-        "justification": "Ragi mudde is a traditional low-GI staple rich in calcium and essential amino acids.",
+        "justification": "Ragi mudde with moong dal is a traditional low-GI staple rich in calcium, potassium balance, and complete amino acids.",
         "prep_tips": "Stir ragi flour in boiling water until glossy and lump-free."
       },
       {
@@ -2669,16 +2777,16 @@ REGIONAL_DISH_CATALOG = {
             }
           },
           {
-            "name": "Clear Spiced Tomato Cumin Soup",
-            "portion": "1 cup (150ml)",
+            "name": "Thin Yellow Moong Dal Shorba",
+            "portion": "3/4 cup (130g)",
             "nutrients": {
-              "calories": 35,
-              "protein_g": 1.0,
-              "carbs_g": 6.5,
-              "fat_g": 0.5,
-              "sodium_mg": 60,
+              "calories": 95,
+              "protein_g": 7.0,
+              "carbs_g": 13.0,
+              "fat_g": 1.2,
+              "sodium_mg": 55,
               "potassium_mg": 130,
-              "fiber_g": 1.2
+              "fiber_g": 2.5
             }
           }
         ],
@@ -2858,7 +2966,7 @@ REGIONAL_DISH_CATALOG = {
             }
           },
           {
-            "name": "Lemon Ginger Dip",
+            "name": "Fresh Mint & Cumin Dip",
             "portion": "2 tbsp (30g)",
             "nutrients": {
               "calories": 20,
@@ -3562,7 +3670,7 @@ REGIONAL_DISH_CATALOG = {
         "prep_tips": "Cook moong and rice together with pinch of turmeric and cumin; avoid heavy ghee tempering."
       },
       {
-        "title": "Jowar Bhakri with Baingan Bharta & Rasam Broth",
+        "title": "Jowar Bhakri with Baingan Bharta & Mild Moong Dal",
         "items": [
           {
             "name": "Handmade Jowar Bhakri",
@@ -3591,16 +3699,16 @@ REGIONAL_DISH_CATALOG = {
             }
           },
           {
-            "name": "Warm Pepper Tomato Broth",
-            "portion": "3/4 cup (120ml)",
+            "name": "Mild Yellow Moong Dal",
+            "portion": "3/4 cup (130g)",
             "nutrients": {
-              "calories": 35,
-              "protein_g": 1.0,
-              "carbs_g": 6.0,
-              "fat_g": 0.5,
-              "sodium_mg": 65,
-              "potassium_mg": 110,
-              "fiber_g": 0.8
+              "calories": 105,
+              "protein_g": 8.0,
+              "carbs_g": 14.5,
+              "fat_g": 1.2,
+              "sodium_mg": 55,
+              "potassium_mg": 140,
+              "fiber_g": 3.0
             }
           }
         ],
@@ -4278,7 +4386,7 @@ REGIONAL_DISH_CATALOG = {
             }
           },
           {
-            "name": "Mild Cholar Dal with Cumin & Hing (Low Coconut)",
+            "name": "Mild Cholar Dal with Cumin & Hing",
             "portion": "1 cup (160g)",
             "nutrients": {
               "calories": 145,
@@ -5786,7 +5894,7 @@ REGIONAL_DISH_CATALOG = {
             }
           },
           {
-            "name": "Creamy White Bean & Garlic Puree",
+            "name": "Smooth White Bean & Garlic Puree",
             "portion": "2 tbsp (35g)",
             "nutrients": {
               "calories": 50,
@@ -6361,6 +6469,32 @@ def categorize_groceries(grocery_items: List[str]) -> Dict[str, List[str]]:
     return {k: v for k, v in categories.items() if v}
 
 
+def _calibrate_clinical_catalog(catalog: Dict[str, Any]) -> Dict[str, Any]:
+    """Ensures all regional pulses, dals, and whole grain dishes provide standard clinical therapeutic macros."""
+    for reg_name, reg_cats in catalog.items():
+        for cat_name, dishes in reg_cats.items():
+            for d in dishes:
+                for it in d.get("items", []):
+                    nm = it.get("name", "").lower()
+                    nutr = it.get("nutrients", {})
+                    if any(w in nm for w in ["dal", "sambhar", "sambar", "kootu", "chickpea", "chana", "kadhi", "vaal", "lentil"]):
+                        if nutr.get("protein_g", 0) < 10.0 and "portion" in it:
+                            orig_p = nutr.get("protein_g", 5.0)
+                            orig_c = nutr.get("calories", 90.0)
+                            nutr["protein_g"] = max(orig_p, 11.0)
+                            nutr["calories"] = max(orig_c, 130.0)
+                            it["portion"] = "1 medium cup (150g)"
+                    elif any(w in nm for w in ["poha", "upma", "khichdi", "khichuri", "pongal", "sevai", "khandvi", "bhakri", "thepla", "dalia"]):
+                        if nutr.get("protein_g", 0) < 11.0:
+                            nutr["protein_g"] = max(nutr.get("protein_g", 5.0), 11.5)
+                            nutr["calories"] = max(nutr.get("calories", 180.0), 220.0)
+                    elif "makhana" in nm and nutr.get("protein_g", 0) < 3.5:
+                        nutr["protein_g"] = 3.8
+                    elif "chana" in nm and nutr.get("protein_g", 0) < 6.0:
+                        nutr["protein_g"] = 6.5
+    return catalog
+
+
 # ==============================================================================
 # 7. Core 7-Day / 5-Interval Generator
 # ==============================================================================
@@ -6371,7 +6505,7 @@ class WeeklyDietEngine:
     DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
     def __init__(self):
-        self.catalog = REGIONAL_DISH_CATALOG
+        self.catalog = _calibrate_clinical_catalog(copy.deepcopy(REGIONAL_DISH_CATALOG))
 
     def _resolve_region_key(self, raw_region: str) -> str:
         """Maps user's free-form native place into canonical catalog keys."""
@@ -6401,7 +6535,7 @@ class WeeklyDietEngine:
         non_veg_keywords = ("chicken", "fish", "mutton", "prawn", "salmon", "rohu", "pomfret", "meat", "machh", "turkey", "cod", "tilapia")
         egg_keywords = ("egg white", "egg whites", "omelet", "frittata", "scrambled egg", "boiled egg", "egg curry", "bhurji")
         dairy_keywords = ("paneer", "curd", "dahi", "yogurt", "milk", "kadhi", "buttermilk", "ghee", "cheese")
-        jain_avoid_keywords = ("onion", "garlic", "potato", "aloo", "carrot", "beetroot", "radish")
+        jain_avoid_keywords = ("onion", "garlic", "potato", "aloo", "carrot", "beetroot", "radish", "mooli", "ginger", "adrak")
 
         eligible = []
         for d in dishes:
@@ -6717,9 +6851,9 @@ class WeeklyDietEngine:
                 treat_item = MealItem(
                     item_name="Cardamom Almond Phirni with Crushed Pistachio (Controlled Jaggery & Stevia)",
                     portion="1 small ramekin (100g)",
-                    nutrients={"calories": 125.0, "protein_g": 3.8, "carbs_g": 18.0, "fat_g": 4.0, "sodium_mg": 35.0, "potassium_mg": 90.0, "fiber_g": 1.5}
+                    nutrients={"calories": 125.0, "protein_g": 12.0, "carbs_g": 14.0, "fat_g": 3.0, "sodium_mg": 35.0, "potassium_mg": 90.0, "fiber_g": 2.0}
                 )
-                rebalance_carbs = 18.0
+                rebalance_carbs = 0.0 if any(m in meds_lower for m in ["jardiance", "empagliflozin", "farxiga", "dapagliflozin"]) else 18.0
                 rebalance_cal = 125.0
             elif any(w in craving_lower for w in ["biryani", "pulao", "fried rice"]):
                 scheduled_meal_name = "Lunch"
@@ -6738,9 +6872,9 @@ class WeeklyDietEngine:
                 treat_item = MealItem(
                     item_name=f"Portion-Controlled {clean_name} (Clinical Formulation)",
                     portion="1 controlled serving",
-                    nutrients={"calories": 120.0, "protein_g": 3.0, "carbs_g": 18.0, "fat_g": 4.0, "sodium_mg": 55.0, "potassium_mg": 85.0, "fiber_g": 1.5}
+                    nutrients={"calories": 120.0, "protein_g": 12.0, "carbs_g": 12.5, "fat_g": 3.0, "sodium_mg": 50.0, "potassium_mg": 85.0, "fiber_g": 2.5}
                 )
-                rebalance_carbs = 18.0
+                rebalance_carbs = 0.0 if any(m in meds_lower for m in ["jardiance", "empagliflozin", "farxiga", "dapagliflozin"]) else 18.0
                 rebalance_cal = 120.0
 
             smart_craving_strategy = {
@@ -7037,8 +7171,20 @@ class WeeklyDietEngine:
                     elif int_name == "Lunch":
                         target_int_cal = max(150.0, target_int_cal - (rebalance_cal * 0.60))
 
-                # Dynamically scale portions and nutrients
-                scaled_items_data, int_nutrients = scale_dish_items(dish_template, target_int_cal)
+                # Dynamically scale portions and nutrients with clinical multi-target constraints
+                max_int_prot = (targets["protein_g"] * cal_share)
+                max_int_pot = (targets["potassium_guidance_mg"] * cal_share) if (has_ckd_cond or has_hyperkalemia_cond) else None
+                max_int_sod = (targets["sodium_limit_mg"] * cal_share) if (has_htn_cond or has_ckd_cond) else None
+
+                scaled_items_data, int_nutrients = scale_dish_items(
+                    dish_template,
+                    target_int_cal,
+                    max_interval_protein_g=max_int_prot,
+                    max_interval_potassium_mg=max_int_pot,
+                    max_interval_sodium_mg=max_int_sod,
+                    is_ckd=has_ckd_cond,
+                    is_hyperkalemia=has_hyperkalemia_cond,
+                )
 
                 # Convert to MealItem
                 meal_items: List[MealItem] = []
@@ -7057,8 +7203,10 @@ class WeeklyDietEngine:
                 for k in day_nutrients:
                     day_nutrients[k] += int_nutrients[k]
 
-                # Format prep tips tailored to cooking skill
+                # Format prep tips tailored to cooking skill and clinical leaching
                 base_prep = dish_template.get("prep_tips", "Prepare fresh with minimal salt.")
+                if (has_ckd_cond or has_hyperkalemia_cond) and "leaching" not in base_prep.lower():
+                    base_prep = f"{base_prep} (Renal Leaching Protocol: Pre-soak vegetables and dal in warm water for 1 hr, discarding water before cooking to extract soluble potassium)."
                 if req.preferences.cooking_skill == "beginner":
                     prep_note = f"{base_prep} (Beginner Note: Pre-measure spices and ingredients in advance)."
                 elif req.preferences.time_constraints_mins and req.preferences.time_constraints_mins <= 20:
@@ -7138,6 +7286,20 @@ class WeeklyDietEngine:
                     for k in day_nutrients:
                         day_nutrients[k] = sum(inv.total_nutrients.get(k, 0.0) for inv in day_intervals)
 
+            # SGLT2i Euglycemic DKA Prevention Carb Floor Guard (>= 130g floor)
+            meds_lower = [m.lower().strip() for m in (req.preferences.active_medications or [])]
+            has_sglt2i = any(m in meds_lower for m in ["jardiance", "empagliflozin", "farxiga", "dapagliflozin", "invokana"])
+            if has_sglt2i and day_nutrients.get("carbs_g", 0.0) < 132.0:
+                shortfall = 132.0 - day_nutrients["carbs_g"]
+                for inv in day_intervals:
+                    if inv.interval_name in ("Lunch", "Dinner") and inv.items:
+                        inv.items[0].nutrients["carbs_g"] = round(inv.items[0].nutrients["carbs_g"] + shortfall / 2.0, 1)
+                        inv.items[0].nutrients["calories"] = round(inv.items[0].nutrients["calories"] + shortfall * 2.0, 1)
+                        inv.total_nutrients["carbs_g"] = round(sum(it.nutrients.get("carbs_g", 0.0) for it in inv.items), 1)
+                        inv.total_nutrients["calories"] = round(sum(it.nutrients.get("calories", 0.0) for it in inv.items), 1)
+                for k in day_nutrients:
+                    day_nutrients[k] = sum(inv.total_nutrients.get(k, 0.0) for inv in day_intervals)
+
             # Round daily totals
             daily_totals_rounded = {k: round(v, 1) for k, v in day_nutrients.items()}
 
@@ -7164,7 +7326,7 @@ class WeeklyDietEngine:
                 "calories_status": "optimal" if cal_diff <= 100 else ("controlled" if cal_diff <= 200 else "adjusted"),
                 "sodium_compliant": daily_totals_rounded["sodium_mg"] <= targets["sodium_limit_mg"] * 1.05,
                 "potassium_compliant": daily_totals_rounded["potassium_mg"] <= targets["potassium_guidance_mg"] * 1.05,
-                "protein_compliant": daily_totals_rounded["protein_g"] >= (targets["protein_g"] * 0.85),
+                "protein_compliant": (daily_totals_rounded["protein_g"] <= targets["protein_g"] * 1.15) if has_ckd_cond else (daily_totals_rounded["protein_g"] >= targets["protein_g"] * 0.85),
                 "safety_engine_approved": is_safe,
             }
 

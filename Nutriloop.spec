@@ -6,9 +6,16 @@ PyInstaller specification file to compile Nutriloop into a single,
 self-contained Windows executable (.exe) with zero external runtime dependencies.
 """
 
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+import os
+import shutil
 import sys
 from pathlib import Path
+
+# Prevent bytecode generation and __pycache__ directory creation during PyInstaller build
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 block_cipher = None
 REPO_ROOT = Path.cwd()
@@ -19,7 +26,6 @@ datas = [
     (str(REPO_ROOT / "bin"), "bin"),
     (str(REPO_ROOT / "datasets" / "unified_food_kb.csv"), "datasets"),
     (str(REPO_ROOT / "gui"), "gui"),
-    (str(REPO_ROOT / "Assets"), "Assets"),
 ] + collect_data_files("sklearn")
 
 # Hidden imports required by dynamic reflection / C-extensions
@@ -105,5 +111,17 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=str(REPO_ROOT / "Assets" / "Nutriloop_1.ico"),
+    icon=str(REPO_ROOT / "gui" / "assets" / "Nutriloop_1.ico"),
 )
+
+# Purge any __pycache__ left behind during PyInstaller analysis
+try:
+    for target in [REPO_ROOT / "__pycache__"]:
+        if target.exists() and target.is_dir():
+            shutil.rmtree(target, ignore_errors=True)
+    for p in REPO_ROOT.rglob("__pycache__"):
+        if p.is_dir():
+            shutil.rmtree(p, ignore_errors=True)
+except Exception:
+    pass
+

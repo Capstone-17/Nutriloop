@@ -553,6 +553,9 @@ function setupEventListeners() {
   document.getElementById("btn-save-diet")?.addEventListener("click", saveWeeklyDiet);
   document.getElementById("btn-open-folder-diet")?.addEventListener("click", openReportsFolder);
   document.getElementById("btn-open-folder")?.addEventListener("click", openReportsFolder);
+  document.getElementById("btn-close-save-modal")?.addEventListener("click", closeSaveNoticeModal);
+  document.getElementById("btn-dismiss-save-modal")?.addEventListener("click", closeSaveNoticeModal);
+  document.getElementById("btn-open-reports-dir")?.addEventListener("click", openReportsFolder);
 
   document.getElementById("btn-chat-send")?.addEventListener("click", sendChatMessage);
   document.getElementById("chat-input-text")?.addEventListener("keydown", (e) => {
@@ -1083,11 +1086,15 @@ function renderWeeklyDietResults(plan) {
       const tot = day.daily_total_nutrients || {};
       strip.innerHTML = `
         <div class="day-strip-header">
-          <div style="font-weight: 700; color: #ffffff;">
-            Day ${day.day_number}: ${day.day_name}
+          <div class="day-strip-title">
+            <span class="day-num-badge">Day ${day.day_number}</span>
+            <span class="day-name-label">${day.day_name}</span>
           </div>
-          <div style="font-size: 12.5px; color: var(--text-muted); font-family: var(--font-mono);">
-            ${tot.calories || "-"} kcal | P: ${tot.protein_g || "-"}g | Na: ${tot.sodium_mg || "-"}mg | K: ${tot.potassium_mg || "-"}mg
+          <div class="day-strip-metrics">
+            <span class="day-metric-pill"><span class="metric-icon">🔥</span> <strong>${tot.calories || "-"}</strong> kcal</span>
+            <span class="day-metric-pill"><span class="metric-icon">🥩</span> P: <strong>${tot.protein_g || "-"}</strong>g</span>
+            <span class="day-metric-pill"><span class="metric-icon">🧂</span> Na: <strong>${tot.sodium_mg || "-"}</strong>mg</span>
+            <span class="day-metric-pill"><span class="metric-icon">⚡</span> K: <strong>${tot.potassium_mg || "-"}</strong>mg</span>
           </div>
         </div>
         <div class="day-intervals-container" style="${idx === 0 ? 'display:flex;' : 'display:none;'}">
@@ -1143,24 +1150,56 @@ function renderDayIntervals(intervals) {
   return intervals
     .map((inv) => {
       const nut = inv.total_nutrients || {};
-      const itemsStr = inv.items
-        .map((it) => `• <strong>${it.item_name}</strong> (${it.portion})`)
-        .join("<br>");
-
       const isStarred = (inv.meal_title || "").startsWith("⭐");
       const cleanTitle = (inv.meal_title || "").replace(/^⭐\s*/, "");
       const starBadge = isStarred
-        ? `<span class="craving-badge" style="background: rgba(245, 158, 11, 0.25); border: 1px solid #f59e0b; color: #fbbf24; font-size: 11px; padding: 2px 7px; margin-left: 8px;">⭐ Preferred Choice</span>`
+        ? `<span class="preferred-choice-badge" title="Selected specifically to match your food preferences">⭐ Preferred Choice</span>`
         : "";
 
+      const itemsListHtml = (inv.items || [])
+        .map(
+          (it) => `
+            <li class="interval-food-item">
+              <span class="food-bullet">✦</span>
+              <span class="food-name">${it.item_name}</span>
+              <span class="food-portion">(${it.portion})</span>
+            </li>`
+        )
+        .join("");
+
       return `
-      <div class="interval-box" style="${isStarred ? 'border-left: 3px solid #fbbf24;' : ''}">
-        <div class="interval-header">
-          <span class="interval-title">${inv.interval_name} (${inv.time_window}): <strong>${cleanTitle}</strong>${starBadge}</span>
-          <span class="interval-nutri">${nut.calories || "-"} kcal | P: ${nut.protein_g || "-"}g | Na: ${nut.sodium_mg || "-"}mg</span>
+      <div class="interval-box ${isStarred ? 'starred-interval' : ''}">
+        <!-- Top Bar: Category, Time Window & Right-Aligned Macro Chips -->
+        <div class="interval-top-row">
+          <div class="interval-badge-group">
+            <span class="interval-name-chip">${inv.interval_name}</span>
+            <span class="interval-time-chip">${inv.time_window}</span>
+            ${starBadge}
+          </div>
+          <div class="interval-macros-strip">
+            <span class="macro-pill cal"><span class="macro-icon">🔥</span> <strong>${nut.calories || "-"}</strong> kcal</span>
+            <span class="macro-pill prot"><span class="macro-icon">🥩</span> P: <strong>${nut.protein_g || "-"}</strong>g</span>
+            <span class="macro-pill sod"><span class="macro-icon">🧂</span> Na: <strong>${nut.sodium_mg || "-"}</strong>mg</span>
+          </div>
         </div>
-        <div class="interval-items">${itemsStr}</div>
-        <div class="interval-clinical">💡 Clinical Note: ${inv.clinical_justification || "Balanced glycemic profile."}</div>
+
+        <!-- Full-Width Dedicated Meal Title (Eliminates text overlapping) -->
+        <div class="interval-dish-banner">
+          <div class="interval-dish-title">${cleanTitle}</div>
+        </div>
+
+        <!-- Food Components List -->
+        <ul class="interval-food-list">
+          ${itemsListHtml}
+        </ul>
+
+        <!-- Clinical Rationale Callout Box -->
+        <div class="interval-clinical-callout">
+          <span class="clinical-icon">💡</span>
+          <div class="clinical-text">
+            <strong>Clinical Rationale:</strong> ${inv.clinical_justification || "Balanced glycemic and metabolic profile."}
+          </div>
+        </div>
       </div>
     `;
     })
@@ -1173,12 +1212,36 @@ async function saveWeeklyDiet() {
   try {
     const res = await window.pywebview.api.save_weekly_diet_report(currentWeeklyPlan, pid);
     if (res.status === "saved") {
-      alert(`Report saved locally to your folder:\n${res.filename}\n(Both JSON and printable HTML created)`);
+      showSaveNoticeModal(res);
       refreshSavedReports();
     }
   } catch (err) {
     alert("Failed to save report: " + err);
   }
+}
+
+function showSaveNoticeModal(res) {
+  const modal = document.getElementById("save-diet-modal");
+  if (!modal) return;
+  const htmlEl = document.getElementById("notice-html-filename");
+  const jsonEl = document.getElementById("notice-json-filename");
+  const pathEl = document.getElementById("notice-folder-path");
+  if (htmlEl && res.filename) htmlEl.textContent = res.filename;
+  if (jsonEl && res.json_path) {
+    const parts = res.json_path.split(/[/\\]/);
+    jsonEl.textContent = parts[parts.length - 1];
+  }
+  if (pathEl && res.html_path) {
+    const parts = res.html_path.split(/[/\\]/);
+    parts.pop();
+    pathEl.textContent = parts.join("/");
+  }
+  modal.style.display = "flex";
+}
+
+function closeSaveNoticeModal() {
+  const modal = document.getElementById("save-diet-modal");
+  if (modal) modal.style.display = "none";
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -1344,8 +1407,16 @@ function appendChatBubble(role, text, engineMode, isEscalated = false) {
   msgDiv.className = `chat-msg ${role}`;
 
   const avatar = document.createElement("div");
-  avatar.className = "chat-avatar";
-  avatar.textContent = role === "user" ? "👤" : "🤖";
+  avatar.className = `chat-avatar ${role === "assistant" ? "bot-avatar" : "user-avatar"}`;
+  if (role === "assistant") {
+    const img = document.createElement("img");
+    img.src = "assets/Nutriloop_2.png";
+    img.alt = "Dr. Nutriloop";
+    img.className = "bot-avatar-img";
+    avatar.appendChild(img);
+  } else {
+    avatar.textContent = "👤";
+  }
 
   const bubble = document.createElement("div");
   bubble.className = "chat-bubble";

@@ -8,16 +8,40 @@ Provides complete in-process bridge without needing external browser or web serv
 
 from __future__ import annotations
 
+import atexit
 import logging
 import os
+import shutil
 import sys
+from pathlib import Path
+from typing import Optional
 
 # Prevent bytecode generation and __pycache__ directory creation
 sys.dont_write_bytecode = True
 os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 
+
+def _purge_pycache() -> None:
+    """Proactively remove any __pycache__ directories created before or during execution."""
+    try:
+        base_dir = Path(__file__).resolve().parent
+        for target in [
+            base_dir / "__pycache__",
+            Path.cwd() / "__pycache__",
+        ]:
+            if target.exists() and target.is_dir():
+                shutil.rmtree(target, ignore_errors=True)
+        for p in base_dir.rglob("__pycache__"):
+            if p.is_dir():
+                shutil.rmtree(p, ignore_errors=True)
+    except Exception:
+        pass
+
+
+_purge_pycache()
+atexit.register(_purge_pycache)
+
 import multiprocessing
-from pathlib import Path
 
 # Enforce 100% in-process execution and prevent loky from spawning PowerShell core-detection subprocesses on Windows
 os.environ["JOBLIB_MULTIPROCESSING"] = "0"
@@ -60,12 +84,9 @@ def get_icon_path() -> Optional[Path]:
     else:
         base_dir = Path(__file__).resolve().parent
 
-    for candidate in [
-        base_dir / "Assets" / "Nutriloop_1.ico",
-        base_dir / "gui" / "assets" / "Nutriloop_1.ico",
-    ]:
-        if candidate.exists():
-            return candidate
+    icon_candidate = base_dir / "gui" / "assets" / "Nutriloop_1.ico"
+    if icon_candidate.exists():
+        return icon_candidate
     return None
 
 

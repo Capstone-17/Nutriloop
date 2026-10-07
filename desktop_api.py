@@ -13,14 +13,39 @@ Handles:
 
 from __future__ import annotations
 
+import atexit
 import json
 import logging
 import os
+import shutil
 import sys
+from pathlib import Path
 
-# Prevent bytecode generation and __pycache__ directory creation
+# Prevent bytecode generation and __pycache__ directory creation across this process and child processes
 sys.dont_write_bytecode = True
 os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
+
+def _purge_pycache() -> None:
+    """Proactively remove any __pycache__ directories created before or during execution."""
+    try:
+        base_dir = Path(__file__).resolve().parent
+        for target in [
+            base_dir / "__pycache__",
+            Path.cwd() / "__pycache__",
+        ]:
+            if target.exists() and target.is_dir():
+                shutil.rmtree(target, ignore_errors=True)
+        for p in base_dir.rglob("__pycache__"):
+            if p.is_dir():
+                shutil.rmtree(p, ignore_errors=True)
+    except Exception:
+        pass
+
+
+# Purge immediately to destroy any bytecode cached by the import loader before execution began
+_purge_pycache()
+atexit.register(_purge_pycache)
 
 import threading
 from datetime import datetime, timezone

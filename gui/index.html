@@ -620,8 +620,8 @@
           <div class="chat-container">
             <div class="chat-header-bar">
               <div style="display: flex; align-items: center; gap: 10px;">
-                <div class="chat-avatar">
-                  <span>🤖</span>
+                <div class="chat-avatar bot-avatar">
+                  <img src="assets/Nutriloop_2.png" alt="Dr. Nutriloop" class="bot-avatar-img">
                 </div>
                 <div>
                   <div style="font-weight: 700; color: #ffffff; font-size: 14px;">Dr. Nutriloop Clinical AI Assistant</div>
@@ -637,7 +637,9 @@
             <div class="chat-messages-scroll-area">
               <div class="chat-messages-area" id="chat-history">
                 <div class="chat-msg assistant">
-                  <div class="chat-avatar">🤖</div>
+                  <div class="chat-avatar bot-avatar">
+                    <img src="assets/Nutriloop_2.png" alt="Dr. Nutriloop" class="bot-avatar-img">
+                  </div>
                   <div class="chat-bubble">
                     <p><strong>Hello! I am Dr. Nutriloop</strong>, your Clinical AI Physician and Medical Nutrition Specialist.</p>
                     <p>I supervise your chronic disease management across <strong>Chronic Kidney Disease, Hypertension, and Type 2 Diabetes</strong> with direct access to your clinical reports, lab readings, and 7-day nutrition schedule.</p>
@@ -838,6 +840,59 @@
       <div class="modal-body" id="clinical-modal-message"></div>
       <div class="modal-footer">
         <button id="btn-modal-correct" class="btn btn-gold">Understood, Correct Value</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────────────────────
+       Save Weekly Diet Plan Success Notice Modal
+       ────────────────────────────────────────────────────────────────────────── -->
+  <div id="save-diet-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card save-notice-card">
+      <div class="modal-header save-notice-header">
+        <div class="save-notice-title-wrap">
+          <div class="save-notice-glow-icon">✨</div>
+          <div>
+            <div class="save-notice-main-title">Clinical Diet Plan Saved</div>
+            <div class="save-notice-sub-title">7-Day Medical Nutrition Schedule successfully exported</div>
+          </div>
+        </div>
+        <button id="btn-close-save-modal" class="btn btn-secondary" style="padding: 2px 8px; font-size: 12px;" title="Close">✕</button>
+      </div>
+      <div class="modal-body save-notice-body">
+        <div class="save-files-container">
+          <div class="save-file-card html-type">
+            <div class="save-file-header">
+              <span class="file-badge html-badge">📄 Printable HTML</span>
+              <span class="file-badge-sub">Ready to print / PDF export</span>
+            </div>
+            <div class="save-file-name" id="notice-html-filename">Patient_weekly_diet_report.html</div>
+            <div class="save-file-note">High-resolution formatted chart with grocery checklists</div>
+          </div>
+          <div class="save-file-card json-type">
+            <div class="save-file-header">
+              <span class="file-badge json-badge">📊 Clinical JSON</span>
+              <span class="file-badge-sub">Machine-readable data</span>
+            </div>
+            <div class="save-file-name" id="notice-json-filename">Patient_weekly_diet_report.json</div>
+            <div class="save-file-note">Complete biomarker, target, and interval nutrient records</div>
+          </div>
+        </div>
+        <div class="save-location-bar">
+          <span class="save-loc-icon">📂</span>
+          <div class="save-loc-content">
+            <span class="save-loc-label">Saved Directory:</span>
+            <code class="save-loc-path" id="notice-folder-path">Nutriloop Reports Folder</code>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer save-notice-footer">
+        <button id="btn-open-reports-dir" class="btn btn-secondary save-action-btn">
+          <span>📁</span> Open Containing Folder
+        </button>
+        <button id="btn-dismiss-save-modal" class="btn btn-gold save-action-btn">
+          <span>✓</span> Done
+        </button>
       </div>
     </div>
   </div>
