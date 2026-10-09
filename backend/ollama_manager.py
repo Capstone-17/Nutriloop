@@ -109,7 +109,15 @@ class OllamaProcessManager:
         if workspace_bin.exists():
             return workspace_bin
 
-        # 3. System PATH fallback
+        # 3. Adjacent bin directory (e.g. dist/bin/ollama.exe or installation folder)
+        try:
+            adjacent_bin = Path(sys.executable).resolve().parent / "bin" / ("ollama.exe" if os.name == "nt" else "ollama")
+            if adjacent_bin.exists():
+                return adjacent_bin
+        except Exception:
+            pass
+
+        # 4. System PATH fallback
         sys_which = shutil.which("ollama")
         if sys_which:
             return Path(sys_which)
@@ -236,6 +244,7 @@ class OllamaProcessManager:
                                 ["taskkill", "/F", "/T", "/PID", str(pid)],
                                 creationflags=CREATE_NO_WINDOW,
                                 capture_output=True,
+                                timeout=1.5,
                             )
                         else:
                             self._process.terminate()

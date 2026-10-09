@@ -10,6 +10,7 @@
 </head>
 <body>
 
+
   <div class="app-shell">
 
     <!-- ──────────────────────────────────────────────────────────────────────────
@@ -486,15 +487,17 @@
             </div>
           </div>
 
-          <div class="bento-grid">
+          <div class="diet-layout-stack">
 
-            <!-- Diet Configuration Bento Card -->
-            <div class="bento-col-5 card">
+            <!-- 1. Patient Cultural & Culinary Profile (Top Full-Width Card) -->
+            <div class="card" id="culinary-profile-card">
               <div class="card-header">
-                <div class="card-title">🍽️ Patient Cultural & Culinary Profile</div>
+                <div class="card-title">🍽️ Patient Cultural &amp; Culinary Profile</div>
+                <span class="risk-badge badge-normal" style="font-size: 11.5px;">Precision Rebalancing Engine</span>
               </div>
 
-              <div class="form-row">
+              <!-- Top Row: Cuisine, Pattern, Cooking Skill, Max Prep Time -->
+              <div class="diet-profile-grid">
                 <div class="form-group">
                   <label class="form-label">Regional Cuisine (Native Place)</label>
                   <select id="diet-cuisine" class="form-select">
@@ -516,9 +519,6 @@
                     <option value="jain">Jain (No Onion/Garlic)</option>
                   </select>
                 </div>
-              </div>
-
-              <div class="form-row">
                 <div class="form-group">
                   <label class="form-label">Cooking Skill</label>
                   <select id="diet-cooking" class="form-select">
@@ -533,39 +533,41 @@
                 </div>
               </div>
 
-              <div class="form-group" style="margin-bottom: 12px;">
-                <label class="form-label">Preferred Foods & Interests (Likes)</label>
-                <input type="text" id="diet-likes" class="form-input" value="millet, dalia, spinach" placeholder="e.g. oats, paneer, ragi, khichdi">
-                <span class="input-hint">Separated by commas or 'and'. Prioritized across all 7 days with ⭐ badge.</span>
-              </div>
-
-              <div class="form-group" style="margin-bottom: 12px;">
-                <label class="form-label">Food Allergens & Dislikes (Strictly Excluded)</label>
-                <input type="text" id="diet-dislikes" class="form-input" value="" placeholder="e.g. None, peanuts, mushrooms">
-                <span class="input-hint">Zero-tolerance clinical exclusion scrubber.</span>
-              </div>
-
-              <div class="form-group" style="margin-bottom: 12px;">
-                <label class="form-label">Active Medications (Drug-Nutrient Cross-Check)</label>
-                <input type="text" id="diet-meds" class="form-input" value="" placeholder="e.g. None, or metformin, lisinopril">
-                <span class="input-hint">Cross-referenced against clinical pharmacopeia guidelines.</span>
-              </div>
-
-              <div class="form-group" style="margin-bottom: 16px;">
-                <label class="form-label">🎯 Smart Craving Sunday Treat (Optional)</label>
-                <input type="text" id="diet-craving" class="form-input" value="" placeholder="e.g. Pizza, Gulab Jamun, Biryani">
-                <span class="input-hint">Strictly budgeted for Sunday (Day 7) with 6-day metabolic lock.</span>
+              <!-- Second Row: Likes, Dislikes, Medications, Sunday Craving -->
+              <div class="diet-profile-grid" style="margin-top: 14px;">
+                <div class="form-group">
+                  <label class="form-label">Preferred Foods &amp; Interests (Likes)</label>
+                  <input type="text" id="diet-likes" class="form-input" value="millet, dalia, spinach" placeholder="e.g. oats, paneer, ragi, khichdi">
+                  <span class="input-hint">Separated by commas. Prioritized with ⭐ badge.</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Food Allergens &amp; Dislikes (Excluded)</label>
+                  <input type="text" id="diet-dislikes" class="form-input" value="" placeholder="e.g. None, peanuts, mushrooms">
+                  <span class="input-hint">Zero-tolerance clinical exclusion scrubber.</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Active Medications (Drug-Nutrient Check)</label>
+                  <input type="text" id="diet-meds" class="form-input" value="" placeholder="e.g. None, or metformin, lisinopril">
+                  <span class="input-hint">Cross-referenced against clinical pharmacopeia.</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">🎯 Smart Craving Sunday Treat (Optional)</label>
+                  <input type="text" id="diet-craving" class="form-input" value="" placeholder="e.g. Pizza, Gulab Jamun, Biryani">
+                  <span class="input-hint">Strictly budgeted for Sunday (Day 7) metabolic lock.</span>
+                </div>
               </div>
 
               <input type="hidden" id="diet-calories" value="">
 
-              <button id="btn-generate-diet" class="btn btn-emerald" style="width: 100%;">
-                🥗 Generate Personalized 7-Day Regional Diet
-              </button>
+              <div class="diet-action-bar">
+                <button id="btn-generate-diet" class="btn btn-emerald" style="min-width: 320px; padding: 12px 24px; font-size: 14px; font-weight: 700;">
+                  🥗 Generate Personalized 7-Day Regional Diet
+                </button>
+              </div>
             </div>
 
-            <!-- Diet Plan Output Bento Card -->
-            <div class="bento-col-7 card" id="diet-results-card">
+            <!-- 2. 7-Day Clinically Rebalanced Diet Schedule (Bottom Full-Width Card) -->
+            <div class="card" id="diet-results-card">
               <div class="card-header">
                 <div class="card-title">📅 7-Day Clinically Rebalanced Diet Schedule</div>
                 <div style="display: flex; gap: 8px;">
@@ -581,8 +583,8 @@
               <div id="diet-placeholder" style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
                 <div style="font-size: 40px; margin-bottom: 12px; opacity: 0.7;">🥗</div>
                 <h4 style="color: #ffffff; margin-bottom: 6px;">No Diet Plan Generated Yet</h4>
-                <p style="font-size: 13px; max-width: 400px; margin: 0 auto;">
-                  Configure patient preferences and click "Generate Personalized 7-Day Regional Diet".
+                <p style="font-size: 13px; max-width: 440px; margin: 0 auto;">
+                  Configure patient culinary preferences above and click "Generate Personalized 7-Day Regional Diet".
                 </p>
               </div>
 
@@ -597,11 +599,17 @@
                 <!-- Macro Targets Row -->
                 <div id="diet-targets-row" class="nutri-targets-row"></div>
 
-                <!-- 7-Day Accordion Container -->
-                <div id="diet-days-list"></div>
+                <!-- 7-Day Column Buttons Navigator (Easy click access for patient) -->
+                <div id="diet-day-nav" class="diet-days-bar"></div>
+
+                <!-- Active Selected Day View Container -->
+                <div id="diet-active-day-view" class="day-active-view">
+                  <div id="diet-active-day-header" class="day-active-header"></div>
+                  <div id="diet-active-day-meals" class="day-intervals-container"></div>
+                </div>
 
                 <!-- Grocery Checklist Container -->
-                <div id="diet-grocery-container" style="margin-top: 20px;">
+                <div id="diet-grocery-container" style="margin-top: 24px;">
                   <div class="card-header">
                     <div class="card-title" style="font-size: 13.5px;">🛒 Weekly Clinical Grocery Checklist</div>
                   </div>

@@ -6,6 +6,7 @@ sys.dont_write_bytecode = True
 os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 
 import json
+import threading
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -37,44 +38,51 @@ class ModelRegistry:
         self.features: Dict[str, List[str]] = {}
         self.risk_profiles: Dict[str, Dict] = {}
         self._risk_profiles_loaded = False
-
+        self._lock = threading.Lock()
 
     def load(self) -> None:
         self.load_feature_metadata()
         self.load_risk_profiles()
 
     def load_feature_metadata(self) -> None:
-        for disease in ["ckd", "hypertension", "diabetes"]:
-            if disease in self.features:
-                continue
-            features_path = ARTIFACT_DIR / f"{disease}_features.json"
-            if features_path.exists():
-                self.features[disease] = json.loads(features_path.read_text(encoding="utf-8"))
+        with self._lock:
+            for disease in ["ckd", "hypertension", "diabetes"]:
+                if disease in self.features:
+                    continue
+                features_path = ARTIFACT_DIR / f"{disease}_features.json"
+                if features_path.exists():
+                    self.features[disease] = json.loads(features_path.read_text(encoding="utf-8"))
 
     def load_risk_profiles(self) -> None:
-        if self._risk_profiles_loaded:
-            return
-        risk_profile_path = ARTIFACT_DIR / "risk_thresholds_and_factors.json"
-        if risk_profile_path.exists():
-            payload = json.loads(risk_profile_path.read_text(encoding="utf-8"))
-            self.risk_profiles = payload.get("diseases", payload)
-        self._risk_profiles_loaded = True
+        with self._lock:
+            if self._risk_profiles_loaded:
+                return
+            risk_profile_path = ARTIFACT_DIR / "risk_thresholds_and_factors.json"
+            if risk_profile_path.exists():
+                payload = json.loads(risk_profile_path.read_text(encoding="utf-8"))
+                self.risk_profiles = payload.get("diseases", payload)
+            self._risk_profiles_loaded = True
 
     def ensure_model_loaded(self, disease: str) -> None:
-        if disease in self.models:
-            return
+        with self._lock:
+            if disease in self.models:
+                return
 
-        model_path = ARTIFACT_DIR / f"{disease}_model.joblib"
-        if not model_path.exists():
-            raise ValueError(f"Model artifact not found for disease '{disease}'.")
+            model_path = ARTIFACT_DIR / f"{disease}_model.joblib"
+            if not model_path.exists():
+                raise ValueError(f"Model artifact not found for disease '{disease}'.")
 
-        model = joblib.load(model_path)
-        if not hasattr(model, "multi_class"):
-            try:
-                setattr(model, "multi_class", "auto")
-            except Exception:
-                pass
-        self.models[disease] = model
+            model = joblib.load(model_path)
+            if not hasattr(model, "multi_class"):
+                try:
+                    setattr(model, "multi_class", "auto")
+                except Exception:
+                    pass
+            self.models[disease] = model
+
+    def is_model_loaded(self, disease: str) -> bool:
+        with self._lock:
+            return disease in self.models
 
     def is_ready(self, disease: str) -> bool:
         self.load_feature_metadata()

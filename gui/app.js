@@ -34,30 +34,45 @@ function getRandomAlliterativeName() {
   return ALLITERATIVE_NAMES[idx];
 }
 
+// Immediate instantaneous UI setup on DOM load (0ms latency!)
+window.addEventListener("DOMContentLoaded", () => {
+  setupTabs();
+  setupEventListeners();
+  applySafeClinicalDefaults();
+  updateHealthGaugesFromInputs();
+
+  setTimeout(() => {
+    if (window.pywebview && window.pywebview.api && !appBridgeInitialized) {
+      appBridgeInitialized = true;
+      initApp();
+    }
+  }, 200);
+});
+
 // Wait for pywebview bridge readiness
 window.addEventListener("pywebviewready", () => {
   console.log("Nutriloop Desktop Bridge Ready");
-  initApp();
-});
-
-// Fallback initialization if opened directly
-window.addEventListener("DOMContentLoaded", () => {
-  setupTabs();
-  setTimeout(() => {
-    if (window.pywebview && window.pywebview.api) {
-      initApp();
-    }
-  }, 300);
+  if (!appBridgeInitialized) {
+    appBridgeInitialized = true;
+    initApp();
+  }
 });
 
 async function initApp() {
-  await loadSystemInfo();
-  await checkAndLoadInitialPatient();
-  await refreshOllamaStatus();
-  await refreshSavedReports();
-  await loadAiSettings();
-  setupEventListeners();
-  updateHealthGaugesFromInputs();
+  // 1. Immediately load initial patient test in background (updates sliders if previous report exists)
+  try {
+    await checkAndLoadInitialPatient();
+  } catch (err) {
+    console.warn("Initial patient load:", err);
+  }
+
+  // 2. Load system info, ollama status, reports, and AI settings asynchronously in parallel (non-blocking)
+  Promise.allSettled([
+    loadSystemInfo(),
+    refreshOllamaStatus(),
+    refreshSavedReports(),
+    loadAiSettings()
+  ]).catch((err) => console.warn("Background system initialization error:", err));
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -1074,21 +1089,34 @@ function renderWeeklyDietResults(plan) {
     `;
   }
 
-  // Render 7 Days
-  const daysList = document.getElementById("diet-days-list");
-  if (daysList && plan.days) {
-    daysList.innerHTML = "";
+  // Render 7 Days Column Button Navigator & Single Day Schedule View
+  const dayNav = document.getElementById("diet-day-nav");
+  const activeHeader = document.getElementById("diet-active-day-header");
+  const activeMeals = document.getElementById("diet-active-day-meals");
 
-    plan.days.forEach((day, idx) => {
-      const strip = document.createElement("div");
-      strip.className = `day-strip ${idx === 0 ? "open" : ""}`;
+  if (plan.days && plan.days.length > 0) {
+    function selectDietDay(selectedIdx) {
+      const day = plan.days[selectedIdx];
+      if (!day) return;
 
-      const tot = day.daily_total_nutrients || {};
-      strip.innerHTML = `
-        <div class="day-strip-header">
-          <div class="day-strip-title">
+      // Update active state on column buttons
+      if (dayNav) {
+        dayNav.querySelectorAll(".day-col-btn").forEach((btn, i) => {
+          if (i === selectedIdx) {
+            btn.classList.add("active");
+          } else {
+            btn.classList.remove("active");
+          }
+        });
+      }
+
+      // Update active day header banner
+      if (activeHeader) {
+        const tot = day.daily_total_nutrients || {};
+        activeHeader.innerHTML = `
+          <div class="day-active-title-wrap">
             <span class="day-num-badge">Day ${day.day_number}</span>
-            <span class="day-name-label">${day.day_name}</span>
+            <span class="day-active-title">${day.day_name} Clinically Rebalanced Regimen</span>
           </div>
           <div class="day-strip-metrics">
             <span class="day-metric-pill"><span class="metric-icon">🔥</span> <strong>${tot.calories || "-"}</strong> kcal</span>
@@ -1096,26 +1124,42 @@ function renderWeeklyDietResults(plan) {
             <span class="day-metric-pill"><span class="metric-icon">🧂</span> Na: <strong>${tot.sodium_mg || "-"}</strong>mg</span>
             <span class="day-metric-pill"><span class="metric-icon">⚡</span> K: <strong>${tot.potassium_mg || "-"}</strong>mg</span>
           </div>
-        </div>
-        <div class="day-intervals-container" style="${idx === 0 ? 'display:flex;' : 'display:none;'}">
-          ${renderDayIntervals(day.intervals)}
-        </div>
-      `;
+        `;
+      }
 
-      const header = strip.querySelector(".day-strip-header");
-      header.addEventListener("click", () => {
-        const c = strip.querySelector(".day-intervals-container");
-        if (strip.classList.contains("open")) {
-          strip.classList.remove("open");
-          c.style.display = "none";
-        } else {
-          strip.classList.add("open");
-          c.style.display = "flex";
-        }
+      // Render active day meal intervals
+      if (activeMeals) {
+        activeMeals.innerHTML = renderDayIntervals(day.intervals);
+      }
+    }
+
+    // Build the 7 column buttons
+    if (dayNav) {
+      dayNav.innerHTML = "";
+      plan.days.forEach((day, idx) => {
+        const tot = day.daily_total_nutrients || {};
+        const isSundayTreat = idx === 6 && plan.smart_craving_strategy && plan.smart_craving_strategy.requested_craving;
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `day-col-btn ${idx === 0 ? "active" : ""}`;
+        btn.innerHTML = `
+          <span class="day-col-badge">Day ${day.day_number}</span>
+          <span class="day-col-name">${day.day_name}</span>
+          <span class="day-col-cal">${tot.calories ? tot.calories + " kcal" : "-"}</span>
+          ${isSundayTreat ? '<span class="day-col-treat-tag">🎯 Treat</span>' : ""}
+        `;
+
+        btn.addEventListener("click", () => {
+          selectDietDay(idx);
+        });
+
+        dayNav.appendChild(btn);
       });
+    }
 
-      daysList.appendChild(strip);
-    });
+    // Display Day 1 by default
+    selectDietDay(0);
   }
 
   // Grocery Checklist

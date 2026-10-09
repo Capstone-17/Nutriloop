@@ -27,18 +27,12 @@ os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 
 
 def _purge_pycache() -> None:
-    """Proactively remove any __pycache__ directories created before or during execution."""
+    """Fast removal of all __pycache__ directories across the repository."""
     try:
         base_dir = Path(__file__).resolve().parent
-        for target in [
-            base_dir / "__pycache__",
-            Path.cwd() / "__pycache__",
-        ]:
-            if target.exists() and target.is_dir():
+        for target in base_dir.rglob("__pycache__"):
+            if target.is_dir():
                 shutil.rmtree(target, ignore_errors=True)
-        for p in base_dir.rglob("__pycache__"):
-            if p.is_dir():
-                shutil.rmtree(p, ignore_errors=True)
     except Exception:
         pass
 
@@ -52,17 +46,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Enforce in-process execution and prevent loky from launching PowerShell subprocesses on Windows
-os.environ["JOBLIB_MULTIPROCESSING"] = "0"
-os.environ["LOKY_MAX_CPU_COUNT"] = str(os.cpu_count() or 4)
-try:
-    import joblib.externals.loky.backend.context as loky_context
-    loky_context.physical_cores_cache = os.cpu_count() or 4
-except Exception:
-    pass
-
 import re
-import httpx
 
 from backend.db import (
     BASE_DIR,
@@ -82,17 +66,6 @@ from backend.db import (
     set_app_setting,
 )
 from backend.ollama_manager import ollama_manager
-from backend.model_registry import registry
-from backend.raw_input import map_raw_payload
-from backend.rules import (
-    build_calibration_context,
-    calibrate_disease_risk,
-    classify_risk_level,
-    explain_disease_risk,
-)
-from backend.schemas import WeeklyDietPlanRequest
-from backend.weekly_diet_engine import weekly_diet_engine
-from backend.chatbot.agent import run_agent
 
 log = logging.getLogger(__name__)
 
@@ -102,9 +75,8 @@ class DesktopAPI:
 
     def __init__(self) -> None:
         init_db()
-        registry.load()
-        self.ollama_base_url = ollama_manager.base_url
-        self.recommended_model = ollama_manager.recommended_model
+        self.ollama_base_url = "http://localhost:11434"
+        self.recommended_model = "llama3.2:1b"
 
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -113,6 +85,7 @@ class DesktopAPI:
 
     def get_system_info(self) -> Dict[str, Any]:
         """Return system status, persistence directory, and database statistics."""
+        from backend.model_registry import registry
         saved_files = list(REPORTS_DIR.glob("*.*")) if REPORTS_DIR.exists() else []
 
         # Count records in SQLite
@@ -466,6 +439,15 @@ class DesktopAPI:
         detected_conditions = []
         now = datetime.now(timezone.utc).isoformat()
 
+        from backend.model_registry import registry
+        from backend.raw_input import map_raw_payload
+        from backend.rules import (
+            build_calibration_context,
+            calibrate_disease_risk,
+            classify_risk_level,
+            explain_disease_risk,
+        )
+
         for disease in ["ckd", "hypertension", "diabetes"]:
             try:
                 mapping_res = map_raw_payload(disease, merged_inputs)
@@ -641,6 +623,8 @@ class DesktopAPI:
     def generate_weekly_diet(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Generate a 7-Day, 5-interval personalized meal plan with regional cuisine."""
         try:
+            from backend.schemas import WeeklyDietPlanRequest
+            from backend.weekly_diet_engine import weekly_diet_engine
             req = WeeklyDietPlanRequest.model_validate(payload)
             plan = weekly_diet_engine.generate_weekly_plan(req)
             plan_dict = plan.model_dump()
@@ -830,6 +814,7 @@ class DesktopAPI:
     ) -> Dict[str, Any]:
         """Send consultation message to Dr. Nutriloop AI."""
         try:
+            from backend.chatbot.agent import run_agent
             result = run_agent(
                 user_id=user_id,
                 message=message,
