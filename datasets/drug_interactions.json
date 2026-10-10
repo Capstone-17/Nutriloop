@@ -1,0 +1,103 @@
+{
+  "interactions": {
+    "warfarin": ["vitamin_k", "leafy_greens", "spinach", "broccoli"],
+    "coumadin": ["vitamin_k", "leafy_greens", "spinach", "broccoli"],
+    "ace_inhibitors": ["potassium_high", "salt_substitutes", "bananas"],
+    "lisinopril": ["potassium_high", "salt_substitutes", "bananas"],
+    "ramipril": ["potassium_high", "salt_substitutes"],
+    "arbs": ["potassium_high", "salt_substitutes"],
+    "losartan": ["potassium_high", "salt_substitutes"],
+    "valsartan": ["potassium_high", "salt_substitutes"],
+    "sglt2_inhibitors": ["very_low_carb", "keto", "alcohol"],
+    "empagliflozin": ["very_low_carb", "keto", "alcohol"],
+    "dapagliflozin": ["very_low_carb", "keto", "alcohol"],
+    "jardiance": ["very_low_carb", "keto", "alcohol"],
+    "glp1_ras": ["high_fat_meals", "large_portions"],
+    "semaglutide": ["high_fat_meals", "large_portions"],
+    "ozempic": ["high_fat_meals", "large_portions"],
+    "beta_blockers": ["high_potassium", "salt_substitutes"],
+    "metoprolol": ["high_potassium", "salt_substitutes"],
+    "calcium_channel_blockers": ["grapefruit", "grapefruit_juice"],
+    "amlodipine": ["grapefruit", "grapefruit_juice"],
+    "diuretics": ["sodium_high", "licorice"],
+    "furosemide": ["sodium_high", "licorice"],
+    "lasix": ["sodium_high", "licorice"],
+    "insulin": ["carbohydrates", "alcohol", "sugars"],
+    "metformin": ["alcohol"],
+    "digoxin": ["potassium_low", "high_fiber_meals"],
+    "statins": ["grapefruit", "grapefruit_juice"],
+    "atorvastatin": ["grapefruit", "grapefruit_juice"],
+    "potassium_binders": ["oral_medications"],
+    "lokelma": ["oral_medications"],
+    "phosphate_binders": ["fasting_administration"],
+    "sevelamer": ["fasting_administration"]
+  },
+  "clinical_warnings": [
+    {
+      "id": "sglt2i",
+      "medications": ["jardiance", "empagliflozin", "farxiga", "dapagliflozin", "invokana"],
+      "title": "CRITICAL PHARMACOPEIA (SGLT2i / Jardiance)",
+      "message": "CRITICAL PHARMACOPEIA (SGLT2i / Jardiance): Induces osmotic glucosuria. Daily carbohydrate intake is strictly protected at >= 130g/day with >= 2.5L daily hydration to eliminate Euglycemic DKA risk. Extreme low-carb or fasting regimens are contraindicated."
+    },
+    {
+      "id": "ccb",
+      "medications": ["amlodipine", "norvasc", "nifedipine", "felodipine", "diltiazem", "verapamil"],
+      "title": "DRUG INTERACTION WARNING (Calcium Channel Blocker / Amlodipine)",
+      "message": "DRUG INTERACTION WARNING (Calcium Channel Blocker / Amlodipine): Grapefruit, pomelo, and Seville oranges are 100% eliminated from this plan. Their furanocoumarins irreversibly inhibit gut CYP3A4, causing massive drug over-absorption and severe hypotension."
+    },
+    {
+      "id": "acei_arb",
+      "medications": ["lisinopril", "losartan", "ramipril", "valsartan", "telmisartan", "enalapril"],
+      "title": "ELECTROLYTE ALERT (ACEi / ARB)",
+      "message": "ELECTROLYTE ALERT (ACEi / ARB): Renin-angiotensin blockade reduces renal potassium clearance. Daily potassium is capped at <= 2000-2400 mg/d. High-potassium salt substitutes (potassium chloride) and concentrated potassium drinks (e.g., coconut water) are restricted."
+    },
+    {
+      "id": "glp1_ra",
+      "medications": ["ozempic", "semaglutide", "mounjaro", "tirzepatide", "rybelsus", "wegovy"],
+      "title": "DIGESTIVE PACING (GLP-1 RA)",
+      "message": "DIGESTIVE PACING (GLP-1 RA): Gastric emptying is slowed. Daily calories are split evenly across 5 modest intervals and high-fat items are restricted to prevent nausea, reflux, and gastroparesis."
+    },
+    {
+      "id": "metformin",
+      "medications": ["metformin"],
+      "title": "METABOLIC STABILITY (Metformin)",
+      "message": "METABOLIC STABILITY (Metformin): All main intervals feature high-fiber complex carbohydrates to minimize gastrointestinal discomfort and maintain smooth glycemic control."
+    },
+    {
+      "id": "beta_blockers",
+      "medications": ["metoprolol", "atenolol", "bisoprolol", "carvedilol"],
+      "title": "HEMODYNAMIC MONITORING (Beta-Blocker)",
+      "message": "HEMODYNAMIC MONITORING (Beta-Blocker): Maintain steady complex carbohydrate pacing across morning and lunch intervals to avoid blunting of hypoglycemia awareness."
+    },
+    {
+      "id": "statins",
+      "medications": ["atorvastatin", "simvastatin", "lipitor", "zocor"],
+      "title": "CYP3A4 PHARMACOPEIA (Statin)",
+      "message": "CYP3A4 PHARMACOPEIA (Statin): Grapefruit and related citrus are omitted to prevent statin accumulation, rhabdomyolysis, and myopathy."
+    },
+    {
+      "id": "diuretics",
+      "medications": ["furosemide", "lasix", "hydrochlorothiazide", "hctz", "torsemide", "spironolactone"],
+      "title": "ELECTROLYTE & FLUID MONITORING (Diuretic)",
+      "message": "ELECTROLYTE & FLUID MONITORING (Diuretic): Renal electrolyte wasting or potassium sparing is active. Maintain steady fluid pacing and monitor serum electrolytes routinely."
+    },
+    {
+      "id": "warfarin",
+      "medications": ["warfarin", "coumadin"],
+      "title": "COAGULATION WARNING (Warfarin)",
+      "message": "COAGULATION WARNING (Warfarin): Vitamin K intake from dark leafy greens (spinach, kale, methi) must remain consistent day-to-day to avoid destabilizing INR and prothrombin time."
+    },
+    {
+      "id": "insulin",
+      "medications": ["insulin", "lantus", "humalog", "novolog", "tresiba"],
+      "title": "GLYCEMIC SAFETY (Insulin)",
+      "message": "GLYCEMIC SAFETY (Insulin): Carbohydrate portions are precision-calculated across all intervals to prevent nocturnal and postprandial hypoglycemia."
+    }
+  ],
+  "emergency_thresholds": {
+    "sodium_mg": { "critical": 3000, "emergency": 5000 },
+    "potassium_mg": { "critical_low": 2000, "critical_high": 6000 },
+    "blood_glucose_mg_dl": { "critical_low": 70, "critical_high": 400 },
+    "blood_pressure_systolic": { "critical_high": 180 }
+  }
+}

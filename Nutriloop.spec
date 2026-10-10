@@ -31,7 +31,7 @@ REPO_ROOT = Path.cwd()
 datas = [
     (str(REPO_ROOT / "artifacts"), "artifacts"),
     (str(REPO_ROOT / "bin"), "bin"),
-    (str(REPO_ROOT / "datasets" / "unified_food_kb.csv"), "datasets"),
+    (str(REPO_ROOT / "datasets"), "datasets"),
     (str(REPO_ROOT / "gui"), "gui"),
 ] + collect_data_files("sklearn")
 

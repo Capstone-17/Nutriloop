@@ -34,6 +34,21 @@ function getRandomAlliterativeName() {
   return ALLITERATIVE_NAMES[idx];
 }
 
+/**
+ * Format decimal capped at maxPlaces (default 2), eliminating float artifacts and trimming trailing zeroes.
+ */
+function formatDecimal(val, maxPlaces = 2) {
+  if (val === null || val === undefined || isNaN(Number(val))) return "0";
+  const num = Number(val);
+  const factor = Math.pow(10, maxPlaces);
+  const rounded = Math.round((num + Number.EPSILON) * factor) / factor;
+  return rounded.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: maxPlaces,
+    useGrouping: false,
+  });
+}
+
 // Immediate instantaneous UI setup on DOM load (0ms latency!)
 window.addEventListener("DOMContentLoaded", () => {
   setupTabs();
@@ -349,7 +364,7 @@ function updateHealthGaugesFromInputs() {
     bmiClass = "badge-warning";
     bmiStroke = "stroke-amber";
   }
-  setGauge("gauge-bmi-stroke", "gauge-bmi-val", "gauge-bmi-badge", bmi.toFixed(1), 10.0, 60.0, bmi, bmiStatus, bmiClass, bmiStroke);
+  setGauge("gauge-bmi-stroke", "gauge-bmi-val", "gauge-bmi-badge", formatDecimal(bmi, 2), 10.0, 60.0, bmi, bmiStatus, bmiClass, bmiStroke);
 
   // 3. Systolic BP (70 - 240)
   let sbpStatus = "Optimal";
@@ -421,7 +436,7 @@ function updateHealthGaugesFromInputs() {
     hba1cClass = "badge-warning";
     hba1cStroke = "stroke-amber";
   }
-  setGauge("gauge-hba1c-stroke", "gauge-hba1c-val", "gauge-hba1c-badge", hba1c.toFixed(1), 3.5, 16.0, hba1c, hba1cStatus, hba1cClass, hba1cStroke);
+  setGauge("gauge-hba1c-stroke", "gauge-hba1c-val", "gauge-hba1c-badge", formatDecimal(hba1c, 2), 3.5, 16.0, hba1c, hba1cStatus, hba1cClass, hba1cStroke);
 
   // 7. Serum Creatinine (0.2 - 10.0)
   let creatStatus = "Normal";
@@ -436,7 +451,7 @@ function updateHealthGaugesFromInputs() {
     creatClass = "badge-warning";
     creatStroke = "stroke-amber";
   }
-  setGauge("gauge-creat-stroke", "gauge-creat-val", "gauge-creat-badge", creat.toFixed(1), 0.2, 10.0, creat, creatStatus, creatClass, creatStroke);
+  setGauge("gauge-creat-stroke", "gauge-creat-val", "gauge-creat-badge", formatDecimal(creat, 2), 0.2, 10.0, creat, creatStatus, creatClass, creatStroke);
 
   // 8. eGFR (5 - 140)
   let egfrStatus = "Optimal";
@@ -455,7 +470,7 @@ function updateHealthGaugesFromInputs() {
     egfrClass = "badge-warning";
     egfrStroke = "stroke-amber";
   }
-  setGauge("gauge-egfr-stroke", "gauge-egfr-val", "gauge-egfr-badge", Math.round(egfr), 5, 140, egfr, egfrStatus, egfrClass, egfrStroke);
+  setGauge("gauge-egfr-stroke", "gauge-egfr-val", "gauge-egfr-badge", formatDecimal(egfr, 2), 5, 140, egfr, egfrStatus, egfrClass, egfrStroke);
 
   // 9. Serum Potassium (2.5 - 7.5)
   let potStatus = "Normal";
@@ -474,7 +489,7 @@ function updateHealthGaugesFromInputs() {
     potClass = "badge-warning";
     potStroke = "stroke-amber";
   }
-  setGauge("gauge-pot-stroke", "gauge-pot-val", "gauge-pot-badge", pot.toFixed(1), 2.5, 7.5, pot, potStatus, potClass, potStroke);
+  setGauge("gauge-pot-stroke", "gauge-pot-val", "gauge-pot-badge", formatDecimal(pot, 2), 2.5, 7.5, pot, potStatus, potClass, potStroke);
 
   // 10. Serum Sodium (110 - 170)
   let sodStatus = "Normal";
@@ -840,7 +855,7 @@ function renderExplainability(dis) {
 
   const exp = item.explanation || {};
   const level = (item.risk_level || "low").toLowerCase();
-  const pct = ((item.risk_score || 0) * 100).toFixed(1);
+  const pct = formatDecimal((item.risk_score || 0) * 100, 2);
   const dName = exp.disease_name || (dis === "ckd" ? "Chronic Kidney Disease" : dis === "hypertension" ? "Hypertension" : "Type 2 Diabetes");
 
   let whyTitle = exp.why_title;
@@ -920,7 +935,7 @@ function updateRiskMeter(disease, data) {
     return;
   }
 
-  const scorePct = (data.risk_score * 100).toFixed(1);
+  const scorePct = formatDecimal((data.risk_score || 0) * 100, 2);
   scoreNum.textContent = `${scorePct}%`;
 
   const level = (data.risk_level || "low").toLowerCase();
@@ -1051,35 +1066,35 @@ function renderWeeklyDietResults(plan) {
     const t = plan.clinical_targets || {};
     targetsRow.innerHTML = `
       <div class="target-badge">
-        <div class="target-value">${t.calories_kcal || 1800} kcal</div>
+        <div class="target-value">${formatDecimal(t.calories_kcal || 1800, 2)} kcal</div>
         <div class="target-label">Caloric Target</div>
       </div>
       <div class="target-badge">
-        <div class="target-value">${t.protein_g || 60} g</div>
+        <div class="target-value">${formatDecimal(t.protein_g || 60, 2)} g</div>
         <div class="target-label">Protein Target</div>
       </div>
       <div class="target-badge">
-        <div class="target-value">${t.carbohydrate_g || 220} g</div>
+        <div class="target-value">${formatDecimal(t.carbohydrate_g || 220, 2)} g</div>
         <div class="target-label">Carbohydrate Floor</div>
       </div>
       <div class="target-badge">
-        <div class="target-value">${t.fat_g || 50} g</div>
+        <div class="target-value">${formatDecimal(t.fat_g || 50, 2)} g</div>
         <div class="target-label">Healthy Fats</div>
       </div>
       <div class="target-badge">
-        <div class="target-value">&ge; ${t.fiber_target_g || 28} g</div>
+        <div class="target-value">&ge; ${formatDecimal(t.fiber_target_g || 28, 2)} g</div>
         <div class="target-label">Dietary Fiber</div>
       </div>
       <div class="target-badge">
-        <div class="target-value">&le; ${t.sodium_limit_mg || 1500} mg</div>
+        <div class="target-value">&le; ${formatDecimal(t.sodium_limit_mg || 1500, 2)} mg</div>
         <div class="target-label">Sodium Limit</div>
       </div>
       <div class="target-badge">
-        <div class="target-value">&le; ${t.potassium_guidance_mg || 2000} mg</div>
+        <div class="target-value">&le; ${formatDecimal(t.potassium_guidance_mg || 2000, 2)} mg</div>
         <div class="target-label">Potassium Guidance</div>
       </div>
       <div class="target-badge">
-        <div class="target-value">${t.fluid_intake_ml || 2000} ml</div>
+        <div class="target-value">${formatDecimal(t.fluid_intake_ml || 2000, 2)} ml</div>
         <div class="target-label">Fluid Intake</div>
       </div>
       <div class="target-badge">
@@ -1119,10 +1134,10 @@ function renderWeeklyDietResults(plan) {
             <span class="day-active-title">${day.day_name} Clinically Rebalanced Regimen</span>
           </div>
           <div class="day-strip-metrics">
-            <span class="day-metric-pill"><span class="metric-icon">🔥</span> <strong>${tot.calories || "-"}</strong> kcal</span>
-            <span class="day-metric-pill"><span class="metric-icon">🥩</span> P: <strong>${tot.protein_g || "-"}</strong>g</span>
-            <span class="day-metric-pill"><span class="metric-icon">🧂</span> Na: <strong>${tot.sodium_mg || "-"}</strong>mg</span>
-            <span class="day-metric-pill"><span class="metric-icon">⚡</span> K: <strong>${tot.potassium_mg || "-"}</strong>mg</span>
+            <span class="day-metric-pill"><span class="metric-icon">🔥</span> <strong>${formatDecimal(tot.calories, 2)}</strong> kcal</span>
+            <span class="day-metric-pill"><span class="metric-icon">🥩</span> P: <strong>${formatDecimal(tot.protein_g, 2)}</strong>g</span>
+            <span class="day-metric-pill"><span class="metric-icon">🧂</span> Na: <strong>${formatDecimal(tot.sodium_mg, 2)}</strong>mg</span>
+            <span class="day-metric-pill"><span class="metric-icon">⚡</span> K: <strong>${formatDecimal(tot.potassium_mg, 2)}</strong>mg</span>
           </div>
         `;
       }
@@ -1146,7 +1161,7 @@ function renderWeeklyDietResults(plan) {
         btn.innerHTML = `
           <span class="day-col-badge">Day ${day.day_number}</span>
           <span class="day-col-name">${day.day_name}</span>
-          <span class="day-col-cal">${tot.calories ? tot.calories + " kcal" : "-"}</span>
+          <span class="day-col-cal">${tot.calories ? formatDecimal(tot.calories, 2) + " kcal" : "-"}</span>
           ${isSundayTreat ? '<span class="day-col-treat-tag">🎯 Treat</span>' : ""}
         `;
 
@@ -1221,9 +1236,9 @@ function renderDayIntervals(intervals) {
             ${starBadge}
           </div>
           <div class="interval-macros-strip">
-            <span class="macro-pill cal"><span class="macro-icon">🔥</span> <strong>${nut.calories || "-"}</strong> kcal</span>
-            <span class="macro-pill prot"><span class="macro-icon">🥩</span> P: <strong>${nut.protein_g || "-"}</strong>g</span>
-            <span class="macro-pill sod"><span class="macro-icon">🧂</span> Na: <strong>${nut.sodium_mg || "-"}</strong>mg</span>
+            <span class="macro-pill cal"><span class="macro-icon">🔥</span> <strong>${nut.calories != null ? formatDecimal(nut.calories, 2) : "-"}</strong> kcal</span>
+            <span class="macro-pill prot"><span class="macro-icon">🥩</span> P: <strong>${nut.protein_g != null ? formatDecimal(nut.protein_g, 2) : "-"}</strong>g</span>
+            <span class="macro-pill sod"><span class="macro-icon">🧂</span> Na: <strong>${nut.sodium_mg != null ? formatDecimal(nut.sodium_mg, 2) : "-"}</strong>mg</span>
           </div>
         </div>
 

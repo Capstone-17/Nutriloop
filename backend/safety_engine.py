@@ -5,8 +5,11 @@ Implements medical guidelines and safety checks for diet recommendations
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
 from enum import Enum
+import json
+from pathlib import Path
+import sys
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class SafetyLevel(Enum):
@@ -144,8 +147,22 @@ class SafetyEngine:
         self.medication_interactions = self._load_medication_interactions()
         self.emergency_thresholds = self._load_emergency_thresholds()
     
+    def _get_datasets_dir(self) -> Path:
+        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+            return Path(sys._MEIPASS) / "datasets"
+        return Path(__file__).resolve().parent.parent / "datasets"
+
     def _load_medication_interactions(self) -> Dict[str, List[str]]:
-        """Load medication-food interaction rules for 18+ medications"""
+        """Load medication-food interaction rules from canonical datasets/drug_interactions.json"""
+        json_file = self._get_datasets_dir() / "drug_interactions.json"
+        if json_file.exists():
+            try:
+                with open(json_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if "interactions" in data:
+                        return data["interactions"]
+            except Exception:
+                pass
         return {
             "warfarin": ["vitamin_k", "leafy_greens", "spinach", "broccoli"],
             "coumadin": ["vitamin_k", "leafy_greens", "spinach", "broccoli"],
@@ -181,7 +198,16 @@ class SafetyEngine:
         }
     
     def _load_emergency_thresholds(self) -> Dict[str, Dict[str, float]]:
-        """Load emergency thresholds requiring immediate attention"""
+        """Load emergency thresholds from canonical datasets/drug_interactions.json"""
+        json_file = self._get_datasets_dir() / "drug_interactions.json"
+        if json_file.exists():
+            try:
+                with open(json_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if "emergency_thresholds" in data:
+                        return data["emergency_thresholds"]
+            except Exception:
+                pass
         return {
             "sodium_mg": {"critical": 3000, "emergency": 5000},
             "potassium_mg": {"critical_low": 2000, "critical_high": 6000},

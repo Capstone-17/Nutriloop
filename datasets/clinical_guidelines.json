@@ -1,0 +1,31 @@
+{
+  "guidelines": {
+    "ckd": {
+      "sodium_mg": { "max": 2000, "critical": 2300, "guideline": "KDIGO: Sodium <2g/day for CKD patients" },
+      "potassium_mg": { "max": 2000, "critical": 2500, "guideline": "KDIGO: Potassium restriction for advanced CKD" },
+      "phosphorus_mg": { "max": 800, "critical": 1000, "guideline": "KDIGO: Phosphorus 800-1000mg/day" },
+      "protein_g_kg": { "max": 0.8, "critical": 1.0, "guideline": "KDIGO: Protein 0.6-0.8g/kg/day" },
+      "fluid_ml": { "max": 2000, "critical": 2500, "guideline": "KDIGO: Fluid restriction for advanced CKD" }
+    },
+    "diabetes": {
+      "carbs_g_meal": { "max": 45, "critical": 60, "guideline": "ADA: 45-60g carbs per meal" },
+      "sugar_g_day": { "max": 25, "critical": 37.5, "guideline": "ADA: Added sugar <10% of calories" },
+      "fiber_g_day": { "min": 25, "guideline": "ADA: 25-35g fiber daily" },
+      "sodium_mg": { "max": 2300, "critical": 2300, "guideline": "ADA: Sodium <2300mg/day" },
+      "saturated_fat_g": { "max": 13, "critical": 16, "guideline": "ADA: Saturated fat <13g/day" }
+    },
+    "hypertension": {
+      "sodium_mg": { "max": 1500, "critical": 2300, "guideline": "AHA: Sodium <1500mg ideal, <2300mg limit" },
+      "potassium_mg": { "min": 3500, "guideline": "AHA: Potassium 3500-4700mg/day" },
+      "fiber_g_day": { "min": 25, "guideline": "AHA: 25-30g fiber daily" },
+      "saturated_fat_g": { "max": 13, "critical": 16, "guideline": "AHA: Saturated fat <13g/day" }
+    },
+    "general": {
+      "sodium_mg": { "max": 2300, "critical": 3000, "guideline": "Dietary Guidelines: Sodium <2300mg/day" },
+      "potassium_mg": { "min": 2600, "max": 4700, "guideline": "Dietary Guidelines: Balanced potassium intake" },
+      "fiber_g_day": { "min": 25, "guideline": "Dietary Guidelines: 25-35g fiber daily" },
+      "sugar_g_day": { "max": 50, "critical": 75, "guideline": "WHO: Free sugars <10% total calories" },
+      "saturated_fat_g": { "max": 20, "critical": 30, "guideline": "Dietary Guidelines: Saturated fat <10% calories" }
+    }
+  }
+}
