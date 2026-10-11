@@ -16,10 +16,12 @@ from __future__ import annotations
 
 import atexit
 import ctypes
+import http.server
 import logging
 import multiprocessing
 import os
 import shutil
+import socketserver
 import sys
 import threading
 from pathlib import Path
@@ -89,17 +91,28 @@ def check_single_instance() -> Tuple[bool, Optional[Any]]:
         return True, None
 
 
-def get_html_path() -> Path:
-    """Resolve index.html path for both source and PyInstaller bundled environments."""
-    if getattr(sys, "_MEIPASS", None):
-        base_dir = Path(sys._MEIPASS)
-    else:
-        base_dir = Path(__file__).resolve().parent
+class _QuietRootHandler(http.server.SimpleHTTPRequestHandler):
+    """Serve frontend and common assets without console spam."""
+    def __init__(self, *args, **kwargs):
+        base_dir = getattr(sys, "_MEIPASS", None)
+        root_dir = Path(base_dir) if base_dir else Path(__file__).resolve().parent
+        super().__init__(*args, directory=str(root_dir), **kwargs)
 
-    html_file = base_dir / "gui" / "index.html"
-    if not html_file.exists():
-        raise FileNotFoundError(f"GUI interface file not found at: {html_file}")
-    return html_file
+    def log_message(self, format, *args):
+        pass  # Quiet in production console
+
+
+def start_local_server() -> Tuple[str, socketserver.TCPServer]:
+    """
+    Start an in-process ephemeral loopback HTTP server.
+    Serves both the common root /assets folder and /pc frontend without sandbox restrictions.
+    """
+    httpd = socketserver.TCPServer(("127.0.0.1", 0), _QuietRootHandler)
+    port = httpd.server_address[1]
+    server_thread = threading.Thread(target=httpd.serve_forever, daemon=True, name="DesktopHttpServer")
+    server_thread.start()
+    log.info("Desktop static server running at http://127.0.0.1:%d/", port)
+    return f"http://127.0.0.1:{port}/pc/index.html", httpd
 
 
 def get_icon_path() -> Optional[Path]:
@@ -109,7 +122,7 @@ def get_icon_path() -> Optional[Path]:
     else:
         base_dir = Path(__file__).resolve().parent
 
-    icon_candidate = base_dir / "gui" / "assets" / "Nutriloop_1.ico"
+    icon_candidate = base_dir / "assets" / "Nutriloop_1.ico"
     if icon_candidate.exists():
         return icon_candidate
     return None
@@ -155,7 +168,8 @@ def main() -> None:
     from desktop_api import DesktopAPI
     api = DesktopAPI()
     
-    html_path = get_html_path()
+    app_url, httpd = start_local_server()
+    atexit.register(httpd.shutdown)
     icon_path = get_icon_path()
     icon_str = str(icon_path) if icon_path else None
 
@@ -165,7 +179,7 @@ def main() -> None:
     # 4. Create and start native window immediately
     window = webview.create_window(
         title="Nutriloop",
-        url=str(html_path),
+        url=app_url,
         js_api=api,
         width=1240,
         height=840,

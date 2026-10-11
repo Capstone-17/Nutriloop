@@ -11,7 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../theme/colors";
 import { PatientVitals, PatientPreferences, WeeklyDietPlan } from "../types/clinical";
-import { WeeklyDietEngine } from "../engine/weekly_diet_engine";
+import { ApiService } from "../services/api";
 import { dbManager } from "../db/database";
 import { formatDecimal } from "../utils/formatters";
 
@@ -122,9 +122,8 @@ export const DietScreen: React.FC<DietScreenProps> = ({
           cravingOrTreat: cravingInput.trim() || undefined,
         };
 
-        const plan = WeeklyDietEngine.generateWeeklyPlan(
+        const plan = await ApiService.generateWeeklyDiet(
           vitals,
-          detectedConditions,
           prefs,
           reportDate || undefined,
           isHistoricalTest
@@ -141,8 +140,11 @@ export const DietScreen: React.FC<DietScreenProps> = ({
         setTimeout(() => {
           scrollViewRef.current?.scrollTo({ y: 550, animated: true });
         }, 120);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to generate weekly diet plan:", err);
+        alert(
+          `Could not generate diet plan via common backend (${err?.message || "Check connection"}). Please ensure Nutriloop backend is running.`
+        );
       } finally {
         setIsGenerating(false);
       }

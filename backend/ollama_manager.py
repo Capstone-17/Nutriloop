@@ -29,11 +29,10 @@ import json
 import logging
 import shutil
 import subprocess
-import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import httpx
 from backend.db import MODELS_DIR

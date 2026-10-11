@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="gui/assets/Nutriloop_1.png" alt="NutriLoop Logo" width="360" style="margin-bottom: 16px;" />
+<img src="assets/Nutriloop_1.png" alt="NutriLoop Logo" width="360" style="margin-bottom: 16px;" />
 
 # NutriLoop
 
@@ -97,31 +97,34 @@ python app_desktop.py
 
 ```
 Nutriloop/
-├── Assets/                        # Project logos and application icons
-│   ├── Nutriloop_1.ico            # Standalone face and window icon
+├── assets/                        # Single common assets space for PC and Android (logos, icons, splashes)
+│   ├── Nutriloop_1.ico            # Standalone window and desktop executable icon
 │   ├── Nutriloop_1.png            # High-resolution brand logo
-│   └── Nutriloop_2.png            # Secondary brand artwork
-├── backend/                       # Core clinical intelligence engines
+│   ├── Nutriloop_2.png            # Secondary brand artwork / Dr. Nutriloop avatar
+│   └── splash.png                 # Instant bootloader splash background
+├── backend/                       # Single common clinical intelligence backend & API
 │   ├── weekly_diet_engine.py      # 7-Day regional nutrition generator
 │   ├── safety_engine.py           # Medical constraints & pharmacopeia guardrails
 │   ├── rules.py                   # Clinical explanation & staging rules
 │   ├── model_registry.py          # Machine learning model loader
-│   ├── ollama_manager.py          # Local model lifecycle (pause/resume/cancel)
 │   ├── reporting.py               # Local report export (HTML / JSON)
 │   ├── schemas.py                 # Pydantic validation models
+│   ├── app.py                     # Unified FastAPI server (/assess-patient, /generate-diet-plan, etc.)
 │   └── db.py                      # Local SQLite database manager
-├── gui/                           # Edge WebView2 desktop frontend
+├── pc/                            # PC application frontend components only
 │   ├── index.html                 # Clean semantic single-page layout
 │   ├── style.css                  # Royal glassmorphism styling & animations
-│   ├── app.js                     # Bidirectional JavaScript-Python bridge
-│   └── assets/                    # Bundled icons and imagery
+│   └── app.js                     # Bidirectional JavaScript-Python desktop bridge
+├── android/                       # Android mobile frontend components only
+│   ├── App.tsx                    # Primary React Native / Expo application shell
+│   ├── src/screens/               # Mobile UI screens (Assessment, Diet, Chat, History)
+│   ├── src/components/            # Mobile reusable UI components
+│   ├── src/types/                 # TypeScript clinical vitals, plans, and assessment interfaces
+│   └── src/services/api.ts        # Client API service connecting to backend
 ├── artifacts/                     # Trained ML models (.joblib)
 ├── datasets/                      # Unified clinical food knowledge base
 ├── scripts/                       # Automated test and verification suites
-│   ├── test_diet_accuracy.py      # Precision nutrient & variety test suite
-│   ├── test_diet_preferences.py   # Preference responsiveness verification
-│   └── test_model_download_control.py # Lifecycle & persistence verification
-├── app_desktop.py                 # PyWebView standalone application entrypoint
+├── app_desktop.py                 # Standalone PC desktop application entrypoint
 ├── Nutriloop.spec                 # PyInstaller standalone build configuration
 └── README.md                      # Project documentation
 ```

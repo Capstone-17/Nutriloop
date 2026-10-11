@@ -13,8 +13,14 @@ import { Ionicons } from "@expo/vector-icons";
 import Svg, { Circle } from "react-native-svg";
 import { Colors } from "../theme/colors";
 import { VitalSliderCard } from "../components/VitalSliderCard";
-import { PatientVitals, MultiDiseaseAssessmentResult, SavePatientTestResult } from "../types/clinical";
-import { ClinicalRulesEngine } from "../engine/clinical_rules";
+import {
+  PatientVitals,
+  DEFAULT_PATIENT_VITALS,
+  MultiDiseaseAssessmentResult,
+  SavePatientTestResult,
+} from "../types/clinical";
+import { ApiService } from "../services/api";
+import { parseLabReportText, calculateCkdEpiEgfr } from "../utils/labParser";
 import { formatDecimal, roundToDecimal } from "../utils/formatters";
 
 interface AssessmentScreenProps {
@@ -80,13 +86,14 @@ export const AssessmentScreen: React.FC<AssessmentScreenProps> = ({
   const [labTextModalVisible, setLabTextModalVisible] = useState(false);
   const [duplicateNoticeVisible, setDuplicateNoticeVisible] = useState(false);
   const [labTextInput, setLabTextInput] = useState("");
+  const [isAssessing, setIsAssessing] = useState(false);
   const [selectedExplainDisease, setSelectedExplainDisease] = useState<"ckd" | "hypertension" | "diabetes">("ckd");
 
   const updateVital = <K extends keyof PatientVitals>(key: K, val: PatientVitals[K]) => {
     const updated = { ...vitals, [key]: val };
     // Auto-recalculate eGFR if creatinine, age, or sex changes
     if (key === "serumCreatinineMgDl" || key === "ageYears" || key === "sex") {
-      updated.egfrMlMin = ClinicalRulesEngine.calculateCkdEpiEgfr(
+      updated.egfrMlMin = calculateCkdEpiEgfr(
         updated.serumCreatinineMgDl,
         updated.ageYears,
         updated.sex
@@ -96,10 +103,21 @@ export const AssessmentScreen: React.FC<AssessmentScreenProps> = ({
   };
 
   const handleRunAssessment = async () => {
-    const result = ClinicalRulesEngine.assessPatient(vitals);
-    const saveRes = await onAssessCompleted(result);
-    if (saveRes && saveRes.isDuplicate) {
-      setDuplicateNoticeVisible(true);
+    try {
+      setIsAssessing(true);
+      const result = await ApiService.assessPatient(vitals);
+      const saveRes = await onAssessCompleted(result);
+      if (saveRes && saveRes.isDuplicate) {
+        setDuplicateNoticeVisible(true);
+      }
+    } catch (err: any) {
+      console.warn("Assessment API error:", err);
+      Alert.alert(
+        "Assessment Notice",
+        `Could not reach common backend API (${err?.message || "Check connection"}). Please ensure Nutriloop backend is running.`
+      );
+    } finally {
+      setIsAssessing(false);
     }
   };
 
@@ -108,7 +126,7 @@ export const AssessmentScreen: React.FC<AssessmentScreenProps> = ({
       setLabTextModalVisible(false);
       return;
     }
-    const extracted = ClinicalRulesEngine.parseLabText(labTextInput);
+    const extracted = parseLabReportText(labTextInput);
     const count = Object.keys(extracted).length;
     if (count === 0) {
       Alert.alert("No Biomarkers Found", "Could not detect blood pressure, glucose, creatinine, or lab values in the pasted text.");
@@ -117,7 +135,7 @@ export const AssessmentScreen: React.FC<AssessmentScreenProps> = ({
 
     const merged = { ...vitals, ...extracted };
     if (extracted.serumCreatinineMgDl && !extracted.egfrMlMin) {
-      merged.egfrMlMin = ClinicalRulesEngine.calculateCkdEpiEgfr(
+      merged.egfrMlMin = calculateCkdEpiEgfr(
         merged.serumCreatinineMgDl,
         merged.ageYears,
         merged.sex
@@ -273,14 +291,25 @@ export const AssessmentScreen: React.FC<AssessmentScreenProps> = ({
           <Text style={styles.sectionSubheading}>Input latest lab tests or adjust sliders below</Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.btnSecondary}
-          activeOpacity={0.8}
-          onPress={() => setLabTextModalVisible(true)}
-        >
-          <Ionicons name="document-text-outline" size={15} color={Colors.secondary} />
-          <Text style={styles.btnSecondaryText}>Paste Lab Notes</Text>
-        </TouchableOpacity>
+        <View style={styles.topBarActions}>
+          <TouchableOpacity
+            style={styles.btnSecondary}
+            activeOpacity={0.8}
+            onPress={() => onVitalsChange({ ...DEFAULT_PATIENT_VITALS })}
+          >
+            <Ionicons name="refresh-outline" size={14} color={Colors.secondary} />
+            <Text style={styles.btnSecondaryText}>Ideal Baseline</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.btnSecondary}
+            activeOpacity={0.8}
+            onPress={() => setLabTextModalVisible(true)}
+          >
+            <Ionicons name="document-text-outline" size={14} color={Colors.secondary} />
+            <Text style={styles.btnSecondaryText}>Paste Notes</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Sex Toggle */}
@@ -434,12 +463,15 @@ export const AssessmentScreen: React.FC<AssessmentScreenProps> = ({
           STEP 2: Prominent Button to Run Assessment
           ────────────────────────────────────────────────────────────────── */}
       <TouchableOpacity
-        style={styles.btnRunAssessment}
+        style={[styles.btnRunAssessment, isAssessing && { opacity: 0.7 }]}
         activeOpacity={0.85}
+        disabled={isAssessing}
         onPress={handleRunAssessment}
       >
-        <Ionicons name="flash" size={18} color="#FFF" />
-        <Text style={styles.btnRunAssessmentText}>Run Clinical Risk Assessment</Text>
+        <Ionicons name={isAssessing ? "hourglass-outline" : "flash"} size={18} color="#FFF" />
+        <Text style={styles.btnRunAssessmentText}>
+          {isAssessing ? "Evaluating with Clinical Models..." : "Run Clinical Risk Assessment"}
+        </Text>
       </TouchableOpacity>
 
       {/* ──────────────────────────────────────────────────────────────────
@@ -688,6 +720,12 @@ const styles = StyleSheet.create({
   },
   topBarTextWrap: {
     flex: 1,
+    marginRight: 8,
+  },
+  topBarActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   sectionHeading: {
     color: "#FFF",

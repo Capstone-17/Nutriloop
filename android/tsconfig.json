@@ -3,5 +3,9 @@
   "compilerOptions": {
     "strict": true,
     "resolveJsonModule": true
-  }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ]
 }

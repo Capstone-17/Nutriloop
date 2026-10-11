@@ -30,9 +30,10 @@ REPO_ROOT = Path.cwd()
 # Data files to bundle inside sys._MEIPASS
 datas = [
     (str(REPO_ROOT / "artifacts"), "artifacts"),
+    (str(REPO_ROOT / "assets"), "assets"),
     (str(REPO_ROOT / "bin"), "bin"),
     (str(REPO_ROOT / "datasets"), "datasets"),
-    (str(REPO_ROOT / "gui"), "gui"),
+    (str(REPO_ROOT / "pc"), "pc"),
 ] + collect_data_files("sklearn")
 
 # Hidden imports required by dynamic reflection / C-extensions
@@ -110,9 +111,9 @@ a = Analysis(
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 # Native C-level splash screen: appears in < 50ms upon double-click before archive extraction
-splash_img = str(REPO_ROOT / "gui" / "assets" / "splash.png")
+splash_img = str(REPO_ROOT / "assets" / "splash.png")
 if not os.path.exists(splash_img):
-    splash_img = str(REPO_ROOT / "gui" / "assets" / "Nutriloop_2.png")
+    splash_img = str(REPO_ROOT / "assets" / "Nutriloop_2.png")
 
 # Custom dynamic Tcl script to render and animate moving gold loading bar during bootloader extraction
 CUSTOM_SPLASH_TCL = r'''
@@ -292,7 +293,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=str(REPO_ROOT / "gui" / "assets" / "Nutriloop_1.ico"),
+    icon=str(REPO_ROOT / "assets" / "Nutriloop_1.ico"),
 )
 
 # Purge any __pycache__ left behind during PyInstaller analysis

@@ -5,10 +5,8 @@ Provides structured access to medical guidelines, drug-food interactions, and cl
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 from enum import Enum
-import json
-from pathlib import Path
 
 
 class GuidelineSource(Enum):

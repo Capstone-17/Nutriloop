@@ -7,6 +7,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
+  /* Enforce native dark controls & popup styling across WebView2 / Chromium */
+  color-scheme: dark;
+
   /* Dark Mode Rich Wine & Slate Tokens */
   --bg-main: #0c0608;
   --bg-surface: #140a10;
@@ -747,57 +750,129 @@ body {
    Forms & Controls
    ────────────────────────────────────────────────────────────────────────── */
 
+/* Base Select & Options Styling (Chromium / WebView2 Native Flyouts) */
+select {
+  color-scheme: dark;
+  accent-color: var(--secondary-gold);
+}
+
+select option,
+select optgroup {
+  background-color: #170912;
+  color: #fdfaf6;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 10px 14px;
+}
+
+select option:hover,
+select option:focus {
+  background-color: #2e1322;
+  color: #fbbf24;
+}
+
+select option:checked {
+  background-color: #9b1b30;
+  color: #ffffff;
+  font-weight: 600;
+}
+
 .history-select-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .history-select-wrapper {
   display: flex;
   align-items: center;
-  background: var(--bg-input);
-  border: 1px solid var(--border-card);
+  background: linear-gradient(135deg, rgba(26, 12, 20, 0.95), rgba(16, 8, 14, 0.98));
+  border: 1px solid rgba(212, 175, 55, 0.35);
   border-radius: var(--radius-sm);
-  padding: 0 10px;
-  transition: var(--transition);
+  padding: 2px 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 38px;
+}
+
+.history-select-wrapper:hover {
+  border-color: rgba(245, 158, 11, 0.65);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55), 0 0 12px rgba(245, 158, 11, 0.2);
+  background: linear-gradient(135deg, rgba(34, 16, 26, 0.98), rgba(22, 10, 18, 0.98));
 }
 
 .history-select-wrapper:focus-within {
   border-color: var(--secondary-light);
-  box-shadow: 0 0 0 2px var(--secondary-glow);
+  box-shadow: 0 0 0 2px var(--secondary-glow), 0 4px 16px rgba(0, 0, 0, 0.6);
+  background: rgba(28, 14, 22, 0.98);
 }
 
 .history-select-icon {
-  font-size: 13px;
-  margin-right: 6px;
+  font-size: 15px;
+  margin-right: 8px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.4));
 }
 
 .history-select {
+  color-scheme: dark;
   background: transparent;
   border: none;
-  color: var(--text-main);
-  font-size: 12px;
-  padding: 6px 0;
+  color: #fdfaf6;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 4px;
   outline: none;
   font-family: inherit;
-  min-width: 220px;
+  min-width: 280px;
+  max-width: 440px;
+  cursor: pointer;
+  letter-spacing: 0.1px;
+}
+
+.history-select option {
+  background-color: #170912;
+  color: #fdfaf6;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.history-select option:hover,
+.history-select option:focus {
+  background-color: #2e1322;
+  color: #fbbf24;
+}
+
+.history-select option:checked {
+  background-color: #9b1b30;
+  color: #ffffff;
+  font-weight: 700;
 }
 
 .btn-delete-report {
-  background: rgba(225, 29, 72, 0.15);
-  border: 1px solid rgba(225, 29, 72, 0.35);
+  background: rgba(225, 29, 72, 0.16);
+  border: 1px solid rgba(225, 29, 72, 0.45);
   color: #fb7185;
-  padding: 5px 8px;
+  padding: 7px 12px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: var(--transition);
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
 }
 
 .btn-delete-report:hover {
-  background: rgba(225, 29, 72, 0.3);
+  background: rgba(225, 29, 72, 0.32);
+  border-color: rgba(225, 29, 72, 0.8);
   color: #ffffff;
+  box-shadow: 0 0 14px rgba(225, 29, 72, 0.4);
+  transform: translateY(-1px);
 }
 
 .form-row {
@@ -829,6 +904,30 @@ body {
   font-family: inherit;
   transition: var(--transition);
   outline: none;
+  color-scheme: dark;
+}
+
+.form-select {
+  cursor: pointer;
+}
+
+.form-select option {
+  background-color: #170912;
+  color: #fdfaf6;
+  font-size: 13px;
+  padding: 10px 14px;
+}
+
+.form-select option:hover,
+.form-select option:focus {
+  background-color: #2e1322;
+  color: #fbbf24;
+}
+
+.form-select option:checked {
+  background-color: #9b1b30;
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .form-input:focus, .form-select:focus, .form-textarea:focus {

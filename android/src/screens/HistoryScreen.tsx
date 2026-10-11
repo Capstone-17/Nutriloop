@@ -10,7 +10,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../theme/colors";
-import { PatientTestHistoryRecord, PatientVitals } from "../types/clinical";
+import {
+  PatientTestHistoryRecord,
+  PatientVitals,
+  DEFAULT_PATIENT_VITALS,
+} from "../types/clinical";
 import { dbManager } from "../db/database";
 import { formatDecimal } from "../utils/formatters";
 
@@ -66,6 +70,14 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onLoadTest }) => {
             <Text style={styles.emptyText}>
               Run a Multi-Disease Assessment on the Assessment tab to save test reports into your device.
             </Text>
+            <TouchableOpacity
+              style={styles.btnEmptyBaseline}
+              activeOpacity={0.8}
+              onPress={() => onLoadTest({ ...DEFAULT_PATIENT_VITALS }, undefined, false)}
+            >
+              <Ionicons name="shield-checkmark-outline" size={16} color={Colors.secondary} />
+              <Text style={styles.btnEmptyBaselineText}>Apply Safe Reference Baseline</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           history.map((rec, index) => {
@@ -254,6 +266,24 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 6,
     lineHeight: 16,
+    marginBottom: 12,
+  },
+  btnEmptyBaseline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(245, 158, 11, 0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(245, 158, 11, 0.4)",
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  btnEmptyBaselineText: {
+    color: Colors.secondary,
+    fontSize: 13,
+    fontWeight: "700",
   },
   recordCard: {
     backgroundColor: Colors.bgCardSolid,

@@ -12,6 +12,25 @@ export interface PatientVitals {
   serumSodiumMeqL: number;
 }
 
+/**
+ * Standard ideal healthy reference patient baseline:
+ * Normotensive (115/75 mmHg), euglycemic (90 mg/dL, HbA1c 5.2%),
+ * normal renal filtration (eGFR 100 mL/min, Cr 0.9 mg/dL), normal BMI (22.0).
+ */
+export const DEFAULT_PATIENT_VITALS: PatientVitals = {
+  ageYears: 45,
+  sex: "male",
+  bodyMassIndex: 22.0,
+  systolicBpMmhg: 115,
+  diastolicBpMmhg: 75,
+  fastingGlucoseMgDl: 90,
+  hba1cPct: 5.2,
+  serumCreatinineMgDl: 0.9,
+  egfrMlMin: 100.0,
+  serumPotassiumMeqL: 4.2,
+  serumSodiumMeqL: 140,
+};
+
 export interface DiseaseAssessment {
   disease: "ckd" | "hypertension" | "diabetes";
   diseaseName: string;

@@ -21,24 +21,18 @@ os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 
 import copy
 from datetime import datetime, timezone
-import json
-import math
-from pathlib import Path
 import random
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from backend.schemas import (
     LatestTestReportInput,
-    PatientPreferencesInput,
     MealItem,
     SingleMealInterval,
     DayDietPlan,
     WeeklyDietPlanRequest,
     WeeklyDietPlanResponse,
 )
-from backend.safety_engine import safety_engine
-from backend.medical_knowledge import medical_knowledge_base
 from backend.rules import calculate_ckd_epi_egfr
 
 
@@ -517,39 +511,64 @@ def scale_dish_items(
 # 4. Comprehensive 5-Region Culinary Catalog (Single Source of Truth)
 # ==============================================================================
 
-def _get_common_datasets_dir() -> Path:
-    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-        return Path(sys._MEIPASS) / "datasets"
-    return Path(__file__).resolve().parent.parent / "datasets"
-
-def _load_regional_dish_catalog() -> Dict[str, Any]:
-    catalog_path = _get_common_datasets_dir() / "regional_dish_catalog.json"
-    with open(catalog_path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-REGIONAL_DISH_CATALOG = _load_regional_dish_catalog()
+from backend.regional_dish_catalog import REGIONAL_DISH_CATALOG
 
 
 # ==============================================================================
 # 5. Multi-Condition Drug Interaction Check (31+ Pharmacopeia Engine)
 # ==============================================================================
 
-def _load_drug_interactions() -> Dict[str, Any]:
-    rules_path = _get_common_datasets_dir() / "drug_interactions.json"
-    if rules_path.exists():
-        with open(rules_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
+CLINICAL_DRUG_WARNINGS = [
+    {
+        "medications": ["jardiance", "empagliflozin", "farxiga", "dapagliflozin", "invokana"],
+        "message": "CRITICAL PHARMACOPEIA (SGLT2i / Jardiance): Induces osmotic glucosuria. Daily carbohydrate intake is strictly protected at >= 130g/day with >= 2.5L daily hydration to eliminate Euglycemic DKA risk. Extreme low-carb or fasting regimens are contraindicated."
+    },
+    {
+        "medications": ["amlodipine", "norvasc", "nifedipine", "felodipine", "diltiazem", "verapamil"],
+        "message": "DRUG INTERACTION WARNING (Calcium Channel Blocker / Amlodipine): Grapefruit, pomelo, and Seville oranges are 100% eliminated from this plan. Their furanocoumarins irreversibly inhibit gut CYP3A4, causing massive drug over-absorption and severe hypotension."
+    },
+    {
+        "medications": ["lisinopril", "losartan", "ramipril", "valsartan", "telmisartan", "enalapril"],
+        "message": "ELECTROLYTE ALERT (ACEi / ARB): Renin-angiotensin blockade reduces renal potassium clearance. Daily potassium is capped at <= 2000-2400 mg/d. High-potassium salt substitutes (potassium chloride) and concentrated potassium drinks (e.g., coconut water) are restricted."
+    },
+    {
+        "medications": ["ozempic", "semaglutide", "mounjaro", "tirzepatide", "rybelsus", "wegovy"],
+        "message": "DIGESTIVE PACING (GLP-1 RA): Gastric emptying is slowed. Daily calories are split evenly across 5 modest intervals and high-fat items are restricted to prevent nausea, reflux, and gastroparesis."
+    },
+    {
+        "medications": ["metformin"],
+        "message": "METABOLIC STABILITY (Metformin): All main intervals feature high-fiber complex carbohydrates to minimize gastrointestinal discomfort and maintain smooth glycemic control."
+    },
+    {
+        "medications": ["metoprolol", "atenolol", "bisoprolol", "carvedilol"],
+        "message": "HEMODYNAMIC MONITORING (Beta-Blocker): Maintain steady complex carbohydrate pacing across morning and lunch intervals to avoid blunting of hypoglycemia awareness."
+    },
+    {
+        "medications": ["atorvastatin", "simvastatin", "lipitor", "zocor"],
+        "message": "CYP3A4 PHARMACOPEIA (Statin): Grapefruit and related citrus are omitted to prevent statin accumulation, rhabdomyolysis, and myopathy."
+    },
+    {
+        "medications": ["furosemide", "lasix", "hydrochlorothiazide", "hctz", "torsemide", "spironolactone"],
+        "message": "ELECTROLYTE & FLUID MONITORING (Diuretic): Renal electrolyte wasting or potassium sparing is active. Maintain steady fluid pacing and monitor serum electrolytes routinely."
+    },
+    {
+        "medications": ["warfarin", "coumadin"],
+        "message": "COAGULATION WARNING (Warfarin): Vitamin K intake from dark leafy greens (spinach, kale, methi) must remain consistent day-to-day to avoid destabilizing INR and prothrombin time."
+    },
+    {
+        "medications": ["insulin", "lantus", "humalog", "novolog", "tresiba"],
+        "message": "GLYCEMIC SAFETY (Insulin): Carbohydrate portions are precision-calculated across all intervals to prevent nocturnal and postprandial hypoglycemia."
+    }
+]
 
 def check_medication_warnings(medications: List[str], plan_targets: Dict[str, Any]) -> List[str]:
-    """Generates drug-specific nutrition warnings for active prescriptions using drug_interactions.json."""
+    """Generates drug-specific nutrition warnings for active prescriptions."""
     warnings = []
     if not medications:
         return warnings
 
     med_lower = [m.lower().strip() for m in medications]
-    rules = _load_drug_interactions()
-    for cw in rules.get("clinical_warnings", []):
+    for cw in CLINICAL_DRUG_WARNINGS:
         triggers = cw.get("medications", [])
         if any(any(trig in m for trig in triggers) for m in med_lower):
             warnings.append(cw.get("message", ""))

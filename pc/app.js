@@ -312,7 +312,7 @@ function updateHealthGaugesFromInputs() {
   if (avatarEl) {
     avatarEl.title = `Patient: ${userId}`;
     if (!avatarEl.querySelector("img")) {
-      avatarEl.innerHTML = '<img src="assets/Nutriloop_1.png" alt="NutriLoop Logo" class="patient-avatar-logo">';
+      avatarEl.innerHTML = '<img src="../assets/Nutriloop_1.png" alt="NutriLoop Logo" class="patient-avatar-logo">';
     }
   }
 
@@ -1469,7 +1469,7 @@ function appendChatBubble(role, text, engineMode, isEscalated = false) {
   avatar.className = `chat-avatar ${role === "assistant" ? "bot-avatar" : "user-avatar"}`;
   if (role === "assistant") {
     const img = document.createElement("img");
-    img.src = "assets/Nutriloop_2.png";
+    img.src = "../assets/Nutriloop_2.png";
     img.alt = "Dr. Nutriloop";
     img.className = "bot-avatar-img";
     avatar.appendChild(img);

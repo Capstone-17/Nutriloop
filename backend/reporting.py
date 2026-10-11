@@ -16,8 +16,6 @@ def _get_bundle_dir() -> Path:
 
 BASE_DIR = _get_bundle_dir()
 FOOD_KB_PATH = BASE_DIR / "datasets" / "unified_food_kb.csv"
-if not FOOD_KB_PATH.exists():
-    FOOD_KB_PATH = BASE_DIR / "medical datasets" / "raw" / "unified_food_kb_20260222_093221.csv"
 NUTRIENT_CALIBRATION_PATH = BASE_DIR / "artifacts" / "nutrient_calibration_rules.json"
 
 

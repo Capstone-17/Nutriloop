@@ -10,7 +10,6 @@ from fastapi import FastAPI, HTTPException, Query
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List, Dict, Any
-import csv
 import json
 
 from backend.db import (
@@ -53,30 +52,26 @@ from backend.schemas import (
     RecommendPlanRequest,
     RecommendPlanResponse,
     # Agentic AI schemas
-    UserProfile,
     AgentRequest,
     AgentResponse,
     SafetyValidationRequest,
     SafetyValidationResponse,
     MealLogRequest as AdaptationMealLogRequest,
     MealLogResponse as AdaptationMealLogResponse,
-    AdaptationSummaryRequest,
     AdaptationSummaryResponse,
     FeedbackRequest,
     FeedbackResponse,
     HealthOutcomeRequest,
     HealthOutcomeResponse,
-    MedicalGuidelineRequest,
     MedicalGuidelineResponse,
-    DrugInteractionRequest,
     DrugInteractionResponse,
     WeeklyDietPlanRequest,
     WeeklyDietPlanResponse,
 )
 
 # Agentic AI imports
-from backend.agent_engine import agent_engine, UserProfile as AgentUserProfile, MealType as AgentMealType
-from backend.safety_engine import safety_engine, SafetyLevel
+from backend.agent_engine import agent_engine, UserProfile as AgentUserProfile
+from backend.safety_engine import safety_engine
 from backend.adaptation_engine import adaptation_engine
 from backend.feedback_learning import feedback_collector, outcome_tracker, learning_engine, FeedbackType, FeedbackSource, OutcomeType
 from backend.medical_knowledge import medical_knowledge_base
@@ -100,69 +95,31 @@ app = FastAPI(
 
 def _read_project_model_metrics() -> List[dict]:
     base_dir = Path(__file__).resolve().parent.parent
-    csv_path = base_dir / "reports" / "current" / "baseline_model_comparison.csv"
-    if not csv_path.exists():
-        json_path = base_dir / "artifacts" / "risk_thresholds_and_factors.json"
-        if json_path.exists():
-            with open(json_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            rows = []
-            for ds, p in data.items():
-                m = p.get("metrics", {})
-                rows.append({
-                    "dataset": ds,
-                    "model": p.get("model_name", ""),
-                    "accuracy": float(m.get("accuracy", 0.0)),
-                    "macro_f1": float(m.get("macro_f1", 0.0)),
-                    "roc_auc": float(m.get("roc_auc", 0.0)),
-                    "pr_auc": float(m.get("pr_auc", 0.0)),
-                    "precision_pos": float(m.get("precision_pos", 0.0)),
-                    "recall_pos": float(m.get("recall_pos", 0.0)),
-                    "specificity": float(m.get("specificity", 0.0)),
-                    "brier_score": float(m.get("brier_score", 0.0)),
-                })
-            return sorted(rows, key=lambda r: r.get("dataset", ""))
-        return []
-
-    rows: List[dict] = []
-    with csv_path.open("r", encoding="utf-8") as fh:
-        reader = csv.DictReader(fh)
-        for row in reader:
-            if row.get("model_key") != "project_final_model":
-                continue
-            rows.append(
-                {
-                    "dataset": row.get("dataset", ""),
-                    "model": row.get("model", ""),
-                    "accuracy": float(row.get("accuracy", 0.0)),
-                    "macro_f1": float(row.get("macro_f1", 0.0)),
-                    "roc_auc": float(row.get("roc_auc", 0.0)),
-                    "pr_auc": float(row.get("pr_auc", 0.0)),
-                    "precision_pos": float(row.get("precision_pos", 0.0)),
-                    "recall_pos": float(row.get("recall_pos", 0.0)),
-                    "specificity": float(row.get("specificity", 0.0)),
-                    "brier_score": float(row.get("brier_score", 0.0)),
-                    "ci_macro_f1_lo": float(row.get("ci_macro_f1_lo", 0.0)),
-                    "ci_macro_f1_hi": float(row.get("ci_macro_f1_hi", 0.0)),
-                    "ci_pr_auc_lo": float(row.get("ci_pr_auc_lo", 0.0)),
-                    "ci_pr_auc_hi": float(row.get("ci_pr_auc_hi", 0.0)),
-                    "mcnemar_p_vs_best_baseline": (
-                        float(row["mcnemar_p_vs_best_baseline"])
-                        if row.get("mcnemar_p_vs_best_baseline") not in (None, "")
-                        else None
-                    ),
-                }
-            )
-    rows.sort(key=lambda r: r.get("dataset", ""))
-    return rows
+    json_path = base_dir / "artifacts" / "risk_thresholds_and_factors.json"
+    if json_path.exists():
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        rows = []
+        for ds, p in data.items():
+            m = p.get("metrics", {})
+            rows.append({
+                "dataset": ds,
+                "model": p.get("model_name", ""),
+                "accuracy": float(m.get("accuracy", 0.0)),
+                "macro_f1": float(m.get("macro_f1", 0.0)),
+                "roc_auc": float(m.get("roc_auc", 0.0)),
+                "pr_auc": float(m.get("pr_auc", 0.0)),
+                "precision_pos": float(m.get("precision_pos", 0.0)),
+                "recall_pos": float(m.get("recall_pos", 0.0)),
+                "specificity": float(m.get("specificity", 0.0)),
+                "brier_score": float(m.get("brier_score", 0.0)),
+            })
+        return sorted(rows, key=lambda r: r.get("dataset", ""))
+    return []
 
 
 def _count_generated_charts() -> int:
-    base_dir = Path(__file__).resolve().parent.parent
-    fig_dir = base_dir / "reports" / "current" / "figures" / "model_comparisons"
-    if not fig_dir.exists():
-        return 0
-    return len(list(fig_dir.glob("*.png")))
+    return 0
 
 
 @app.get("/health")
@@ -548,6 +505,17 @@ def risk_report_raw(req: RiskReportRawRequest) -> RiskReportRawResponse:
         raw_inputs=mapped.raw_inputs,
         validation_warnings=mapped.validation_warnings,
     )
+
+
+@app.post("/assess-patient")
+def assess_patient_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Unified multi-disease risk evaluation and clinical assessment.
+    Provides identical diagnostic accuracy across PC and Android interfaces.
+    """
+    from desktop_api import DesktopAPI
+    api = DesktopAPI()
+    return api.assess_patient(payload)
 
 
 # ==================== Agentic AI Endpoints ====================

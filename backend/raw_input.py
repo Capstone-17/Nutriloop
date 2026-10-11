@@ -8,9 +8,8 @@ fully aligned, normalized feature vectors matching the trained ML models.
 import json
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List
 import numpy as np
-
 from pydantic import ValidationError
 
 from backend.model_registry import registry

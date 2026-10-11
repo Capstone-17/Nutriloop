@@ -66,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
     <View style={styles.headerContainer}>
       <View style={styles.brandRow}>
         <Image
-          source={require("../../assets/Nutriloop_1.png")}
+          source={require("../../../assets/Nutriloop_1.png")}
           style={styles.brandLogo}
           resizeMode="contain"
         />

@@ -21,7 +21,6 @@ except Exception:
 
 import joblib
 import numpy as np
-import pandas as pd
 
 
 def _get_bundle_dir() -> Path:

@@ -7,35 +7,25 @@ import { Header, getRandomAlliterativeName } from "./src/components/Header";
 import { AssessmentScreen } from "./src/screens/AssessmentScreen";
 import { DietScreen } from "./src/screens/DietScreen";
 import { HistoryScreen } from "./src/screens/HistoryScreen";
+import { ChatScreen } from "./src/screens/ChatScreen";
 import {
   PatientVitals,
+  DEFAULT_PATIENT_VITALS,
   MultiDiseaseAssessmentResult,
   WeeklyDietPlan,
   SavePatientTestResult,
 } from "./src/types/clinical";
 import { dbManager } from "./src/db/database";
-import { ClinicalRulesEngine } from "./src/engine/clinical_rules";
+import { ApiService } from "./src/services/api";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<"assessment" | "diet" | "history">("assessment");
+  const [activeTab, setActiveTab] = useState<"assessment" | "diet" | "chat" | "history">("assessment");
   const [patientName, setPatientName] = useState<string>("Clever Cheetah");
   const [reportDate, setReportDate] = useState<string | null>(null);
   const [isHistoricalTest, setIsHistoricalTest] = useState<boolean>(false);
 
-  // Clinical Vitals Baseline
-  const [vitals, setVitals] = useState<PatientVitals>({
-    ageYears: 48,
-    sex: "male",
-    bodyMassIndex: 25.4,
-    systolicBpMmhg: 130,
-    diastolicBpMmhg: 82,
-    fastingGlucoseMgDl: 110,
-    hba1cPct: 5.8,
-    serumCreatinineMgDl: 1.0,
-    egfrMlMin: 85,
-    serumPotassiumMeqL: 4.3,
-    serumSodiumMeqL: 140,
-  });
+  // Clinical Vitals Baseline (Ideal Reference Standard: Normotensive & Euglycemic)
+  const [vitals, setVitals] = useState<PatientVitals>(DEFAULT_PATIENT_VITALS);
 
   const [assessmentResult, setAssessmentResult] = useState<MultiDiseaseAssessmentResult | null>(null);
   const [activePlan, setActivePlan] = useState<WeeklyDietPlan | null>(null);
@@ -66,12 +56,30 @@ export default function App() {
           setVitals(latest.vitals);
           setReportDate(latest.createdAt);
           setIsHistoricalTest(false);
-          const res = ClinicalRulesEngine.assessPatient(latest.vitals);
-          setAssessmentResult(res);
+          try {
+            const res = await ApiService.assessPatient(latest.vitals);
+            setAssessmentResult(res);
+          } catch {
+            if (latest.assessments) {
+              setAssessmentResult({
+                timestamp: latest.createdAt,
+                detectedConditions: latest.detectedConditions || [],
+                assessments: latest.assessments as any,
+                vitals: latest.vitals,
+              });
+            }
+          }
         } else {
-          // Compute baseline assessment
-          const res = ClinicalRulesEngine.assessPatient(vitals);
-          setAssessmentResult(res);
+          // No saved test reports yet: apply ideal clinical baseline report
+          setVitals(DEFAULT_PATIENT_VITALS);
+          setReportDate(null);
+          setIsHistoricalTest(false);
+          try {
+            const res = await ApiService.assessPatient(DEFAULT_PATIENT_VITALS);
+            setAssessmentResult(res);
+          } catch (e) {
+            console.warn("Initial backend assessment notice:", e);
+          }
         }
       } catch (err) {
         console.warn("Error initializing offline database:", err);
@@ -134,14 +142,20 @@ export default function App() {
           />
         )}
 
+        {activeTab === "chat" && <ChatScreen vitals={vitals} />}
+
         {activeTab === "history" && (
           <HistoryScreen
-            onLoadTest={(loadedVitals, createdAt, isHistorical) => {
+            onLoadTest={async (loadedVitals, createdAt, isHistorical) => {
               setVitals(loadedVitals);
               setReportDate(createdAt || null);
               setIsHistoricalTest(isHistorical ?? false);
-              const res = ClinicalRulesEngine.assessPatient(loadedVitals);
-              setAssessmentResult(res);
+              try {
+                const res = await ApiService.assessPatient(loadedVitals);
+                setAssessmentResult(res);
+              } catch (e) {
+                console.warn("Historical test assessment notice:", e);
+              }
               setActiveTab("assessment");
             }}
           />
@@ -175,6 +189,20 @@ export default function App() {
           />
           <Text style={[styles.navText, activeTab === "diet" && styles.navTextActive]}>
             7-Day Diet
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.navItem, activeTab === "chat" && styles.navItemActive]}
+          onPress={() => setActiveTab("chat")}
+        >
+          <Ionicons
+            name={activeTab === "chat" ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"}
+            size={22}
+            color={activeTab === "chat" ? Colors.secondary : Colors.textMuted}
+          />
+          <Text style={[styles.navText, activeTab === "chat" && styles.navTextActive]}>
+            AI Chat
           </Text>
         </TouchableOpacity>
 

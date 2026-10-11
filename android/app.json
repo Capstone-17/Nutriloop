@@ -4,7 +4,7 @@
     "slug": "nutriloop",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "../assets/Nutriloop_1.png",
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true
@@ -13,15 +13,10 @@
       "package": "com.nutriloop.app",
       "adaptiveIcon": {
         "backgroundColor": "#0C0608",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "../assets/Nutriloop_1.png"
       },
       "permissions": [],
       "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-sqlite",

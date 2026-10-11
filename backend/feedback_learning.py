@@ -5,10 +5,9 @@ Collects user feedback, tracks outcomes, and continuously improves recommendatio
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 from enum import Enum
 from datetime import datetime, timedelta
-import json
 from collections import defaultdict
 
 from backend import db
