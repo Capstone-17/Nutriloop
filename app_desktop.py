@@ -166,6 +166,12 @@ def main() -> None:
     # 2. Lazy-load bridge API (fast lightweight startup)
     import webview
     from desktop_api import DesktopAPI
+    from backend.ollama_manager import ollama_manager
+
+    # Ensure zero background Ollama processes on app startup
+    ollama_manager.terminate_service()
+    atexit.register(ollama_manager.terminate_service)
+
     api = DesktopAPI()
     
     app_url, httpd = start_local_server()

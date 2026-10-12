@@ -89,6 +89,8 @@ class OllamaProcessManager:
 
         # Ensure cleanup and pause persistence on process exit
         atexit.register(self._on_app_exit)
+        # Ensure zero background Ollama processes on startup
+        self.terminate_service()
         log.info("[OllamaManager] Initialized. Binary: %s", self.binary_path)
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -227,22 +229,21 @@ class OllamaProcessManager:
         self.terminate_service()
         return False
 
-    def terminate_service(self) -> None:
+    def terminate_service(self, force_all: bool = True) -> None:
         """Kill the Ollama background daemon and all child processes immediately."""
         with self._proc_lock:
             self._cancel_idle_timer()
 
-            pid = self._process.pid if self._process else None
-
-            # 1. Kill tracked process
+            # 1. Terminate tracked process object
             if self._process is not None:
                 try:
                     if self._process.poll() is None:
                         if os.name == "nt":
                             subprocess.run(
-                                ["taskkill", "/F", "/T", "/PID", str(pid)],
+                                ["taskkill", "/F", "/T", "/PID", str(self._process.pid)],
                                 creationflags=CREATE_NO_WINDOW,
-                                capture_output=True,
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL,
                                 timeout=1.5,
                             )
                         else:
@@ -253,14 +254,21 @@ class OllamaProcessManager:
                 finally:
                     self._process = None
 
-            # Only stop the process this manager started and still tracks.
-            # Never terminate every process named ollama.exe: another app or a
-            # user-managed Ollama service may be using it.
-            if pid is None:
-                log.info("[OllamaManager] No app-owned Ollama process to stop.")
-                return
+            # 2. Force termination of any lingering background Ollama processes on Windows
+            if force_all and os.name == "nt":
+                for proc_name in ["ollama.exe", "ollama_llama_server.exe"]:
+                    try:
+                        subprocess.run(
+                            ["taskkill", "/F", "/IM", proc_name],
+                            creationflags=CREATE_NO_WINDOW,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                            timeout=2.0,
+                        )
+                    except Exception as exc:
+                        log.debug("[OllamaManager] taskkill /IM %s error: %s", proc_name, exc)
 
-            log.info("[OllamaManager] App-owned Ollama process termination requested.")
+            log.info("[OllamaManager] Background Ollama process termination complete.")
 
     def schedule_idle_shutdown(self, seconds: Optional[float] = None) -> None:
         """Schedule automatic termination after seconds of no chat activity."""
@@ -514,6 +522,72 @@ class OllamaProcessManager:
             self._download_state["status"] = "idle"
             return {"status": "cancelled", "state": dict(self._download_state)}
 
+    def delete_model(self, model_name: Optional[str] = None) -> Dict[str, Any]:
+        """Permanently remove installed model manifests, blobs, and download state from disk."""
+        target = (model_name or self.recommended_model).strip().lower()
+        clean_name = target.split(":")[0]  # e.g., 'llama3.2'
+
+        # 1. Stop Ollama service if running
+        self.terminate_service()
+
+        deleted_manifests = 0
+        deleted_blobs = 0
+
+        # 2. Delete manifests matching target model
+        for m_dir in self._get_manifest_dirs():
+            if not m_dir.exists():
+                continue
+            for p in list(m_dir.rglob("*")):
+                if p.is_file():
+                    p_str = str(p).lower().replace("\\", "/")
+                    if clean_name in p_str:
+                        try:
+                            p.unlink(missing_ok=True)
+                            deleted_manifests += 1
+                        except Exception as exc:
+                            log.warning("[OllamaManager] Could not delete manifest %s: %s", p, exc)
+            # Clean empty manifest directories matching clean_name
+            for d in sorted(list(m_dir.rglob("*")), key=lambda x: len(str(x)), reverse=True):
+                if d.is_dir() and clean_name in str(d).lower():
+                    try:
+                        shutil.rmtree(d, ignore_errors=True)
+                    except Exception:
+                        pass
+
+        # 3. Purge all blobs in self.models_dir
+        blobs_dir = self.models_dir / "blobs"
+        if blobs_dir.exists():
+            for b in list(blobs_dir.glob("*")):
+                try:
+                    if b.is_file():
+                        b.unlink(missing_ok=True)
+                        deleted_blobs += 1
+                except Exception as exc:
+                    log.warning("[OllamaManager] Could not delete blob %s: %s", b, exc)
+
+        # 4. Clear persisted download state and reset to idle
+        self._clear_persisted_state()
+        with self._download_lock:
+            self._download_state = {
+                "status": "idle",
+                "percent": 0.0,
+                "completed_bytes": 0,
+                "total_bytes": 0,
+                "model": None,
+                "message": "Model removed from device. Ready to install.",
+                "error": None,
+            }
+
+        log.info(
+            "[OllamaManager] Permanently deleted model %s (manifests=%d, blobs=%d).",
+            target, deleted_manifests, deleted_blobs,
+        )
+        return {
+            "status": "deleted",
+            "model": target,
+            "message": f"Model {target} was permanently removed from your device.",
+        }
+
     def _run_download_worker(self, model_name: str) -> None:
         """Worker thread: starts daemon, streams pull with HTTP Range support, and terminates daemon immediately."""
         try:
@@ -579,8 +653,9 @@ class OllamaProcessManager:
                                     self._save_persisted_state(self._download_state)
 
                             if is_success:
-                                log.info("[OllamaManager] Download complete: %s", model_name)
+                                log.info("[OllamaManager] Download complete: %s. Terminating daemon immediately.", model_name)
                                 self._clear_persisted_state()
+                                self.terminate_service()
                                 break
                         except Exception:
                             pass

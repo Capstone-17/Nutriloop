@@ -113,8 +113,29 @@ def run_tests():
     assert not ollama_manager.is_service_running()
     print("  [PASS] Cancel cleanly resets state, purges partial files, removes state file, and halts daemon.")
 
+    # 6. Test delete_model capability (permanent removal of manifests and blobs)
+    print("\n[STEP 6] Testing delete_model permanent disk removal...")
+    manifest_dir = ollama_manager.models_dir / "manifests" / "registry.ollama.ai" / "library" / "llama3.2"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    dummy_manifest = manifest_dir / "3b"
+    dummy_manifest.write_text('{"schemaVersion": 2}', encoding="utf-8")
+    dummy_blob = blobs_dir / "sha256-dummy-model-blob"
+    dummy_blob.write_text("model weights data", encoding="utf-8")
+
+    assert ollama_manager.is_model_installed("llama3.2:3b")
+    del_res = desktop_api.delete_model("llama3.2:3b")
+    print("  -> Delete response:", del_res)
+    assert del_res.get("status") == "deleted"
+    assert not dummy_manifest.exists(), "Manifest must be deleted from disk"
+    assert not dummy_blob.exists(), "Model blob must be deleted from disk"
+    assert not ollama_manager.is_model_installed("llama3.2:3b")
+    status = desktop_api.check_ollama_status()
+    assert not status["model_installed"]
+    assert not ollama_manager.is_service_running()
+    print("  [PASS] Model and all blobs permanently deleted from device.")
+
     print("\n" + "=" * 70)
-    print("      ALL MODEL DOWNLOAD CONTROL TESTS PASSED (100%)")
+    print("      ALL MODEL DOWNLOAD CONTROL & DELETION TESTS PASSED (100%)")
     print("=" * 70)
 
 if __name__ == "__main__":

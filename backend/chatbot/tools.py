@@ -431,78 +431,13 @@ def alter_diet_plan_meal(
     Enforces strict programmatic clinical safety validation against patient biomarkers,
     detected conditions, active medications, and allergies.
     """
-    # 1. Retrieve patient clinical context
-    latest_test = get_latest_patient_test(user_id) or {}
-    detected_conds = [str(c).lower() for c in latest_test.get("detected_conditions", [])]
-    labs = latest_test.get("test_reports", {})
-
-    hba1c = float(labs.get("hba1c_pct", 5.2) or 5.2)
-    fbg = float(labs.get("fasting_glucose_mg_dl", 90.0) or 90.0)
-    sbp = float(labs.get("systolic_bp_mmhg", 120.0) or 120.0)
-    egfr = float(labs.get("egfr_ml_min", 90.0) or 90.0)
-    potassium = float(labs.get("serum_potassium_meq_l", 4.2) or 4.2)
-
-    combined_text = f"{new_meal_title} " + " ".join(
-        str(it.get("item_name", "")) for it in new_items if isinstance(it, dict)
-    )
-    combined_lower = combined_text.lower()
-
-    # 2. Strict Clinical Safety Validation
-    # A. Diabetes & High-Glycemic Sugar
-    is_diabetic = any("diabetes" in c or "t2dm" in c for c in detected_conds) or hba1c >= 6.5 or fbg >= 126
-    if is_diabetic:
-        sugar_triggers = [
-            "sugar", "gulab jamun", "jalebi", "sweet", "sweets", "dessert", "halwa",
-            "pastry", "cake", "candy", "sweet lassi", "syrup", "soda", "coca cola",
-            "pepsi", "ice cream", "kheer", "rasgulla", "laddu", "peda", "condensed milk",
-        ]
-        for trig in sugar_triggers:
-            if trig in combined_lower:
-                msg = (
-                    f"CLINICAL REFUSAL: The proposed meal contains high-glycemic sugar or confectionery ('{trig}'). "
-                    f"With patient HbA1c at {hba1c:.1f}% and Fasting Glucose at {fbg:.0f} mg/dL, adding high-sugar items "
-                    "triggers acute postprandial hyperglycemia, advanced glycation end-products, and accelerated "
-                    "glomerular hyperfiltration. As your physician, this dangerous alteration is strictly refused."
-                )
-                log.warning("[alter_diet_plan_meal] %s", msg)
-                return {"status": "clinical_refusal", "error": msg}
-
-    # B. Hypertension & High Sodium
-    is_hypertensive = any("hypertension" in c or "htn" in c for c in detected_conds) or sbp >= 140
-    if is_hypertensive:
-        sodium_triggers = [
-            "pickle", "achar", "papad", "salted chips", "french fries", "salted peanuts",
-            "soy sauce", "salted butter", "processed meat", "bacon", "sausage", "canned soup",
-        ]
-        for trig in sodium_triggers:
-            if trig in combined_lower:
-                msg = (
-                    f"CLINICAL REFUSAL: The proposed meal contains excessive sodium ('{trig}'). "
-                    f"With your blood pressure reading of {sbp:.0f} mmHg, excess sodium causes plasma volume "
-                    "expansion and arterial stiffness, exacerbating cardiovascular risk. Modification blocked."
-                )
-                log.warning("[alter_diet_plan_meal] %s", msg)
-                return {"status": "clinical_refusal", "error": msg}
-
-    # C. CKD & Potassium / Starfruit
-    has_ckd = any("ckd" in c or "kidney" in c for c in detected_conds) or egfr < 60 or potassium >= 5.0
-    if has_ckd:
-        ckd_triggers = [
-            "starfruit", "carambola", "coconut water", "raw spinach juice",
-            "potassium salt", "salt substitute",
-        ]
-        if potassium >= 5.0 or egfr < 30:
-            ckd_triggers.extend(["banana", "orange juice"])
-
-        for trig in ckd_triggers:
-            if trig in combined_lower:
-                msg = (
-                    f"CLINICAL REFUSAL: The proposed meal contains ingredients hazardous to impaired renal function ('{trig}'). "
-                    f"With an eGFR of {egfr:.0f} mL/min and Serum Potassium of {potassium:.1f} mEq/L, high-potassium "
-                    "or nephrotoxic foods risk life-threatening cardiac arrhythmias. Modification blocked."
-                )
-                log.warning("[alter_diet_plan_meal] %s", msg)
-                return {"status": "clinical_refusal", "error": msg}
+    # 1. Programmatic Clinical Risk & Guardrail Validation
+    from backend.chatbot.risk_analysis import validate_diet_risk
+    val = validate_diet_risk(user_id=user_id, proposed_text=new_meal_title, items=new_items)
+    if not val["passed"]:
+        msg = f"CLINICAL REFUSAL: {val['clinical_explanation']}"
+        log.warning("[alter_diet_plan_meal] %s", msg)
+        return {"status": "clinical_refusal", "error": msg}
 
     # 3. Retrieve and modify active 7-Day Plan
     plan = get_active_weekly_plan(user_id)

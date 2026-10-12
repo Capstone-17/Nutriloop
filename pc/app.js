@@ -5,6 +5,7 @@
  */
 
 // Global State
+let appBridgeInitialized = false;
 let currentWeeklyPlan = null;
 let chatHistory = [];
 let downloadPollTimer = null;
@@ -600,6 +601,7 @@ function setupEventListeners() {
   document.getElementById("btn-install-model")?.addEventListener("click", installOllamaModel);
   document.getElementById("btn-pause-model")?.addEventListener("click", pauseOllamaDownload);
   document.getElementById("btn-cancel-model")?.addEventListener("click", cancelOllamaDownload);
+  document.getElementById("btn-delete-model")?.addEventListener("click", deleteOllamaModel);
 
   // Delete Test Button
   document.getElementById("btn-delete-test")?.addEventListener("click", runDeleteActiveTest);
@@ -1424,7 +1426,7 @@ async function sendChatMessage() {
 
   appendChatBubble("user", msg);
 
-  const userId = document.getElementById("p-user-id")?.value?.trim() || "patient_local";
+  const userId = document.getElementById("p-user-id")?.value?.trim() || "John Doe";
   const disease = "ckd_t2dm_htn";
 
   const engineSelect = document.getElementById("ai-engine-select");
@@ -1449,7 +1451,6 @@ async function sendChatMessage() {
     if (res.updated_diet_plan) {
       currentWeeklyPlan = res.updated_diet_plan;
       renderWeeklyDietResults(res.updated_diet_plan);
-      showClinicalModal("🩺 Dr. Nutriloop Prescription Notice:\n\nYour 7-Day Regional Nutrition Plan has been clinically updated based on your consultation. You can view the altered meal schedule in Tab 2.");
     }
   } catch (err) {
     appendChatBubble("assistant", "Chat service error: " + err, "Error", false);
@@ -1482,14 +1483,14 @@ function appendChatBubble(role, text, engineMode, isEscalated = false) {
 
   if (role === "assistant") {
     bubble.innerHTML = renderMarkdown(text);
-    if (engineMode) {
-      const modeTag = document.createElement("div");
-      modeTag.style.fontSize = "10.5px";
-      modeTag.style.color = "var(--secondary-gold)";
-      modeTag.style.marginTop = "8px";
-      modeTag.style.fontWeight = "600";
-      modeTag.textContent = `Mode: ${engineMode}${isEscalated ? " (Supervisor Escalation)" : ""}`;
-      bubble.appendChild(modeTag);
+    if (isEscalated) {
+      const alertTag = document.createElement("div");
+      alertTag.style.fontSize = "11px";
+      alertTag.style.color = "#ff6b6b";
+      alertTag.style.marginTop = "8px";
+      alertTag.style.fontWeight = "700";
+      alertTag.textContent = "🚨 Medical Emergency Warning";
+      bubble.appendChild(alertTag);
     }
   } else {
     bubble.textContent = text;
@@ -1515,16 +1516,20 @@ async function refreshOllamaStatus() {
     const srvText = document.getElementById("ollama-service-status");
     const installedBadge = document.getElementById("ollama-installed-badge");
     const installBtn = document.getElementById("btn-install-model");
+    const deleteBtn = document.getElementById("btn-delete-model");
     const chatDot = document.getElementById("ollama-dot");
     const chatText = document.getElementById("ollama-text");
 
+    const isInstalled = !!status?.model_installed;
+    const isRunning = !!status?.running;
+
     if (chatDot && chatText) {
-      if (status.model_installed) {
+      if (isInstalled) {
         chatDot.className = "status-dot";
-        chatText.textContent = "Local Clinical AI Ready";
-      } else if (status.running) {
-        chatDot.className = "status-dot offline";
-        chatText.textContent = "Model Missing (Install in Settings)";
+        chatText.textContent = "Local Clinical AI Ready (llama3.2:3b)";
+      } else if (isRunning) {
+        chatDot.className = "status-dot";
+        chatText.textContent = "Downloading Model...";
       } else {
         chatDot.className = "status-dot offline";
         chatText.textContent = "Offline Medical Rules Active";
@@ -1532,32 +1537,36 @@ async function refreshOllamaStatus() {
     }
 
     if (srvText) {
-      if (status.model_installed) {
-        srvText.textContent = "Ready (llama3.2:3b Installed)";
+      if (isInstalled) {
+        srvText.textContent = "Stopped (Model llama3.2:3b Installed & Ready)";
         srvText.style.color = "var(--accent-emerald)";
-      } else if (status.running) {
-        srvText.textContent = "Running (Model not yet downloaded)";
+      } else if (isRunning) {
+        srvText.textContent = "Running (Downloading model...)";
         srvText.style.color = "var(--secondary-light)";
       } else {
-        srvText.textContent = "Standalone Ready (Auto-starts on demand)";
+        srvText.textContent = "Stopped (Starts only during model download)";
         srvText.style.color = "var(--secondary-light)";
       }
     }
 
     if (installedBadge) {
       installedBadge.style.display = "inline-block";
-      if (status.model_installed) {
+      if (isInstalled) {
         installedBadge.textContent = "llama3.2:3b Ready";
         installedBadge.className = "risk-badge badge-low";
       } else {
-        installedBadge.textContent = "Model Missing";
+        installedBadge.textContent = "Model Not Installed";
         installedBadge.className = "risk-badge badge-moderate";
       }
     }
 
+    if (deleteBtn) {
+      deleteBtn.style.display = isInstalled ? "inline-flex" : "none";
+    }
+
     if (installBtn && !installBtn.disabled) {
-      if (status.model_installed) {
-        installBtn.textContent = "✅ llama3.2:3b Installed (Re-install if needed)";
+      if (isInstalled) {
+        installBtn.textContent = "✅ llama3.2:3b Installed";
       } else {
         installBtn.textContent = "⬇️ 1-Click Install llama3.2:3b Model";
       }
@@ -1569,21 +1578,31 @@ async function refreshOllamaStatus() {
         if (dlState.status === "downloading" || dlState.status === "starting") {
           pollDownloadProgress();
         } else {
-          updateDownloadUI(dlState);
+          updateDownloadUI(dlState, isInstalled);
         }
       }
     } catch (_) {}
   } catch (err) {
     console.error("Failed to check Ollama:", err);
+    const srvText = document.getElementById("ollama-service-status");
+    if (srvText) {
+      srvText.textContent = "Stopped (Offline Medical Rules Active)";
+      srvText.style.color = "var(--secondary-light)";
+    }
+    const chatText = document.getElementById("ollama-text");
+    if (chatText) {
+      chatText.textContent = "Offline Medical Rules Active";
+    }
   }
 }
 
-function updateDownloadUI(state) {
+function updateDownloadUI(state, isModelInstalled = false) {
   const fill = document.getElementById("model-progress-fill");
   const text = document.getElementById("model-progress-text");
   const installBtn = document.getElementById("btn-install-model");
   const pauseBtn = document.getElementById("btn-pause-model");
   const cancelBtn = document.getElementById("btn-cancel-model");
+  const deleteBtn = document.getElementById("btn-delete-model");
 
   if (!fill || !text || !installBtn) return;
 
@@ -1593,6 +1612,7 @@ function updateDownloadUI(state) {
     fill.style.width = `${Math.max(pct, 2)}%`;
     text.textContent = state.message || "Downloading model...";
     installBtn.style.display = "none";
+    if (deleteBtn) deleteBtn.style.display = "none";
     if (pauseBtn) {
       pauseBtn.style.display = "inline-flex";
       pauseBtn.disabled = false;
@@ -1609,29 +1629,62 @@ function updateDownloadUI(state) {
     installBtn.style.display = "inline-flex";
     installBtn.disabled = false;
     installBtn.textContent = `▶️ Resume Download (${pct}%)`;
+    if (deleteBtn) deleteBtn.style.display = "none";
     if (pauseBtn) pauseBtn.style.display = "none";
     if (cancelBtn) {
       cancelBtn.style.display = "inline-flex";
       cancelBtn.disabled = false;
       cancelBtn.textContent = "🛑 Cancel";
     }
-  } else if (state.status === "success") {
+  } else if (state.status === "success" || isModelInstalled) {
     fill.style.width = "100%";
     text.textContent = state.message || "✅ Model llama3.2:3b successfully installed and ready.";
     installBtn.style.display = "inline-flex";
     installBtn.disabled = false;
     installBtn.textContent = "✅ llama3.2:3b Installed";
+    if (deleteBtn) deleteBtn.style.display = "inline-flex";
     if (pauseBtn) pauseBtn.style.display = "none";
     if (cancelBtn) cancelBtn.style.display = "none";
   } else {
     fill.style.width = state.status === "cancelled" ? "0%" : `${pct}%`;
-    text.textContent = state.message || "Status: Ready";
+    text.textContent = state.message || "Status: Ready to install";
     installBtn.style.display = "inline-flex";
     installBtn.disabled = false;
     installBtn.textContent = "⬇️ 1-Click Install llama3.2:3b Model";
+    if (deleteBtn) deleteBtn.style.display = "none";
     if (pauseBtn) pauseBtn.style.display = "none";
     if (cancelBtn) cancelBtn.style.display = "none";
   }
+}
+
+async function deleteOllamaModel() {
+  if (!window.pywebview?.api) return;
+
+  showConfirmModal({
+    title: "Delete AI Model",
+    message: "Are you sure you want to permanently delete the llama3.2:3b model from this device? This will free up ~2 GB of storage.",
+    confirmText: "Yes, Delete Model",
+    isDanger: true,
+    onConfirm: async () => {
+      const deleteBtn = document.getElementById("btn-delete-model");
+      if (deleteBtn) {
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = "⏳ Deleting...";
+      }
+      try {
+        const res = await window.pywebview.api.delete_model("llama3.2:3b");
+        await refreshOllamaStatus();
+        showClinicalModal(res?.message || "Model llama3.2:3b was permanently removed from your device.");
+      } catch (err) {
+        showClinicalModal("Failed to delete model: " + err);
+      } finally {
+        if (deleteBtn) {
+          deleteBtn.disabled = false;
+          deleteBtn.textContent = "🗑️ Delete Model";
+        }
+      }
+    }
+  });
 }
 
 async function installOllamaModel() {
@@ -1715,6 +1768,9 @@ function pollDownloadProgress() {
       if (state.status === "success") {
         clearInterval(downloadPollTimer);
         downloadPollTimer = null;
+        try {
+          await window.pywebview.api.terminate_ollama();
+        } catch (_) {}
         refreshOllamaStatus();
       } else if (state.status === "error") {
         clearInterval(downloadPollTimer);

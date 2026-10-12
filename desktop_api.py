@@ -140,6 +140,10 @@ class DesktopAPI:
             ),
         }
 
+    def check_ollama_status(self) -> Dict[str, Any]:
+        """Status query for frontend UI; does not start daemon."""
+        return self.check_ollama()
+
     def start_model_download(self, model_name: Optional[str] = None) -> Dict[str, Any]:
         """Trigger background pull of the model. Terminates daemon immediately when completed."""
         return ollama_manager.start_model_download(model_name)
@@ -164,6 +168,10 @@ class DesktopAPI:
         """Explicitly terminate background Ollama daemon."""
         ollama_manager.terminate_service()
         return {"status": "terminated"}
+
+    def delete_model(self, model_name: Optional[str] = None) -> Dict[str, Any]:
+        """Permanently delete installed model and blobs from the device."""
+        return ollama_manager.delete_model(model_name)
 
     # ──────────────────────────────────────────────────────────────────────────
     # Patient Test History & Lab Text Parser

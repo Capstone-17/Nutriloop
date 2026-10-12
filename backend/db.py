@@ -478,6 +478,7 @@ def get_latest_patient_test(user_id: Optional[str] = None) -> Optional[Dict[str,
     conn = get_conn()
     try:
         cur = conn.cursor()
+        r = None
         if user_id and user_id.strip():
             cur.execute(
                 """
@@ -487,14 +488,15 @@ def get_latest_patient_test(user_id: Optional[str] = None) -> Optional[Dict[str,
                 """,
                 (user_id.strip(),),
             )
-        else:
+            r = cur.fetchone()
+        if not r:
             cur.execute(
                 """
                 SELECT id FROM patient_test_history
                 ORDER BY id DESC LIMIT 1
                 """
             )
-        r = cur.fetchone()
+            r = cur.fetchone()
         if not r:
             return None
         return get_patient_test_by_id(r["id"])
@@ -1079,26 +1081,38 @@ def get_agent_session(user_id: str) -> Optional[Dict[str, Any]]:
 # ==============================================================================
 def save_active_weekly_plan(user_id: str, plan_data: Dict[str, Any]) -> None:
     """Persist or overwrite the latest 7-Day Regional Weekly Diet Plan for this patient."""
+    serialized = json.dumps(plan_data, ensure_ascii=False)
+    target_ids = {user_id}
+    # Keep default fallback IDs synchronized
+    if user_id in ("John Doe", "patient_local", "patient_001"):
+        target_ids.update(["John Doe", "patient_local"])
+
     with get_db_conn() as conn:
-        conn.execute(
-            """
-            INSERT INTO active_weekly_plan (user_id, plan_json, updated_at)
-            VALUES (?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(user_id) DO UPDATE SET
-                plan_json = excluded.plan_json,
-                updated_at = CURRENT_TIMESTAMP
-            """,
-            (user_id, json.dumps(plan_data, ensure_ascii=False)),
-        )
+        for uid in target_ids:
+            conn.execute(
+                """
+                INSERT INTO active_weekly_plan (user_id, plan_json, updated_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    plan_json = excluded.plan_json,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (uid, serialized),
+            )
 
 
 def get_active_weekly_plan(user_id: str) -> Optional[Dict[str, Any]]:
-    """Retrieve the current active 7-Day Weekly Diet Plan for this patient."""
+    """Retrieve the current active 7-Day Weekly Diet Plan for this patient, falling back to the latest record if needed."""
     with get_db_conn() as conn:
         row = conn.execute(
             "SELECT plan_json, updated_at FROM active_weekly_plan WHERE user_id = ?",
             (user_id,),
         ).fetchone()
+        if not row:
+            # Fallback to the latest active plan in the database
+            row = conn.execute(
+                "SELECT plan_json, updated_at FROM active_weekly_plan ORDER BY datetime(updated_at) DESC LIMIT 1"
+            ).fetchone()
         if not row:
             return None
         try:
