@@ -5,7 +5,7 @@
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
     "@react-native-community/slider": "5.2.0",
-    "expo": "~57.0.27",
+    "expo": "~57.0.30",
     "expo-font": "~57.0.4",
     "expo-sqlite": "~57.0.4",
     "expo-status-bar": "~57.0.1",
