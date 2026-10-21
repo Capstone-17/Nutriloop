@@ -93,6 +93,23 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Load root .env file if present
+_env_file = Path(__file__).resolve().parent.parent / ".env"
+if _env_file.exists():
+    try:
+        with open(_env_file, "r", encoding="utf-8") as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if not _line or _line.startswith("#") or "=" not in _line:
+                    continue
+                _k, _v = _line.split("=", 1)
+                _k = _k.strip()
+                _v = _v.strip().strip("'\"")
+                if _k and _k not in os.environ:
+                    os.environ[_k] = _v
+    except Exception as _e:
+        logger.warning(f"Failed to parse .env file: {_e}")
+
 # Enable CORS for mobile clients, local development, and production endpoints
 _cors_origins_env = os.getenv("CORS_ALLOWED_ORIGINS", "*")
 _allowed_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
