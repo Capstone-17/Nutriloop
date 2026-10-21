@@ -77,7 +77,7 @@ You can launch NutriLoop directly without installing Python, Node.js, or any bac
 2. Double-click **`Nutriloop.exe`**.
 3. The native desktop window will launch instantly with the custom icon and Edge WebView2 rendering.
 
-### Option B: Run from Source
+### Option B: Run from Source (Desktop)
 If running in a Python development environment:
 
 ```powershell
@@ -90,6 +90,19 @@ pip install -r requirements.txt
 # 3. Launch the desktop application
 python app_desktop.py
 ```
+
+### Option C: Run the Mobile Application (Android / iOS)
+NutriLoop includes a full-featured React Native / Expo SDK 57 mobile client connected to the FastAPI backend:
+
+```powershell
+# 1. Start the FastAPI backend server
+uvicorn backend.app:app --host 0.0.0.0 --port 8000
+
+# 2. In another terminal, start the Expo mobile bundler
+cd android
+npm run start
+```
+*Press `a` to run on Android Emulator or scan the QR code with Expo Go on a physical phone. See [Nutriloop.md](Nutriloop.md) for full technical architecture and deployment steps.*
 
 ---
 

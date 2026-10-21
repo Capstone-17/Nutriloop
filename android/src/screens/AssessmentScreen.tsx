@@ -112,9 +112,13 @@ export const AssessmentScreen: React.FC<AssessmentScreenProps> = ({
       }
     } catch (err: any) {
       console.warn("Assessment API error:", err);
+      const hostUrl = await ApiService.getBaseUrl();
       Alert.alert(
-        "Assessment Notice",
-        `Could not reach common backend API (${err?.message || "Check connection"}). Please ensure Nutriloop backend is running.`
+        "Server Connection Notice",
+        `Could not reach the Nutriloop server at:\n${hostUrl}\n\n` +
+        `Tips to connect:\n` +
+        `1. Start backend: uvicorn backend.app:app --host 0.0.0.0 --port 8000\n` +
+        `2. Tap the Server icon at the top of the screen to configure your computer's Wi-Fi IP (e.g. http://192.168.1.50:8000).`
       );
     } finally {
       setIsAssessing(false);
@@ -846,13 +850,16 @@ const styles = StyleSheet.create({
   },
   btnProceedDiet: {
     backgroundColor: Colors.secondaryGold,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     borderRadius: 8,
+    minHeight: 44,
+    justifyContent: "center",
+    alignItems: "center",
   },
   btnProceedDietText: {
     color: "#000",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
   },
   riskTrioContainer: {

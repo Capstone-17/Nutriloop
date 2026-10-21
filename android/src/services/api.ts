@@ -1,4 +1,3 @@
-import { Platform } from "react-native";
 import {
   PatientVitals,
   MultiDiseaseAssessmentResult,
@@ -8,10 +7,20 @@ import {
 } from "../types/clinical";
 import { dbManager } from "../db/database";
 import { roundToDecimal } from "../utils/formatters";
+import { ENV } from "../config/env";
 
-// Default host based on execution platform
-export const DEFAULT_BACKEND_URL =
-  Platform.OS === "android" ? "http://10.0.2.2:8000" : "http://localhost:8000";
+// Default host derived from environment / platform config
+export const DEFAULT_BACKEND_URL = ENV.apiUrl;
+
+export interface ChatbotApiResponse {
+  reply: string;
+  tool_calls_made?: string[];
+  escalated?: boolean;
+  latency_ms?: number;
+  steps?: number;
+  engine_mode?: string;
+  updated_diet_plan?: any;
+}
 
 export class ApiService {
   private static cachedUrl: string | null = null;
@@ -25,9 +34,9 @@ export class ApiService {
         return this.cachedUrl;
       }
     } catch {
-      // Fallback to default
+      // Fallback to environment default
     }
-    this.cachedUrl = DEFAULT_BACKEND_URL;
+    this.cachedUrl = ENV.apiUrl;
     return this.cachedUrl;
   }
 
@@ -38,7 +47,72 @@ export class ApiService {
   }
 
   /**
-   * Run multi-disease risk evaluation by calling common Python backend /assess-patient.
+   * Resilient HTTP fetch wrapper with AbortController timeout and exponential-backoff retries.
+   */
+  private static async fetchWithTimeoutAndRetry(
+    url: string,
+    options: RequestInit,
+    timeoutMs: number = ENV.timeouts.defaultMs,
+    maxAttempts: number = ENV.retries.maxAttempts,
+    baseDelayMs: number = ENV.retries.baseDelayMs
+  ): Promise<Response> {
+    let lastError: any = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        const response = await fetch(url, {
+          ...options,
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+
+        // Retry on 502/503/504 server gateway issues
+        if ([502, 503, 504].includes(response.status) && attempt < maxAttempts) {
+          await new Promise((res) => setTimeout(res, baseDelayMs * Math.pow(2, attempt - 1)));
+          continue;
+        }
+
+        return response;
+      } catch (err: any) {
+        clearTimeout(timer);
+        lastError = err;
+
+        if (err.name === "AbortError") {
+          lastError = new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s`);
+        }
+
+        if (attempt < maxAttempts) {
+          await new Promise((res) => setTimeout(res, baseDelayMs * Math.pow(2, attempt - 1)));
+        }
+      }
+    }
+
+    throw lastError || new Error(`Network request failed for ${url}`);
+  }
+
+  /**
+   * Health ping to check if the Nutriloop backend server is reachable.
+   */
+  static async checkServerHealth(): Promise<boolean> {
+    try {
+      const baseUrl = await this.getBaseUrl();
+      const res = await this.fetchWithTimeoutAndRetry(
+        `${baseUrl}/health`,
+        { method: "GET" },
+        5000,
+        1
+      );
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Run multi-disease risk evaluation by calling Python backend /assess-patient.
    */
   static async assessPatient(vitals: PatientVitals): Promise<MultiDiseaseAssessmentResult> {
     const baseUrl = await this.getBaseUrl();
@@ -57,11 +131,15 @@ export class ApiService {
       serum_sodium_meq_l: vitals.serumSodiumMeqL,
     };
 
-    const response = await fetch(`${baseUrl}/assess-patient`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const response = await this.fetchWithTimeoutAndRetry(
+      `${baseUrl}/assess-patient`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+      ENV.timeouts.assessmentMs
+    );
 
     if (!response.ok) {
       throw new Error(`Assessment API returned HTTP ${response.status}`);
@@ -106,7 +184,7 @@ export class ApiService {
   }
 
   /**
-   * Generate 7-Day Regional Weekly Diet Plan by calling common Python backend /recommend-weekly-plan.
+   * Generate 7-Day Regional Weekly Diet Plan by calling Python backend /recommend-weekly-plan.
    */
   static async generateWeeklyDiet(
     vitals: PatientVitals,
@@ -139,11 +217,15 @@ export class ApiService {
       prep_time_limit_mins: prefs.maxPrepTimeMins || 45,
     };
 
-    const response = await fetch(`${baseUrl}/recommend-weekly-plan`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const response = await this.fetchWithTimeoutAndRetry(
+      `${baseUrl}/recommend-weekly-plan`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+      ENV.timeouts.dietPlanMs
+    );
 
     if (!response.ok) {
       throw new Error(`Weekly diet API returned HTTP ${response.status}`);
@@ -233,91 +315,72 @@ export class ApiService {
   }
 
   /**
-   * Direct Gemini / OpenAI LLM Chat using user-pasted API key.
-   * Completely independent of Ollama.
+   * Primary clinical AI chat calling FastAPI POST /chatbot/chat.
+   * Zero client-side API keys required — all LLM and tool inference is securely handled server-side.
+   */
+  static async sendChatMessage(
+    message: string,
+    history: { role: "user" | "assistant"; content: string }[],
+    disease: string = "ckd",
+    userId: string = "patient_mobile"
+  ): Promise<string> {
+    const baseUrl = await this.getBaseUrl();
+    const payload = {
+      user_id: userId,
+      message,
+      disease,
+      diseases: ["ckd", "hypertension", "diabetes"],
+      conversation_history: history.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+    };
+
+    try {
+      const response = await this.fetchWithTimeoutAndRetry(
+        `${baseUrl}/chatbot/chat`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+        ENV.timeouts.chatMs,
+        1 // Chat calls are not automatically retried to avoid duplicate agent turns
+      );
+
+      if (!response.ok) {
+        throw new Error(`Server returned HTTP ${response.status}`);
+      }
+
+      const data: ChatbotApiResponse = await response.json();
+      return (
+        data.reply ||
+        "I have processed your clinical dietary query based on standard KDIGO/ADA guidelines."
+      );
+    } catch (err: any) {
+      console.warn("Server chatbot call failed, activating graceful clinical fallback:", err);
+      // Graceful clinical fallback if server is unreachable
+      return (
+        `⚠️ Dr. Nutriloop Clinical Advisory (Offline Reference):\n\n` +
+        `We could not reach the clinical AI reasoning server (${err?.message || "connection error"}).\n\n` +
+        `• Sodium: Maintain <1500–2000 mg/day (AHA DASH / KDIGO standard).\n` +
+        `• Potassium: Consult your latest serum test (normal 3.5–5.0 mEq/L) before high-potassium foods.\n` +
+        `• Hydration: Confirm fluid limits with your nephrologist if experiencing edema.\n\n` +
+        `Please ensure the Nutriloop backend server is running and verify the host setting.`
+      );
+    }
+  }
+
+  /**
+   * Deprecated: legacy direct-LLM chat with user-provided key.
+   * Re-routes directly to server-side sendChatMessage to keep bundle secret-free.
    */
   static async chatWithUserApiKey(
     message: string,
     history: { role: "user" | "assistant"; content: string }[],
-    apiKey: string,
-    vitalsSummary?: string
+    _apiKey?: string,
+    _vitalsSummary?: string
   ): Promise<string> {
-    if (!apiKey || apiKey.trim().length === 0) {
-      throw new Error("Please configure your API key in Settings to chat with Nutriloop AI.");
-    }
-
-    const key = apiKey.trim();
-    const systemPrompt = `You are NutriLoop AI, a world-class clinical nephrology, cardiology, and endocrinology diet assistant.
-Provide empathetic, scientifically sound guidance grounded in KDIGO 2024, ADA 2024, and AHA DASH clinical protocols.
-${vitalsSummary ? `Current Patient Vitals Context: ${vitalsSummary}` : ""}
-Always advise consulting a qualified physician or registered dietitian for personalized medical prescriptions.`;
-
-    // 1. If key starts with "AIzaSy" or appears to be a Google Gemini key
-    if (key.startsWith("AIzaSy") || !key.startsWith("sk-")) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
-      const contents = [
-        {
-          role: "user",
-          parts: [{ text: `${systemPrompt}\n\nHello, I am ready to consult you.` }],
-        },
-        ...history.map((m) => ({
-          role: m.role === "user" ? "user" : "model",
-          parts: [{ text: m.content }],
-        })),
-        {
-          role: "user",
-          parts: [{ text: message }],
-        },
-      ];
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents }),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Gemini API error (${response.status}): ${errText}`);
-      }
-
-      const resData = await response.json();
-      const reply =
-        resData?.candidates?.[0]?.content?.parts?.[0]?.text ||
-        "I could not formulate a clinical recommendation at this time.";
-      return reply;
-    } else {
-      // 2. OpenAI-compatible API
-      const url = "https://api.openai.com/v1/chat/completions";
-      const messages = [
-        { role: "system", content: systemPrompt },
-        ...history.map((m) => ({ role: m.role, content: m.content })),
-        { role: "user", content: message },
-      ];
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${key}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages,
-          temperature: 0.3,
-        }),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`OpenAI API error (${response.status}): ${errText}`);
-      }
-
-      const resData = await response.json();
-      return (
-        resData?.choices?.[0]?.message?.content ||
-        "I could not formulate a clinical recommendation at this time."
-      );
-    }
+    return this.sendChatMessage(message, history);
   }
 }

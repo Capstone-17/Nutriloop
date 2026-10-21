@@ -11,16 +11,21 @@
     },
     "android": {
       "package": "com.nutriloop.app",
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#0C0608",
         "foregroundImage": "../assets/Nutriloop_adaptive.png"
       },
-      "permissions": [],
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
       "expo-sqlite",
-      "expo-font"
+      "expo-font",
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

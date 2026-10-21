@@ -7,6 +7,7 @@ os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List, Dict, Any
@@ -90,6 +91,18 @@ app = FastAPI(
     title="A Deep Learning and Generative AI-Driven Diet Recommendation System for Personalized Chronic Disease Management",
     version="0.1.0",
     lifespan=lifespan,
+)
+
+# Enable CORS for mobile clients, local development, and production endpoints
+_cors_origins_env = os.getenv("CORS_ALLOWED_ORIGINS", "*")
+_allowed_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allowed_origins if _allowed_origins != ["*"] else ["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

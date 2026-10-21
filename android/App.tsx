@@ -8,6 +8,7 @@ import { AssessmentScreen } from "./src/screens/AssessmentScreen";
 import { DietScreen } from "./src/screens/DietScreen";
 import { HistoryScreen } from "./src/screens/HistoryScreen";
 import { ChatScreen } from "./src/screens/ChatScreen";
+import { MedicalDisclaimerModal } from "./src/components/MedicalDisclaimerModal";
 import {
   PatientVitals,
   DEFAULT_PATIENT_VITALS,
@@ -17,12 +18,14 @@ import {
 } from "./src/types/clinical";
 import { dbManager } from "./src/db/database";
 import { ApiService } from "./src/services/api";
+import { SecureStorageService } from "./src/services/storage";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"assessment" | "diet" | "chat" | "history">("assessment");
   const [patientName, setPatientName] = useState<string>("Clever Cheetah");
   const [reportDate, setReportDate] = useState<string | null>(null);
   const [isHistoricalTest, setIsHistoricalTest] = useState<boolean>(false);
+  const [showDisclaimer, setShowDisclaimer] = useState<boolean>(false);
 
   // Clinical Vitals Baseline (Ideal Reference Standard: Normotensive & Euglycemic)
   const [vitals, setVitals] = useState<PatientVitals>(DEFAULT_PATIENT_VITALS);
@@ -30,10 +33,16 @@ export default function App() {
   const [assessmentResult, setAssessmentResult] = useState<MultiDiseaseAssessmentResult | null>(null);
   const [activePlan, setActivePlan] = useState<WeeklyDietPlan | null>(null);
 
-  // Initialize SQLite and load saved plan/test/name
+  // Initialize SQLite, secure disclaimer status, and load saved plan/test/name
   useEffect(() => {
-    async function initOfflineData() {
+    async function initAppData() {
       try {
+        // Check mandatory clinical disclaimer status
+        const accepted = await SecureStorageService.isDisclaimerAccepted();
+        if (!accepted) {
+          setShowDisclaimer(true);
+        }
+
         await dbManager.getDb();
 
         const savedName = await dbManager.getSetting("patient_name");
@@ -82,11 +91,16 @@ export default function App() {
           }
         }
       } catch (err) {
-        console.warn("Error initializing offline database:", err);
+        console.warn("Error initializing app data:", err);
       }
     }
-    initOfflineData();
+    initAppData();
   }, []);
+
+  const handleAcceptDisclaimer = async () => {
+    await SecureStorageService.setDisclaimerAccepted(true);
+    setShowDisclaimer(false);
+  };
 
   const handlePatientNameChange = async (newName: string) => {
     setPatientName(newName);
@@ -162,11 +176,12 @@ export default function App() {
         )}
       </View>
 
-      {/* Bottom Navigation Bar */}
+      {/* Bottom Navigation Bar with >= 48px touch targets */}
       <View style={styles.bottomNav}>
         <TouchableOpacity
           style={[styles.navItem, activeTab === "assessment" && styles.navItemActive]}
           onPress={() => setActiveTab("assessment")}
+          activeOpacity={0.7}
         >
           <Ionicons
             name={activeTab === "assessment" ? "pulse" : "pulse-outline"}
@@ -181,6 +196,7 @@ export default function App() {
         <TouchableOpacity
           style={[styles.navItem, activeTab === "diet" && styles.navItemActive]}
           onPress={() => setActiveTab("diet")}
+          activeOpacity={0.7}
         >
           <Ionicons
             name={activeTab === "diet" ? "restaurant" : "restaurant-outline"}
@@ -195,6 +211,7 @@ export default function App() {
         <TouchableOpacity
           style={[styles.navItem, activeTab === "chat" && styles.navItemActive]}
           onPress={() => setActiveTab("chat")}
+          activeOpacity={0.7}
         >
           <Ionicons
             name={activeTab === "chat" ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"}
@@ -209,6 +226,7 @@ export default function App() {
         <TouchableOpacity
           style={[styles.navItem, activeTab === "history" && styles.navItemActive]}
           onPress={() => setActiveTab("history")}
+          activeOpacity={0.7}
         >
           <Ionicons
             name={activeTab === "history" ? "time" : "time-outline"}
@@ -220,6 +238,12 @@ export default function App() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Mandatory First-Launch Clinical Disclaimer Modal */}
+      <MedicalDisclaimerModal
+        visible={showDisclaimer}
+        onAccept={handleAcceptDisclaimer}
+      />
     </SafeAreaView>
   );
 }
@@ -237,13 +261,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bgSurface,
     borderTopWidth: 1,
     borderTopColor: Colors.borderSubtle,
-    paddingVertical: 10,
-    paddingBottom: Platform.OS === "ios" ? 22 : 10,
+    paddingVertical: 8,
+    paddingBottom: Platform.OS === "ios" ? 24 : 10,
   },
   navItem: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    minHeight: 48,
+    paddingVertical: 4,
   },
   navItemActive: {},
   navText: {

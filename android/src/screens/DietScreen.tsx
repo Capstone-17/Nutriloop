@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../theme/colors";
@@ -142,8 +143,13 @@ export const DietScreen: React.FC<DietScreenProps> = ({
         }, 120);
       } catch (err: any) {
         console.error("Failed to generate weekly diet plan:", err);
-        alert(
-          `Could not generate diet plan via common backend (${err?.message || "Check connection"}). Please ensure Nutriloop backend is running.`
+        const hostUrl = await ApiService.getBaseUrl();
+        Alert.alert(
+          "Server Connection Notice",
+          `Could not generate 7-day diet plan via Nutriloop server at:\n${hostUrl}\n\n` +
+          `Tips to connect:\n` +
+          `1. Start backend: uvicorn backend.app:app --host 0.0.0.0 --port 8000\n` +
+          `2. Tap the Server icon at the top of the screen to configure your computer's Wi-Fi IP (e.g. http://192.168.1.50:8000).`
         );
       } finally {
         setIsGenerating(false);
@@ -959,9 +965,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(245, 158, 11, 0.15)",
     borderWidth: 1,
     borderColor: "rgba(245, 158, 11, 0.35)",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    minHeight: 38,
+    justifyContent: "center",
   },
   btnQuickRegenerateDisabled: {
     opacity: 0.6,
@@ -1073,7 +1081,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 9,
+    paddingVertical: 10,
+    minHeight: 44,
     borderRadius: 8,
     backgroundColor: Colors.bgInput,
     borderWidth: 1,
