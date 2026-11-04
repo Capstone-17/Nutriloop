@@ -1,0 +1,437 @@
+<!-- ──────────────────────────────────────────────────────────────────────────
+     PAGE: Patient Lab Assessment (Full Slider-Driven Health Monitors)
+     ────────────────────────────────────────────────────────────────────────── -->
+<div class="page-content" id="page-assessment">
+
+  <!-- Top Toolbar: History Presets & Primary Assessment Action -->
+  <div class="vitals-toolbar">
+    <div class="history-select-bar">
+      <div class="history-select-wrapper">
+        <span class="history-select-icon">📜</span>
+        <select id="preset-selector" class="history-select" title="Select a previous test report for this patient">
+          <option value="">-- No Previous Test Reports --</option>
+        </select>
+      </div>
+      <button id="btn-delete-test" class="btn-delete-report" title="Permanently delete this test report" style="display: none;">
+        🗑️ Delete
+      </button>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span id="assessment-status-badge" class="risk-badge badge-low" style="display: none;">
+        ✅ Assessed
+      </span>
+      <button id="btn-assess-patient" class="btn btn-primary">
+        ⚡ Run Multi-Disease Risk Assessment
+      </button>
+    </div>
+  </div>
+
+  <!-- Automated Lab Report Ingestion Agent Card -->
+  <div class="card lab-import-card" id="lab-import-card" style="margin-bottom: 22px;">
+    <div class="card-header">
+      <div class="card-title">
+        <span>📄</span> Automated Lab Report Ingestion Agent
+      </div>
+      <span class="risk-badge badge-gold">Multi-Format: PDF / DOCX / TXT</span>
+    </div>
+    <div class="lab-dropzone" id="lab-dropzone">
+      <div class="dropzone-icon">📥</div>
+      <div class="dropzone-content">
+        <div class="dropzone-title">Drag & Drop Lab Report File (.pdf, .docx, .txt)</div>
+        <div class="dropzone-subtitle">Our deep clinical parser agent will automatically extract HbA1c, KFT, BP, compute BMI, and map values directly into the sliders below!</div>
+      </div>
+      <div class="dropzone-actions">
+        <button type="button" id="btn-browse-lab-file" class="btn btn-gold">
+          📁 Browse Lab File
+        </button>
+        <input type="file" id="lab-file-input" accept=".pdf,.docx,.doc,.txt" style="display: none;">
+      </div>
+    </div>
+    <div id="lab-parse-status" class="lab-parse-status" style="display: none;"></div>
+  </div>
+
+  <!-- 11 Interactive Health Monitor Cards with Real-Time Sliders -->
+  <div class="card" style="margin-bottom: 22px;">
+    <div class="card-header">
+      <div class="card-title">
+        <span>⚡</span> Real-Time Clinical Vitals &amp; Lab Biomarkers
+      </div>
+      <span class="risk-badge badge-moderate">Interactive Slider Controls</span>
+    </div>
+
+    <div class="health-monitors-grid">
+
+      <!-- 1. Patient Age -->
+      <div class="health-gauge-card" id="card-gauge-age">
+        <div class="gauge-svg-wrap">
+          <svg class="gauge-svg" viewBox="0 0 120 120">
+            <circle class="gauge-bg" cx="60" cy="60" r="48" />
+            <circle id="gauge-age-stroke" class="gauge-stroke stroke-gold" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 170;" />
+          </svg>
+          <div class="gauge-center-content">
+            <span class="gauge-icon">🎂</span>
+            <span id="gauge-age-val" class="gauge-val">45</span>
+            <span class="gauge-unit">Years</span>
+          </div>
+        </div>
+        <div class="gauge-label">Patient Age</div>
+        <span id="gauge-age-badge" class="gauge-status-badge badge-normal">Adult Baseline</span>
+        <div class="slider-container">
+          <input type="range" id="p-age" class="range-slider" min="18" max="100" value="45" step="1">
+          <div class="slider-limits">
+            <span>18 yrs</span>
+            <span>100 yrs</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Biological Sex Toggle -->
+      <div class="health-gauge-card" id="card-gauge-sex">
+        <div class="gauge-center-content-standalone">
+          <span class="gauge-icon" style="font-size: 24px; margin-bottom: 4px;">⚧️</span>
+          <span id="gauge-sex-val" class="gauge-val" style="font-size: 19px;">Male</span>
+          <span class="gauge-unit">Reference Model</span>
+        </div>
+        <div class="gauge-label" style="margin-top: 8px;">Biological Sex</div>
+        <span id="gauge-sex-badge" class="gauge-status-badge badge-normal">Standard Baseline</span>
+        <div class="sex-toggle-group">
+          <button type="button" class="sex-toggle-btn active" id="btn-sex-male">👨 Male</button>
+          <button type="button" class="sex-toggle-btn" id="btn-sex-female">👩 Female</button>
+        </div>
+        <input type="hidden" id="p-sex" value="male">
+      </div>
+
+      <!-- 3. Body Mass Index (BMI) & Height/Weight Auto-Calculator -->
+      <div class="health-gauge-card" id="card-gauge-bmi">
+        <div class="gauge-svg-wrap">
+          <svg class="gauge-svg" viewBox="0 0 120 120">
+            <circle class="gauge-bg" cx="60" cy="60" r="48" />
+            <circle id="gauge-bmi-stroke" class="gauge-stroke stroke-emerald" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 180;" />
+          </svg>
+          <div class="gauge-center-content">
+            <span class="gauge-icon">⚖️</span>
+            <span id="gauge-bmi-val" class="gauge-val">22.0</span>
+            <span class="gauge-unit">kg/m²</span>
+          </div>
+        </div>
+        <div class="gauge-label">Body Mass Index</div>
+        <span class="gauge-sublabel">Auto-computed from Height & Weight</span>
+        <span id="gauge-bmi-badge" class="gauge-status-badge badge-normal">Normal</span>
+
+        <!-- Quick Height & Weight Inputs -->
+        <div class="ht-wt-quick-box">
+          <div class="ht-wt-field">
+            <label for="input-height">Height (cm)</label>
+            <input type="number" id="input-height" class="ht-wt-num-input" placeholder="172" min="50" max="250" step="0.5" title="Enter height in cm (e.g. 172)">
+          </div>
+          <div class="ht-wt-field">
+            <label for="input-weight">Weight (kg)</label>
+            <input type="number" id="input-weight" class="ht-wt-num-input" placeholder="68" min="20" max="300" step="0.5" title="Enter weight in kg (e.g. 68)">
+          </div>
+        </div>
+
+        <div class="slider-container">
+          <input type="range" id="p-bmi" class="range-slider" min="10.0" max="60.0" value="22.0" step="0.1">
+          <div class="slider-limits">
+            <span>10 kg/m²</span>
+            <span>60 kg/m²</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Systolic Blood Pressure -->
+      <div class="health-gauge-card" id="card-gauge-sbp">
+        <div class="gauge-svg-wrap">
+          <svg class="gauge-svg" viewBox="0 0 120 120">
+            <circle class="gauge-bg" cx="60" cy="60" r="48" />
+            <circle id="gauge-sbp-stroke" class="gauge-stroke stroke-emerald" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 150;" />
+          </svg>
+          <div class="gauge-center-content">
+            <span class="gauge-icon">🫀</span>
+            <span id="gauge-sbp-val" class="gauge-val">115</span>
+            <span class="gauge-unit">mmHg</span>
+          </div>
+        </div>
+        <div class="gauge-label">Systolic BP</div>
+        <span class="gauge-sublabel">Peak Arterial Pressure (&lt;120 Optimal)</span>
+        <span id="gauge-sbp-badge" class="gauge-status-badge badge-normal">Optimal</span>
+        <div class="slider-container">
+          <input type="range" id="p-sbp" class="range-slider" min="70" max="240" value="115" step="1">
+          <div class="slider-limits">
+            <span>70 mmHg</span>
+            <span>240 mmHg</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Diastolic Blood Pressure -->
+      <div class="health-gauge-card" id="card-gauge-dbp">
+        <div class="gauge-svg-wrap">
+          <svg class="gauge-svg" viewBox="0 0 120 120">
+            <circle class="gauge-bg" cx="60" cy="60" r="48" />
+            <circle id="gauge-dbp-stroke" class="gauge-stroke stroke-emerald" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 140;" />
+          </svg>
+          <div class="gauge-center-content">
+            <span class="gauge-icon">🩸</span>
+            <span id="gauge-dbp-val" class="gauge-val">75</span>
+            <span class="gauge-unit">mmHg</span>
+          </div>
+        </div>
+        <div class="gauge-label">Diastolic BP</div>
+        <span class="gauge-sublabel">Resting Pressure (&lt;80 Optimal)</span>
+        <span id="gauge-dbp-badge" class="gauge-status-badge badge-normal">Optimal</span>
+        <div class="slider-container">
+          <input type="range" id="p-dbp" class="range-slider" min="40" max="140" value="75" step="1">
+          <div class="slider-limits">
+            <span>40 mmHg</span>
+            <span>140 mmHg</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Fasting Blood Glucose -->
+      <div class="health-gauge-card" id="card-gauge-fbg">
+        <div class="gauge-svg-wrap">
+          <svg class="gauge-svg" viewBox="0 0 120 120">
+            <circle class="gauge-bg" cx="60" cy="60" r="48" />
+            <circle id="gauge-fbg-stroke" class="gauge-stroke stroke-emerald" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 170;" />
+          </svg>
+          <div class="gauge-center-content">
+            <span class="gauge-icon">🍬</span>
+            <span id="gauge-fbg-val" class="gauge-val">90</span>
+            <span class="gauge-unit">mg/dL</span>
+          </div>
+        </div>
+        <div class="gauge-label">Fasting Glucose</div>
+        <span class="gauge-sublabel">Morning Blood Sugar (70–99 Normal)</span>
+        <span id="gauge-fbg-badge" class="gauge-status-badge badge-normal">Normal</span>
+        <div class="slider-container">
+          <input type="range" id="p-fbg" class="range-slider" min="50" max="350" value="90" step="1">
+          <div class="slider-limits">
+            <span>50 mg/dL</span>
+            <span>350 mg/dL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. HbA1c Glycated Hemoglobin -->
+      <div class="health-gauge-card" id="card-gauge-hba1c">
+        <div class="gauge-svg-wrap">
+          <svg class="gauge-svg" viewBox="0 0 120 120">
+            <circle class="gauge-bg" cx="60" cy="60" r="48" />
+            <circle id="gauge-hba1c-stroke" class="gauge-stroke stroke-emerald" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 200;" />
+          </svg>
+          <div class="gauge-center-content">
+            <span class="gauge-icon">🔬</span>
+            <span id="gauge-hba1c-val" class="gauge-val">5.2</span>
+            <span class="gauge-unit">%</span>
+          </div>
+        </div>
+        <div class="gauge-label">HbA1c</div>
+        <span class="gauge-sublabel">3-Month Sugar Avg (&lt;5.7% Normal)</span>
+        <span id="gauge-hba1c-badge" class="gauge-status-badge badge-normal">Normal</span>
+        <div class="slider-container">
+          <input type="range" id="p-hba1c" class="range-slider" min="3.5" max="16.0" value="5.2" step="0.1">
+          <div class="slider-limits">
+            <span>3.5%</span>
+            <span>16.0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. Serum Creatinine -->
+      <div class="health-gauge-card" id="card-gauge-creat">
+        <div class="gauge-svg-wrap">
+          <svg class="gauge-svg" viewBox="0 0 120 120">
+            <circle class="gauge-bg" cx="60" cy="60" r="48" />
+            <circle id="gauge-creat-stroke" class="gauge-stroke stroke-emerald" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 190;" />
+          </svg>
+          <div class="gauge-center-content">
+            <span class="gauge-icon">🩺</span>
+            <span id="gauge-creat-val" class="gauge-val">0.9</span>
+            <span class="gauge-unit">mg/dL</span>
+          </div>
+        </div>
+        <div class="gauge-label">Serum Creatinine</div>
+        <span class="gauge-sublabel">Kidney Waste Filter (0.6–1.2 Normal)</span>
+        <span id="gauge-creat-badge" class="gauge-status-badge badge-normal">Normal</span>
+        <div class="slider-container">
+          <input type="range" id="p-creat" class="range-slider" min="0.2" max="10.0" value="0.9" step="0.1">
+          <div class="slider-limits">
+            <span>0.2 mg/dL</span>
+            <span>10.0 mg/dL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. eGFR Filtration -->
+      <div class="health-gauge-card" id="card-gauge-egfr">
+        <div class="gauge-svg-wrap">
+          <svg class="gauge-svg" viewBox="0 0 120 120">
+            <circle class="gauge-bg" cx="60" cy="60" r="48" />
+            <circle id="gauge-egfr-stroke" class="gauge-stroke stroke-gold" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 80;" />
+          </svg>
+          <div class="gauge-center-content">
+            <span class="gauge-icon">💧</span>
+            <span id="gauge-egfr-val" class="gauge-val">100</span>
+            <span class="gauge-unit">mL/min</span>
+          </div>
+        </div>
+        <div class="gauge-label">eGFR Filtration</div>
+        <span class="gauge-sublabel">Kidney Filtration Rate (&gt;90 Optimal)</span>
+        <span id="gauge-egfr-badge" class="gauge-status-badge badge-normal">Optimal</span>
+        <div class="slider-container">
+          <input type="range" id="p-egfr" class="range-slider" min="5" max="140" value="100" step="1">
+          <div class="slider-limits">
+            <span>5 mL/min</span>
+            <span>140 mL/min</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10. Serum Potassium -->
+      <div class="health-gauge-card" id="card-gauge-pot">
+        <div class="gauge-svg-wrap">
+          <svg class="gauge-svg" viewBox="0 0 120 120">
+            <circle class="gauge-bg" cx="60" cy="60" r="48" />
+            <circle id="gauge-pot-stroke" class="gauge-stroke stroke-emerald" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 160;" />
+          </svg>
+          <div class="gauge-center-content">
+            <span class="gauge-icon">🧪</span>
+            <span id="gauge-pot-val" class="gauge-val">4.2</span>
+            <span class="gauge-unit">mEq/L</span>
+          </div>
+        </div>
+        <div class="gauge-label">Serum Potassium</div>
+        <span class="gauge-sublabel">Heart Rhythm Electrolyte (3.5–5.0)</span>
+        <span id="gauge-pot-badge" class="gauge-status-badge badge-normal">Normal</span>
+        <div class="slider-container">
+          <input type="range" id="p-pot" class="range-slider" min="2.5" max="7.5" value="4.2" step="0.1">
+          <div class="slider-limits">
+            <span>2.5 mEq/L</span>
+            <span>7.5 mEq/L</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 11. Serum Sodium -->
+      <div class="health-gauge-card" id="card-gauge-sod">
+        <div class="gauge-svg-wrap">
+          <svg class="gauge-svg" viewBox="0 0 120 120">
+            <circle class="gauge-bg" cx="60" cy="60" r="48" />
+            <circle id="gauge-sod-stroke" class="gauge-stroke stroke-emerald" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 150;" />
+          </svg>
+          <div class="gauge-center-content">
+            <span class="gauge-icon">🧂</span>
+            <span id="gauge-sod-val" class="gauge-val">140</span>
+            <span class="gauge-unit">mEq/L</span>
+          </div>
+        </div>
+        <div class="gauge-label">Serum Sodium</div>
+        <span class="gauge-sublabel">Fluid Balance Electrolyte (135–145)</span>
+        <span id="gauge-sod-badge" class="gauge-status-badge badge-normal">Normal</span>
+        <div class="slider-container">
+          <input type="range" id="p-sod" class="range-slider" min="110" max="170" value="140" step="1">
+          <div class="slider-limits">
+            <span>110 mEq/L</span>
+            <span>170 mEq/L</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Optional Hidden Summary field for backward compatibility -->
+    <input type="hidden" id="p-summary" value="">
+  </div>
+
+  <!-- Multi-Disease Risk Assessment Results & Explainability Bento Row -->
+  <div class="bento-grid">
+    <div class="bento-col-12 card" id="assessment-results-card">
+      <div class="card-header">
+        <div class="card-title">📊 Multi-Disease Risk Assessment Results</div>
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-transfer-diet" class="btn btn-gold" style="padding: 6px 12px; font-size: 12px;">
+            🥗 Proceed to Personalized Diet Planning ➡️
+          </button>
+        </div>
+      </div>
+
+      <!-- Risk Meters Trio -->
+      <div class="risk-dashboard-grid">
+        <!-- CKD -->
+        <div class="risk-meter-card low active-meter" id="meter-ckd">
+          <div style="font-weight: 700; color: #ffffff; font-size: 13.5px;">Chronic Kidney Disease</div>
+          <div class="risk-circle">
+            <span class="risk-score-num" id="score-ckd">5.3%</span>
+            <span style="font-size: 9px; color: var(--text-muted); text-transform: uppercase;">Score</span>
+          </div>
+          <span class="risk-badge badge-low" id="badge-ckd">LOW</span>
+          <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 6px;">
+            Low: &lt;50% | Mod: 50-75% | High: &gt;75%
+          </div>
+        </div>
+
+        <!-- Hypertension -->
+        <div class="risk-meter-card low" id="meter-hypertension">
+          <div style="font-weight: 700; color: #ffffff; font-size: 13.5px;">Hypertension</div>
+          <div class="risk-circle">
+            <span class="risk-score-num" id="score-hypertension">5.7%</span>
+            <span style="font-size: 9px; color: var(--text-muted); text-transform: uppercase;">Score</span>
+          </div>
+          <span class="risk-badge badge-low" id="badge-hypertension">LOW</span>
+          <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 6px;">
+            Low: &lt;50% | Mod: 50-75% | High: &gt;75%
+          </div>
+        </div>
+
+        <!-- Diabetes -->
+        <div class="risk-meter-card low" id="meter-diabetes">
+          <div style="font-weight: 700; color: #ffffff; font-size: 13.5px;">Type 2 Diabetes</div>
+          <div class="risk-circle">
+            <span class="risk-score-num" id="score-diabetes">8.9%</span>
+            <span style="font-size: 9px; color: var(--text-muted); text-transform: uppercase;">Score</span>
+          </div>
+          <span class="risk-badge badge-low" id="badge-diabetes">LOW</span>
+          <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 6px;">
+            Low: &lt;50% | Mod: 50-75% | High: &gt;75%
+          </div>
+        </div>
+      </div>
+
+      <!-- Detected Clinical Conditions -->
+      <div style="margin-bottom: 14px;">
+        <div style="font-size: 12px; font-weight: 700; color: var(--secondary-gold); margin-bottom: 6px;">
+          Detected Chronic Conditions:
+        </div>
+        <div id="detected-conditions-tags" style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <span class="risk-badge badge-low">✅ No High Clinical Comorbidities Detected</span>
+        </div>
+      </div>
+
+      <!-- Clinical Explainability Container -->
+      <div style="background: rgba(18, 9, 14, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px;">
+        <div class="card-header" style="margin-bottom: 12px;">
+          <div class="card-title" style="font-size: 13.5px;">
+            💡 Explainable AI Clinical Insights &amp; Action Plan
+          </div>
+          <div class="explain-disease-tabs">
+            <button class="explain-tab-btn active" id="tab-btn-ckd">CKD</button>
+            <button class="explain-tab-btn" id="tab-btn-hypertension">Hypertension</button>
+            <button class="explain-tab-btn" id="tab-btn-diabetes">Diabetes</button>
+          </div>
+        </div>
+
+        <div id="explain-card-content">
+          <div style="color: var(--text-muted); font-size: 12.5px; padding: 12px; text-align: center;">
+            Awaiting patient evaluation. Run assessment to view tailored clinical explanations and actionable recommendations.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+

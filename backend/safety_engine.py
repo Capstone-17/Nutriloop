@@ -2,7 +2,17 @@
 Medical Constraint Engine with Safety Guardrails
 Implements medical guidelines and safety checks for diet recommendations
 """
+
 from __future__ import annotations
+
+
+import os
+import sys
+
+# Globally prevent Python from writing .pyc files or creating __pycache__ directories
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
 
 from dataclasses import dataclass
 from enum import Enum

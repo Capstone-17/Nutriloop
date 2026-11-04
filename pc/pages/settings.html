@@ -1,0 +1,130 @@
+<!-- ──────────────────────────────────────────────────────────────────────────
+     PAGE: System & Models (AI Engine, Ollama Model Manager, Persistence)
+     ────────────────────────────────────────────────────────────────────────── -->
+<div class="page-content" id="page-settings">
+
+  <div class="bento-grid">
+
+    <!-- AI Engine Provider Configuration -->
+    <div class="bento-col-12 card">
+      <div class="card-header">
+        <div class="card-title">🤖 AI Assistant Engine &amp; Cloud API Provider</div>
+      </div>
+      <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 14px;">
+        Choose which intelligence engine powers the Dr. Nutriloop chat assistant. By default, it auto-detects local Ollama and falls back cleanly to the Offline Rule-Based Clinical Knowledge Base with zero downtime.
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Active AI Provider</label>
+          <select id="ai-engine-select" class="form-select">
+            <option value="auto">Auto-Detect (Local Ollama → Offline Fallback)</option>
+            <option value="ollama">Local Ollama (llama3.2:3b)</option>
+            <option value="gemini">Google Gemini (Requires API Key)</option>
+            <option value="openai">OpenAI GPT-4o-mini (Requires API Key)</option>
+            <option value="offline">Offline Clinical Knowledge Base (Zero Internet)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Optional Cloud API Key (Stored Locally in SQLite)</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="password" id="ai-api-key-input" class="form-input" placeholder="Paste Gemini / OpenAI Key..." style="flex: 1;">
+            <button id="btn-save-ai-key" class="btn btn-gold" style="white-space: nowrap;">
+              💾 Save Key
+            </button>
+          </div>
+          <span id="ai-key-status" style="font-size: 11px; color: var(--secondary-light); margin-top: 3px;"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Local Ollama Model Management Card -->
+    <div class="bento-col-7 card">
+      <div class="card-header">
+        <div class="card-title">🤖 Local Ollama AI Model Manager</div>
+        <button id="btn-refresh-ollama" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;">
+          🔄 Refresh Status
+        </button>
+      </div>
+
+      <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 14px;">
+        The application includes an embedded local Ollama runtime with zero external setup required. Click below to install the recommended clinical model. Once downloaded, the background service terminates automatically to save system resources.
+      </div>
+
+      <div class="status-pill" style="margin-bottom: 14px; border-radius: var(--radius-sm); justify-content: space-between; width: 100%;">
+        <div>
+          <strong>Ollama Engine:</strong> <span id="ollama-service-status">Detecting...</span>
+        </div>
+        <div>
+          <span id="ollama-installed-badge" class="risk-badge badge-low" style="display:none;">Model Ready</span>
+        </div>
+      </div>
+
+      <!-- Model Download Section with Pause, Resume, and Cancel -->
+      <div style="background: var(--bg-input); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-card);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div>
+            <strong style="color: #ffffff; font-size: 14px;">Clinical Model: llama3.2:3b</strong>
+            <div style="font-size: 11px; color: var(--text-muted);">High-efficiency 3B parameters (~2.0 GB). Runs locally on CPU/GPU with zero external telemetry.</div>
+          </div>
+        </div>
+
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="model-progress-fill"></div>
+        </div>
+        <div id="model-progress-text" style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
+          Status: Ready
+        </div>
+
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <button id="btn-install-model" class="btn btn-primary" style="flex: 2; min-width: 180px;">
+            ⬇️ 1-Click Install llama3.2:3b Model
+          </button>
+          <button id="btn-pause-model" class="btn btn-secondary" style="flex: 1; min-width: 100px; display: none;">
+            ⏸️ Pause
+          </button>
+          <button id="btn-cancel-model" class="btn btn-secondary" style="flex: 1; min-width: 100px; display: none; color: #fb7185;">
+            🛑 Cancel
+          </button>
+          <button id="btn-delete-model" class="btn btn-danger" style="flex: 1; min-width: 130px; display: none; background: #be123c; border-color: #f43f5e; color: #ffffff;">
+            🗑️ Delete Model
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Local Reports & Data Storage Card -->
+    <div class="bento-col-5 card">
+      <div class="card-header">
+        <div class="card-title">📁 Local Persistence &amp; Saved Reports</div>
+        <button id="btn-open-folder" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;">
+          📂 Open in Explorer
+        </button>
+      </div>
+
+      <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 12px;">
+        All test assessments, generated 7-day diet plans, and medical charts are saved locally inside <code style="color:var(--secondary-gold); font-family:var(--font-mono);">Nutriloop_Data/</code>.
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label class="form-label">Database File:</label>
+        <input type="text" id="settings-db-path" class="form-input" readonly value="Nutriloop_Data/app_data.db" style="font-size: 11.5px; font-family: var(--font-mono);">
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label class="form-label">Storage Folder:</label>
+        <input type="text" id="settings-data-dir" class="form-input" readonly value="./Nutriloop_Data" style="font-size: 11.5px; font-family: var(--font-mono);">
+      </div>
+
+      <div class="card-header" style="margin-top: 14px;">
+        <div class="card-title" style="font-size: 13px;">Recent Saved Reports</div>
+      </div>
+      <div id="saved-reports-list" style="max-height: 140px; overflow-y: auto;">
+        <div style="font-size: 12px; color: var(--text-muted);">Loading saved reports...</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+

@@ -34,7 +34,7 @@ datas = [
     (str(REPO_ROOT / "bin"), "bin"),
     (str(REPO_ROOT / "datasets"), "datasets"),
     (str(REPO_ROOT / "pc"), "pc"),
-] + collect_data_files("sklearn")
+] + collect_data_files("sklearn") + collect_data_files("rapidocr_onnxruntime")
 
 # Hidden imports required by dynamic reflection / C-extensions
 hidden_imports = [
@@ -48,6 +48,10 @@ hidden_imports = [
     "sqlite3",
     "httpx",
     "pydantic",
+    "rapidocr_onnxruntime",
+    "onnxruntime",
+    "cv2",
+    "PIL",
     "scipy",
     "scipy.special",
     "scipy.optimize",
@@ -64,10 +68,15 @@ hidden_imports = [
     "backend.chatbot.agent",
     "backend.chatbot.tools",
     "backend.chatbot.system_prompt",
+    "backend.chatbot.risk_analysis",
+    "backend.lab_agent",
+    "fitz",
+    "pypdf",
     "backend.db",
     "backend.medical_knowledge",
     "backend.model_registry",
     "backend.raw_input",
+    "backend.regional_dish_catalog",
     "backend.reporting",
     "backend.rules",
     "backend.safety_engine",

@@ -130,10 +130,12 @@ def get_icon_path() -> Optional[Path]:
 
 def _background_warmup() -> None:
     """
-    Asynchronously pre-warm clinical risk models and heavy engines in the background
-    while the native window and UI finish opening.
+    Asynchronously pre-warm clinical risk models and heavy engines in the background.
+    Deferred by 3.5s so initial window presentation and DOM rendering are completely unhindered.
     """
     try:
+        import time
+        time.sleep(3.5)
         from backend.model_registry import registry
         for disease in ["ckd", "hypertension", "diabetes"]:
             registry.ensure_model_loaded(disease)
@@ -256,7 +258,10 @@ def main() -> None:
             except Exception:
                 pass
 
-        # 4. Immediate hard exit (bypasses thread joins, COM teardown delays, and DLL unload lag)
+        # 4. Clean purge of any temporary __pycache__ directories
+        _purge_pycache()
+
+        # 5. Immediate hard exit (bypasses thread joins, COM teardown delays, and DLL unload lag)
         os._exit(0)
 
     window.events.closing += _fast_shutdown

@@ -321,17 +321,18 @@ def save_patient_test(
     try:
         cur = conn.cursor()
         labs = raw_inputs.get("test_reports", raw_inputs)
-        age = int(raw_inputs.get("age_years", 50) or 50)
-        sex = str(raw_inputs.get("sex", "male")).lower()
-        bmi = float(raw_inputs.get("body_mass_index", 25.0) or 25.0)
-        sbp = float(labs.get("systolic_bp_mmhg", 120.0) or 120.0)
-        dbp = float(labs.get("diastolic_bp_mmhg", 80.0) or 80.0)
-        fbg = float(labs.get("fasting_glucose_mg_dl", 100.0) or 100.0)
+        age = int(raw_inputs.get("age_years", raw_inputs.get("age", 50)) or 50)
+        raw_sex = raw_inputs.get("sex", raw_inputs.get("gender", "male"))
+        sex = "female" if str(raw_sex).lower() in ("0", "female", "f") else "male"
+        bmi = float(raw_inputs.get("body_mass_index", raw_inputs.get("bmi", 25.0)) or 25.0)
+        sbp = float(labs.get("systolic_bp_mmhg", labs.get("bp_systolic", 120.0)) or 120.0)
+        dbp = float(labs.get("diastolic_bp_mmhg", labs.get("bp_diastolic", 80.0)) or 80.0)
+        fbg = float(labs.get("fasting_glucose_mg_dl", labs.get("fasting_glucose", 90.0)) or 90.0)
         hba1c = float(labs.get("hba1c_pct")) if labs.get("hba1c_pct") is not None else None
-        sc = float(labs.get("serum_creatinine_mg_dl")) if labs.get("serum_creatinine_mg_dl") is not None else None
-        egfr = float(labs.get("egfr_ml_min")) if labs.get("egfr_ml_min") is not None else None
-        pot = float(labs.get("serum_potassium_meq_l")) if labs.get("serum_potassium_meq_l") is not None else None
-        sod = float(labs.get("serum_sodium_meq_l")) if labs.get("serum_sodium_meq_l") is not None else None
+        sc = float(labs.get("serum_creatinine_mg_dl", labs.get("serum_creatinine"))) if labs.get("serum_creatinine_mg_dl") is not None or labs.get("serum_creatinine") is not None else None
+        egfr = float(labs.get("egfr_ml_min", labs.get("egfr"))) if labs.get("egfr_ml_min") is not None or labs.get("egfr") is not None else None
+        pot = float(labs.get("serum_potassium_meq_l", labs.get("serum_potassium"))) if labs.get("serum_potassium_meq_l") is not None or labs.get("serum_potassium") is not None else None
+        sod = float(labs.get("serum_sodium_meq_l", labs.get("serum_sodium"))) if labs.get("serum_sodium_meq_l") is not None or labs.get("serum_sodium") is not None else None
         summary = str(labs.get("report_summary_text", "") or "")
 
         cur.execute(

@@ -3,13 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nutriloop - Clinical Nutrition & Chronic Disease Management</title>
+  <title>Nutriloop - Clinical Nutrition &amp; Chronic Disease Management</title>
   <link rel="icon" type="image/x-icon" href="../assets/Nutriloop_1.ico">
   <link rel="shortcut icon" href="../assets/Nutriloop_1.ico">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
 
   <div class="app-shell">
 
@@ -50,11 +49,11 @@
 
         <!-- Navigation Group: System & Preferences -->
         <div class="sidebar-nav-group">
-          <div class="sidebar-nav-heading">System & Models</div>
+          <div class="sidebar-nav-heading">System &amp; Models</div>
           <div class="sidebar-nav-list">
             <button class="nav-tab" data-tab="tab-settings">
               <span class="nav-tab-icon">⚙️</span>
-              <span>Local AI & Saved Data</span>
+              <span>Local AI &amp; Saved Data</span>
             </button>
           </div>
         </div>
@@ -75,741 +74,74 @@
     </aside>
 
     <!-- ──────────────────────────────────────────────────────────────────────────
-         Main Viewport Area
+         Main Viewport Area (Steady Full Topbar + Isolated Page Stage)
          ────────────────────────────────────────────────────────────────────────── -->
     <div class="app-viewport gradient-mesh">
 
-      <!-- Main Content Tabs -->
+      <!-- Real-Time Clinical Topbar (Steady Across All Pages) -->
+      <header class="app-topbar" id="app-topbar">
+        <!-- Left: Live Clock, Date & Active Interval (Takes more presence) -->
+        <div class="topbar-left">
+          <div class="live-clock-badge" id="live-clock-badge">
+            <span class="clock-icon">📅</span>
+            <span id="clock-day-date" class="topbar-date">Tuesday, Nov 3</span>
+            <span class="topbar-sep">•</span>
+            <span id="clock-time" class="topbar-time">6:45 PM</span>
+            <span class="topbar-sep">•</span>
+            <span class="active-meal-pill" id="clock-active-meal">🥗 Active Interval: Dinner</span>
+          </div>
+        </div>
+
+        <!-- Center: Prominent Lab Test Guidance Action -->
+        <div class="topbar-center">
+          <button type="button" id="btn-show-lab-guide" class="btn-topbar-lab-guide" title="Click to view recommended diagnostic packages & blood tests">
+            💡 Which Lab Test Should I Submit?
+          </button>
+        </div>
+
+        <!-- Right: Status Indicator & Notification Bell pinned to far right corner -->
+        <div class="topbar-right">
+          <div class="topbar-status-indicator" id="topbar-status-indicator" title="Clinical AI Engine Offline/Local Mode">
+            <span class="status-dot"></span>
+            <span class="status-label" id="topbar-status-label">Clinical Engine Active</span>
+          </div>
+          <div class="notif-bell-wrap">
+            <button type="button" id="btn-notif-bell" class="btn-topbar-bell" title="Adherence &amp; Motivational Follow-ups">
+              🔔 <span id="notif-count-badge" class="notif-badge">1</span>
+            </button>
+            <div id="notif-dropdown" class="notif-dropdown" style="display: none;">
+              <div class="notif-dropdown-header">
+                <span>🌟 Daily Adherence &amp; Motivation</span>
+                <button type="button" id="btn-close-notif" class="notif-close-btn">&times;</button>
+              </div>
+              <div class="notif-dropdown-body" id="notif-list-container">
+                <div class="notif-item unread">
+                  <span class="notif-item-icon">☀️</span>
+                  <div class="notif-item-content">
+                    <div class="notif-item-title">Morning Adherence Check-In</div>
+                    <div class="notif-item-desc">Stay hydrated and enjoy your potassium-balanced breakfast. You're doing amazing on your health journey! 💪✨</div>
+                    <span class="notif-item-time">9:00 AM Check-In</span>
+                  </div>
+                </div>
+                <div class="notif-item unread">
+                  <span class="notif-item-icon">🥗</span>
+                  <div class="notif-item-content">
+                    <div class="notif-item-title">Evening Dinner &amp; Cheat Buffer Check</div>
+                    <div class="notif-item-desc">Dinner is approaching. Did you have any off-diet snacks today? You can report them to Dr. Nutriloop for instant meal rebalancing! 👏🌟</div>
+                    <span class="notif-item-time">6:30 PM Reminder</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Dynamic Content Container: Isolated Micro-Page Stage -->
       <main class="app-main">
-
-        <!-- ──────────────────────────────────────────────────────────────────
-             TAB 1: Patient Lab Assessment (Full Slider-Driven Health Monitors)
-             ────────────────────────────────────────────────────────────────── -->
-        <section id="tab-assessment" class="tab-pane active">
-
-          <!-- Top Toolbar: History Presets & Primary Assessment Action -->
-          <div class="vitals-toolbar">
-            <div class="history-select-bar">
-              <div class="history-select-wrapper">
-                <span class="history-select-icon">📜</span>
-                <select id="preset-selector" class="history-select" title="Select a previous test report for this patient">
-                  <option value="">-- No Previous Test Reports --</option>
-                </select>
-              </div>
-              <button id="btn-delete-test" class="btn-delete-report" title="Permanently delete this test report" style="display: none;">
-                🗑️ Delete
-              </button>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <span id="assessment-status-badge" class="risk-badge badge-low" style="display: none;">
-                ✅ Assessed
-              </span>
-              <button id="btn-assess-patient" class="btn btn-primary">
-                ⚡ Run Multi-Disease Risk Assessment
-              </button>
-            </div>
-          </div>
-
-          <!-- 11 Interactive Health Monitor Cards with Real-Time Sliders -->
-          <div class="card" style="margin-bottom: 20px;">
-            <div class="card-header">
-              <div class="card-title">
-                <span>⚡</span> Real-Time Clinical Vitals & Lab Biomarkers
-              </div>
-              <span class="risk-badge badge-moderate">Interactive Slider Controls</span>
-            </div>
-
-            <div class="health-monitors-grid">
-
-              <!-- 1. Patient Age -->
-              <div class="health-gauge-card" id="card-gauge-age">
-                <div class="gauge-svg-wrap">
-                  <svg class="gauge-svg" viewBox="0 0 120 120">
-                    <circle class="gauge-bg" cx="60" cy="60" r="48" />
-                    <circle id="gauge-age-stroke" class="gauge-stroke stroke-gold" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 170;" />
-                  </svg>
-                  <div class="gauge-center-content">
-                    <span class="gauge-icon">🎂</span>
-                    <span id="gauge-age-val" class="gauge-val">45</span>
-                    <span class="gauge-unit">Years</span>
-                  </div>
-                </div>
-                <div class="gauge-label">Patient Age</div>
-                <span id="gauge-age-badge" class="gauge-status-badge badge-normal">Adult Baseline</span>
-                <div class="slider-container">
-                  <input type="range" id="p-age" class="range-slider" min="18" max="100" value="45" step="1">
-                  <div class="slider-limits">
-                    <span>18 yrs</span>
-                    <span>100 yrs</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 2. Biological Sex Toggle -->
-              <div class="health-gauge-card" id="card-gauge-sex">
-                <div class="gauge-center-content-standalone">
-                  <span class="gauge-icon" style="font-size: 24px; margin-bottom: 4px;">⚧️</span>
-                  <span id="gauge-sex-val" class="gauge-val" style="font-size: 19px;">Male</span>
-                  <span class="gauge-unit">Reference Model</span>
-                </div>
-                <div class="gauge-label" style="margin-top: 8px;">Biological Sex</div>
-                <span id="gauge-sex-badge" class="gauge-status-badge badge-normal">Standard Baseline</span>
-                <div class="sex-toggle-group">
-                  <button type="button" class="sex-toggle-btn active" id="btn-sex-male">👨 Male</button>
-                  <button type="button" class="sex-toggle-btn" id="btn-sex-female">👩 Female</button>
-                </div>
-                <input type="hidden" id="p-sex" value="male">
-              </div>
-
-              <!-- 3. Body Mass Index (BMI) -->
-              <div class="health-gauge-card" id="card-gauge-bmi">
-                <div class="gauge-svg-wrap">
-                  <svg class="gauge-svg" viewBox="0 0 120 120">
-                    <circle class="gauge-bg" cx="60" cy="60" r="48" />
-                    <circle id="gauge-bmi-stroke" class="gauge-stroke stroke-emerald" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 180;" />
-                  </svg>
-                  <div class="gauge-center-content">
-                    <span class="gauge-icon">⚖️</span>
-                    <span id="gauge-bmi-val" class="gauge-val">22.0</span>
-                    <span class="gauge-unit">kg/m²</span>
-                  </div>
-                </div>
-                <div class="gauge-label">Body Mass Index</div>
-                <span id="gauge-bmi-badge" class="gauge-status-badge badge-normal">Normal</span>
-                <div class="slider-container">
-                  <input type="range" id="p-bmi" class="range-slider" min="10.0" max="60.0" value="22.0" step="0.1">
-                  <div class="slider-limits">
-                    <span>10 kg/m²</span>
-                    <span>60 kg/m²</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 4. Systolic Blood Pressure -->
-              <div class="health-gauge-card" id="card-gauge-sbp">
-                <div class="gauge-svg-wrap">
-                  <svg class="gauge-svg" viewBox="0 0 120 120">
-                    <circle class="gauge-bg" cx="60" cy="60" r="48" />
-                    <circle id="gauge-sbp-stroke" class="gauge-stroke stroke-emerald" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 150;" />
-                  </svg>
-                  <div class="gauge-center-content">
-                    <span class="gauge-icon">🫀</span>
-                    <span id="gauge-sbp-val" class="gauge-val">115</span>
-                    <span class="gauge-unit">mmHg</span>
-                  </div>
-                </div>
-                <div class="gauge-label">Systolic BP</div>
-                <span id="gauge-sbp-badge" class="gauge-status-badge badge-normal">Optimal</span>
-                <div class="slider-container">
-                  <input type="range" id="p-sbp" class="range-slider" min="70" max="240" value="115" step="1">
-                  <div class="slider-limits">
-                    <span>70 mmHg</span>
-                    <span>240 mmHg</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 5. Diastolic Blood Pressure -->
-              <div class="health-gauge-card" id="card-gauge-dbp">
-                <div class="gauge-svg-wrap">
-                  <svg class="gauge-svg" viewBox="0 0 120 120">
-                    <circle class="gauge-bg" cx="60" cy="60" r="48" />
-                    <circle id="gauge-dbp-stroke" class="gauge-stroke stroke-emerald" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 140;" />
-                  </svg>
-                  <div class="gauge-center-content">
-                    <span class="gauge-icon">🩸</span>
-                    <span id="gauge-dbp-val" class="gauge-val">75</span>
-                    <span class="gauge-unit">mmHg</span>
-                  </div>
-                </div>
-                <div class="gauge-label">Diastolic BP</div>
-                <span id="gauge-dbp-badge" class="gauge-status-badge badge-normal">Optimal</span>
-                <div class="slider-container">
-                  <input type="range" id="p-dbp" class="range-slider" min="40" max="140" value="75" step="1">
-                  <div class="slider-limits">
-                    <span>40 mmHg</span>
-                    <span>140 mmHg</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 6. Fasting Blood Glucose -->
-              <div class="health-gauge-card" id="card-gauge-fbg">
-                <div class="gauge-svg-wrap">
-                  <svg class="gauge-svg" viewBox="0 0 120 120">
-                    <circle class="gauge-bg" cx="60" cy="60" r="48" />
-                    <circle id="gauge-fbg-stroke" class="gauge-stroke stroke-emerald" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 170;" />
-                  </svg>
-                  <div class="gauge-center-content">
-                    <span class="gauge-icon">🍬</span>
-                    <span id="gauge-fbg-val" class="gauge-val">90</span>
-                    <span class="gauge-unit">mg/dL</span>
-                  </div>
-                </div>
-                <div class="gauge-label">Fasting Glucose</div>
-                <span id="gauge-fbg-badge" class="gauge-status-badge badge-normal">Normal</span>
-                <div class="slider-container">
-                  <input type="range" id="p-fbg" class="range-slider" min="50" max="350" value="90" step="1">
-                  <div class="slider-limits">
-                    <span>50 mg/dL</span>
-                    <span>350 mg/dL</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 7. HbA1c Glycated Hemoglobin -->
-              <div class="health-gauge-card" id="card-gauge-hba1c">
-                <div class="gauge-svg-wrap">
-                  <svg class="gauge-svg" viewBox="0 0 120 120">
-                    <circle class="gauge-bg" cx="60" cy="60" r="48" />
-                    <circle id="gauge-hba1c-stroke" class="gauge-stroke stroke-emerald" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 200;" />
-                  </svg>
-                  <div class="gauge-center-content">
-                    <span class="gauge-icon">🔬</span>
-                    <span id="gauge-hba1c-val" class="gauge-val">5.2</span>
-                    <span class="gauge-unit">%</span>
-                  </div>
-                </div>
-                <div class="gauge-label">HbA1c</div>
-                <span id="gauge-hba1c-badge" class="gauge-status-badge badge-normal">Normal</span>
-                <div class="slider-container">
-                  <input type="range" id="p-hba1c" class="range-slider" min="3.5" max="16.0" value="5.2" step="0.1">
-                  <div class="slider-limits">
-                    <span>3.5%</span>
-                    <span>16.0%</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 8. Serum Creatinine -->
-              <div class="health-gauge-card" id="card-gauge-creat">
-                <div class="gauge-svg-wrap">
-                  <svg class="gauge-svg" viewBox="0 0 120 120">
-                    <circle class="gauge-bg" cx="60" cy="60" r="48" />
-                    <circle id="gauge-creat-stroke" class="gauge-stroke stroke-emerald" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 190;" />
-                  </svg>
-                  <div class="gauge-center-content">
-                    <span class="gauge-icon">🩺</span>
-                    <span id="gauge-creat-val" class="gauge-val">0.9</span>
-                    <span class="gauge-unit">mg/dL</span>
-                  </div>
-                </div>
-                <div class="gauge-label">Serum Creatinine</div>
-                <span id="gauge-creat-badge" class="gauge-status-badge badge-normal">Normal</span>
-                <div class="slider-container">
-                  <input type="range" id="p-creat" class="range-slider" min="0.2" max="10.0" value="0.9" step="0.1">
-                  <div class="slider-limits">
-                    <span>0.2 mg/dL</span>
-                    <span>10.0 mg/dL</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 9. eGFR Filtration -->
-              <div class="health-gauge-card" id="card-gauge-egfr">
-                <div class="gauge-svg-wrap">
-                  <svg class="gauge-svg" viewBox="0 0 120 120">
-                    <circle class="gauge-bg" cx="60" cy="60" r="48" />
-                    <circle id="gauge-egfr-stroke" class="gauge-stroke stroke-gold" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 80;" />
-                  </svg>
-                  <div class="gauge-center-content">
-                    <span class="gauge-icon">💧</span>
-                    <span id="gauge-egfr-val" class="gauge-val">100</span>
-                    <span class="gauge-unit">mL/min</span>
-                  </div>
-                </div>
-                <div class="gauge-label">eGFR Filtration</div>
-                <span id="gauge-egfr-badge" class="gauge-status-badge badge-normal">Optimal</span>
-                <div class="slider-container">
-                  <input type="range" id="p-egfr" class="range-slider" min="5" max="140" value="100" step="1">
-                  <div class="slider-limits">
-                    <span>5 mL/min</span>
-                    <span>140 mL/min</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 10. Serum Potassium -->
-              <div class="health-gauge-card" id="card-gauge-pot">
-                <div class="gauge-svg-wrap">
-                  <svg class="gauge-svg" viewBox="0 0 120 120">
-                    <circle class="gauge-bg" cx="60" cy="60" r="48" />
-                    <circle id="gauge-pot-stroke" class="gauge-stroke stroke-emerald" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 160;" />
-                  </svg>
-                  <div class="gauge-center-content">
-                    <span class="gauge-icon">🧪</span>
-                    <span id="gauge-pot-val" class="gauge-val">4.2</span>
-                    <span class="gauge-unit">mEq/L</span>
-                  </div>
-                </div>
-                <div class="gauge-label">Serum Potassium</div>
-                <span id="gauge-pot-badge" class="gauge-status-badge badge-normal">Normal</span>
-                <div class="slider-container">
-                  <input type="range" id="p-pot" class="range-slider" min="2.5" max="7.5" value="4.2" step="0.1">
-                  <div class="slider-limits">
-                    <span>2.5 mEq/L</span>
-                    <span>7.5 mEq/L</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 11. Serum Sodium -->
-              <div class="health-gauge-card" id="card-gauge-sod">
-                <div class="gauge-svg-wrap">
-                  <svg class="gauge-svg" viewBox="0 0 120 120">
-                    <circle class="gauge-bg" cx="60" cy="60" r="48" />
-                    <circle id="gauge-sod-stroke" class="gauge-stroke stroke-emerald" cx="60" cy="60" r="48" style="stroke-dasharray: 301.6; stroke-dashoffset: 150;" />
-                  </svg>
-                  <div class="gauge-center-content">
-                    <span class="gauge-icon">🧂</span>
-                    <span id="gauge-sod-val" class="gauge-val">140</span>
-                    <span class="gauge-unit">mEq/L</span>
-                  </div>
-                </div>
-                <div class="gauge-label">Serum Sodium</div>
-                <span id="gauge-sod-badge" class="gauge-status-badge badge-normal">Normal</span>
-                <div class="slider-container">
-                  <input type="range" id="p-sod" class="range-slider" min="110" max="170" value="140" step="1">
-                  <div class="slider-limits">
-                    <span>110 mEq/L</span>
-                    <span>170 mEq/L</span>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            <!-- Optional Hidden Summary field for backward compatibility -->
-            <input type="hidden" id="p-summary" value="">
-          </div>
-
-          <!-- Multi-Disease Risk Assessment Results & Explainability Bento Row -->
-          <div class="bento-grid">
-            <div class="bento-col-12 card" id="assessment-results-card">
-              <div class="card-header">
-                <div class="card-title">📊 Multi-Disease Risk Assessment Results</div>
-                <div style="display: flex; gap: 8px;">
-                  <button id="btn-transfer-diet" class="btn btn-gold" style="padding: 6px 12px; font-size: 12px;">
-                    🥗 Proceed to Personalized Diet Planning ➡️
-                  </button>
-                </div>
-              </div>
-
-              <!-- Risk Meters Trio -->
-              <div class="risk-dashboard-grid">
-                <!-- CKD -->
-                <div class="risk-meter-card low active-meter" id="meter-ckd">
-                  <div style="font-weight: 700; color: #ffffff; font-size: 13.5px;">Chronic Kidney Disease</div>
-                  <div class="risk-circle">
-                    <span class="risk-score-num" id="score-ckd">5.3%</span>
-                    <span style="font-size: 9px; color: var(--text-muted); text-transform: uppercase;">Score</span>
-                  </div>
-                  <span class="risk-badge badge-low" id="badge-ckd">LOW</span>
-                  <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 6px;">
-                    Low: &lt;50% | Mod: 50-75% | High: &gt;75%
-                  </div>
-                </div>
-
-                <!-- Hypertension -->
-                <div class="risk-meter-card low" id="meter-hypertension">
-                  <div style="font-weight: 700; color: #ffffff; font-size: 13.5px;">Hypertension</div>
-                  <div class="risk-circle">
-                    <span class="risk-score-num" id="score-hypertension">5.7%</span>
-                    <span style="font-size: 9px; color: var(--text-muted); text-transform: uppercase;">Score</span>
-                  </div>
-                  <span class="risk-badge badge-low" id="badge-hypertension">LOW</span>
-                  <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 6px;">
-                    Low: &lt;50% | Mod: 50-75% | High: &gt;75%
-                  </div>
-                </div>
-
-                <!-- Diabetes -->
-                <div class="risk-meter-card low" id="meter-diabetes">
-                  <div style="font-weight: 700; color: #ffffff; font-size: 13.5px;">Type 2 Diabetes</div>
-                  <div class="risk-circle">
-                    <span class="risk-score-num" id="score-diabetes">8.9%</span>
-                    <span style="font-size: 9px; color: var(--text-muted); text-transform: uppercase;">Score</span>
-                  </div>
-                  <span class="risk-badge badge-low" id="badge-diabetes">LOW</span>
-                  <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 6px;">
-                    Low: &lt;50% | Mod: 50-75% | High: &gt;75%
-                  </div>
-                </div>
-              </div>
-
-              <!-- Detected Clinical Conditions -->
-              <div style="margin-bottom: 14px;">
-                <div style="font-size: 12px; font-weight: 700; color: var(--secondary-gold); margin-bottom: 6px;">
-                  Detected Chronic Conditions:
-                </div>
-                <div id="detected-conditions-tags" style="display: flex; gap: 6px; flex-wrap: wrap;">
-                  <span class="risk-badge badge-low">✅ No High Clinical Comorbidities Detected</span>
-                </div>
-              </div>
-
-              <!-- Clinical Explainability Container -->
-              <div style="background: rgba(18, 9, 14, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px;">
-                <div class="card-header" style="margin-bottom: 12px;">
-                  <div class="card-title" style="font-size: 13.5px;">
-                    💡 Explainable AI Clinical Insights & Action Plan
-                  </div>
-                  <div class="explain-disease-tabs">
-                    <button class="explain-tab-btn active" id="tab-btn-ckd">CKD</button>
-                    <button class="explain-tab-btn" id="tab-btn-hypertension">Hypertension</button>
-                    <button class="explain-tab-btn" id="tab-btn-diabetes">Diabetes</button>
-                  </div>
-                </div>
-
-                <div id="explain-card-content">
-                  <div style="color: var(--text-muted); font-size: 12.5px; padding: 12px; text-align: center;">
-                    Awaiting patient evaluation. Run assessment to view tailored clinical explanations and actionable recommendations.
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-        </section>
-
-        <!-- ──────────────────────────────────────────────────────────────────
-             TAB 2: 7-Day Regional Weekly Diet
-             ────────────────────────────────────────────────────────────────── -->
-        <section id="tab-diet" class="tab-pane">
-          <!-- Historical Test Warning Banner -->
-          <div id="diet-historical-warning" class="craving-strategy-box" style="display: none; border-left-color: var(--secondary); background: rgba(245, 158, 11, 0.1);">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 16px;">⚠️</span>
-              <div>
-                <strong style="color: var(--secondary-light);">Historical Test Selected:</strong> Meal plan is being calibrated against report from <span id="diet-warning-date" style="font-weight: 700; text-decoration: underline;">--</span>, not your latest test result.
-              </div>
-            </div>
-          </div>
-
-          <div class="diet-layout-stack">
-
-            <!-- 1. Patient Cultural & Culinary Profile (Top Full-Width Card) -->
-            <div class="card" id="culinary-profile-card">
-              <div class="card-header">
-                <div class="card-title">🍽️ Patient Cultural &amp; Culinary Profile</div>
-                <span class="risk-badge badge-normal" style="font-size: 11.5px;">Precision Rebalancing Engine</span>
-              </div>
-
-              <!-- Top Row: Cuisine, Pattern, Cooking Skill, Max Prep Time -->
-              <div class="diet-profile-grid">
-                <div class="form-group">
-                  <label class="form-label">Regional Cuisine (Native Place)</label>
-                  <select id="diet-cuisine" class="form-select">
-                    <option value="South Indian" selected>South Indian (Dosa, Idli, Rasam, Sambar)</option>
-                    <option value="North Indian">North Indian (Roti, Dal, Paneer, Sabzi)</option>
-                    <option value="Western Indian">Western Indian (Gujarati/Maharashtrian)</option>
-                    <option value="Eastern Indian">Eastern Indian (Bengali/Odia)</option>
-                    <option value="Continental">Continental / Western</option>
-                  </select>
-                  <input type="hidden" id="diet-region" value="South Indian">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Dietary Pattern</label>
-                  <select id="diet-type" class="form-select">
-                    <option value="vegetarian" selected>Vegetarian</option>
-                    <option value="non_vegetarian">Non-Vegetarian</option>
-                    <option value="vegan">Vegan</option>
-                    <option value="eggetarian">Eggetarian</option>
-                    <option value="jain">Jain (No Onion/Garlic)</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Cooking Skill</label>
-                  <select id="diet-cooking" class="form-select">
-                    <option value="intermediate" selected>Intermediate</option>
-                    <option value="beginner">Beginner</option>
-                    <option value="advanced">Advanced</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Max Prep Time (mins)</label>
-                  <input type="number" id="diet-time" class="form-input" value="30" min="10" max="120">
-                </div>
-              </div>
-
-              <!-- Second Row: Likes, Dislikes, Medications, Sunday Craving -->
-              <div class="diet-profile-grid" style="margin-top: 14px;">
-                <div class="form-group">
-                  <label class="form-label">Preferred Foods &amp; Interests (Likes)</label>
-                  <input type="text" id="diet-likes" class="form-input" value="millet, dalia, spinach" placeholder="e.g. oats, paneer, ragi, khichdi">
-                  <span class="input-hint">Separated by commas. Prioritized with ⭐ badge.</span>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Food Allergens &amp; Dislikes (Excluded)</label>
-                  <input type="text" id="diet-dislikes" class="form-input" value="" placeholder="e.g. None, peanuts, mushrooms">
-                  <span class="input-hint">Zero-tolerance clinical exclusion scrubber.</span>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Active Medications (Drug-Nutrient Check)</label>
-                  <input type="text" id="diet-meds" class="form-input" value="" placeholder="e.g. None, or metformin, lisinopril">
-                  <span class="input-hint">Cross-referenced against clinical pharmacopeia.</span>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">🎯 Smart Craving Sunday Treat (Optional)</label>
-                  <input type="text" id="diet-craving" class="form-input" value="" placeholder="e.g. Pizza, Gulab Jamun, Biryani">
-                  <span class="input-hint">Strictly budgeted for Sunday (Day 7) metabolic lock.</span>
-                </div>
-              </div>
-
-              <input type="hidden" id="diet-calories" value="">
-
-              <div class="diet-action-bar">
-                <button id="btn-generate-diet" class="btn btn-emerald" style="min-width: 320px; padding: 12px 24px; font-size: 14px; font-weight: 700;">
-                  🥗 Generate Personalized 7-Day Regional Diet
-                </button>
-              </div>
-            </div>
-
-            <!-- 2. 7-Day Clinically Rebalanced Diet Schedule (Bottom Full-Width Card) -->
-            <div class="card" id="diet-results-card">
-              <div class="card-header">
-                <div class="card-title">📅 7-Day Clinically Rebalanced Diet Schedule</div>
-                <div style="display: flex; gap: 8px;">
-                  <button id="btn-save-diet" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;" disabled>
-                    💾 Save Plan
-                  </button>
-                  <button id="btn-open-folder-diet" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">
-                    📂 Open Folder
-                  </button>
-                </div>
-              </div>
-
-              <div id="diet-placeholder" style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
-                <div style="font-size: 40px; margin-bottom: 12px; opacity: 0.7;">🥗</div>
-                <h4 style="color: #ffffff; margin-bottom: 6px;">No Diet Plan Generated Yet</h4>
-                <p style="font-size: 13px; max-width: 440px; margin: 0 auto;">
-                  Configure patient culinary preferences above and click "Generate Personalized 7-Day Regional Diet".
-                </p>
-              </div>
-
-              <!-- Container for actual results -->
-              <div id="weekly-plan-results" style="display: none;">
-                <!-- Craving Rebalancing Banner -->
-                <div id="diet-craving-box" class="craving-strategy-box" style="display: none;"></div>
-
-                <!-- Medication Alert Banner -->
-                <div id="diet-med-alerts" class="med-alert-box" style="display: none;"></div>
-
-                <!-- Macro Targets Row -->
-                <div id="diet-targets-row" class="nutri-targets-row"></div>
-
-                <!-- 7-Day Column Buttons Navigator (Easy click access for patient) -->
-                <div id="diet-day-nav" class="diet-days-bar"></div>
-
-                <!-- Active Selected Day View Container -->
-                <div id="diet-active-day-view" class="day-active-view">
-                  <div id="diet-active-day-header" class="day-active-header"></div>
-                  <div id="diet-active-day-meals" class="day-intervals-container"></div>
-                </div>
-
-                <!-- Grocery Checklist Container -->
-                <div id="diet-grocery-container" style="margin-top: 24px;">
-                  <div class="card-header">
-                    <div class="card-title" style="font-size: 13.5px;">🛒 Weekly Clinical Grocery Checklist</div>
-                  </div>
-                  <div id="diet-grocery-list"></div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </section>
-
-        <!-- ──────────────────────────────────────────────────────────────────
-             TAB 3: Dr. Nutriloop AI Chat
-             ────────────────────────────────────────────────────────────────── -->
-        <section id="tab-chat" class="tab-pane tab-chat-pane">
-          <div class="chat-container">
-            <div class="chat-header-bar">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <div class="chat-avatar bot-avatar">
-                  <img src="../assets/Nutriloop_2.png" alt="Dr. Nutriloop" class="bot-avatar-img">
-                </div>
-                <div>
-                  <div style="font-weight: 700; color: #ffffff; font-size: 14px;">Dr. Nutriloop Clinical AI Assistant</div>
-                  <div style="font-size: 11px; color: var(--secondary-gold);" id="chat-engine-status">Offline Medical Knowledge Base + Ollama LLM</div>
-                </div>
-              </div>
-              <div class="status-pill" id="chat-status-pill">
-                <span id="ollama-dot" class="status-dot offline"></span>
-                <span id="ollama-text">Checking Local Engine...</span>
-              </div>
-            </div>
-
-            <div class="chat-messages-scroll-area">
-              <div class="chat-messages-area" id="chat-history">
-                <div class="chat-msg assistant">
-                  <div class="chat-avatar bot-avatar">
-                    <img src="../assets/Nutriloop_2.png" alt="Dr. Nutriloop" class="bot-avatar-img">
-                  </div>
-                  <div class="chat-bubble">
-                    <p>Hello! I'm Nutriloop, your clinical nutrition assistant. How can I help you today with your diet, meals, or nutrition questions?</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- ChatGPT Style Bottom Dock -->
-            <div class="chat-bottom-dock">
-              <div class="chat-quick-chips">
-                <button type="button" class="chip-btn" onclick="sendQuickPrompt('What is a low-potassium breakfast for CKD Stage 3?')">
-                  🥣 Low-Potassium Breakfast
-                </button>
-                <button type="button" class="chip-btn" onclick="sendQuickPrompt('What regional South Indian foods are safe for diabetes?')">
-                  🍛 South Indian Diabetic Options
-                </button>
-                <button type="button" class="chip-btn" onclick="sendQuickPrompt('Can I eat bananas or oranges with kidney disease?')">
-                  🍌 Fruits & Renal Safety
-                </button>
-                <button type="button" class="chip-btn" onclick="sendQuickPrompt('I have severe chest pain and breathlessness')">
-                  🚨 Emergency Guardrail Test
-                </button>
-              </div>
-
-              <div class="chat-input-bar">
-                <input type="text" id="chat-input-text" class="chat-input" placeholder="Ask a question about your diet, food safety, or meal plan...">
-                <button id="btn-chat-send" class="btn btn-primary btn-chat-send">
-                  <span>Send</span> 💬
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- ──────────────────────────────────────────────────────────────────
-             TAB 4: Settings & Local Persistence
-             ────────────────────────────────────────────────────────────────── -->
-        <section id="tab-settings" class="tab-pane">
-          <div class="bento-grid">
-
-            <!-- AI Engine Provider Configuration -->
-            <div class="bento-col-12 card">
-              <div class="card-header">
-                <div class="card-title">🤖 AI Assistant Engine & Cloud API Provider</div>
-              </div>
-              <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 14px;">
-                Choose which intelligence engine powers the Dr. Nutriloop chat assistant. By default, it auto-detects local Ollama and falls back cleanly to the Offline Rule-Based Clinical Knowledge Base with zero downtime.
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Active AI Provider</label>
-                  <select id="ai-engine-select" class="form-select">
-                    <option value="auto">Auto-Detect (Local Ollama → Offline Fallback)</option>
-                    <option value="ollama">Local Ollama (llama3.2:3b)</option>
-                    <option value="gemini">Google Gemini (Requires API Key)</option>
-                    <option value="openai">OpenAI GPT-4o-mini (Requires API Key)</option>
-                    <option value="offline">Offline Clinical Knowledge Base (Zero Internet)</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Optional Cloud API Key (Stored Locally in SQLite)</label>
-                  <div style="display: flex; gap: 8px;">
-                    <input type="password" id="ai-api-key-input" class="form-input" placeholder="Paste Gemini / OpenAI Key..." style="flex: 1;">
-                    <button id="btn-save-ai-key" class="btn btn-gold" style="white-space: nowrap;">
-                      💾 Save Key
-                    </button>
-                  </div>
-                  <span id="ai-key-status" style="font-size: 11px; color: var(--secondary-light); margin-top: 3px;"></span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Local Ollama Model Management Card -->
-            <div class="bento-col-7 card">
-              <div class="card-header">
-                <div class="card-title">🤖 Local Ollama AI Model Manager</div>
-                <button id="btn-refresh-ollama" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;">
-                  🔄 Refresh Status
-                </button>
-              </div>
-
-              <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 14px;">
-                The application includes an embedded local Ollama runtime with zero external setup required. Click below to install the recommended clinical model. Once downloaded, the background service terminates automatically to save system resources.
-              </div>
-
-              <div class="status-pill" style="margin-bottom: 14px; border-radius: var(--radius-sm); justify-content: space-between; width: 100%;">
-                <div>
-                  <strong>Ollama Engine:</strong> <span id="ollama-service-status">Detecting...</span>
-                </div>
-                <div>
-                  <span id="ollama-installed-badge" class="risk-badge badge-low" style="display:none;">Model Ready</span>
-                </div>
-              </div>
-
-              <!-- Model Download Section with Pause, Resume, and Cancel -->
-              <div style="background: var(--bg-input); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-card);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                  <div>
-                    <strong style="color: #ffffff; font-size: 14px;">Clinical Model: llama3.2:3b</strong>
-                    <div style="font-size: 11px; color: var(--text-muted);">High-efficiency 3B parameters (~2.0 GB). Runs locally on CPU/GPU with zero external telemetry.</div>
-                  </div>
-                </div>
-
-                <div class="progress-bar-container">
-                  <div class="progress-bar-fill" id="model-progress-fill"></div>
-                </div>
-                <div id="model-progress-text" style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
-                  Status: Ready
-                </div>
-
-                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                  <button id="btn-install-model" class="btn btn-primary" style="flex: 2; min-width: 180px;">
-                    ⬇️ 1-Click Install llama3.2:3b Model
-                  </button>
-                  <button id="btn-pause-model" class="btn btn-secondary" style="flex: 1; min-width: 100px; display: none;">
-                    ⏸️ Pause
-                  </button>
-                  <button id="btn-cancel-model" class="btn btn-secondary" style="flex: 1; min-width: 100px; display: none; color: #fb7185;">
-                    🛑 Cancel
-                  </button>
-                  <button id="btn-delete-model" class="btn btn-danger" style="flex: 1; min-width: 130px; display: none; background: #be123c; border-color: #f43f5e; color: #ffffff;">
-                    🗑️ Delete Model
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Local Reports & Data Storage Card -->
-            <div class="bento-col-5 card">
-              <div class="card-header">
-                <div class="card-title">📁 Local Persistence & Saved Reports</div>
-                <button id="btn-open-folder" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;">
-                  📂 Open in Explorer
-                </button>
-              </div>
-
-              <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 12px;">
-                All test assessments, generated 7-day diet plans, and medical charts are saved locally inside <code style="color:var(--secondary-gold); font-family:var(--font-mono);">Nutriloop_Data/</code>.
-              </div>
-
-              <div style="margin-bottom: 12px;">
-                <label class="form-label">Database File:</label>
-                <input type="text" id="settings-db-path" class="form-input" readonly value="Nutriloop_Data/app_data.db" style="font-size: 11.5px; font-family: var(--font-mono);">
-              </div>
-
-              <div style="margin-bottom: 14px;">
-                <label class="form-label">Storage Folder:</label>
-                <input type="text" id="settings-data-dir" class="form-input" readonly value="./Nutriloop_Data" style="font-size: 11.5px; font-family: var(--font-mono);">
-              </div>
-
-              <div class="card-header" style="margin-top: 14px;">
-                <div class="card-title" style="font-size: 13px;">Recent Saved Reports</div>
-              </div>
-              <div id="saved-reports-list" style="max-height: 140px; overflow-y: auto;">
-                <div style="font-size: 12px; color: var(--text-muted);">Loading saved reports...</div>
-              </div>
-            </div>
-
-          </div>
-        </section>
-
+        <div id="page-stage" class="page-stage">
+          <!-- Dynamic Micro-Page Injected Here Without Any Cross-Tab Overlaps -->
+        </div>
       </main>
     </div>
   </div>
@@ -901,6 +233,112 @@
         </button>
         <button id="btn-dismiss-save-modal" class="btn btn-gold save-action-btn">
           <span>✓</span> Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────────────────────
+       Clinical Lab Test Package Guidance Modal
+       ────────────────────────────────────────────────────────────────────────── -->
+  <div id="modal-lab-guide" class="modal-backdrop" style="display: none;">
+    <div class="modal-card lab-guide-modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span style="font-size: 20px;">🩺</span>
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #fbbf24; line-height: 1.2;">Which Lab Test Should I Submit to Nutriloop?</div>
+            <div style="font-size: 11px; font-weight: 400; color: #94a3b8; margin-top: 2px;">Supported Formats: PDF, Word (.docx), and Clinical Text (.txt)</div>
+          </div>
+        </div>
+        <button id="btn-close-lab-guide" class="modal-close-btn" title="Close (ESC)">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="guide-intro-banner">
+          <div class="icon">📑</div>
+          <div class="text">
+            <strong>Deep Automated Parsing:</strong> You can upload any official blood, urine, or metabolic panel from diagnostic laboratories (e.g., <em>Dr. Lal PathLabs, Quest Diagnostics, Metropolis, Apollo, Thyrocare, SRL/Agilus</em>). You do not need to decipher medical abbreviations—our agent extracts and maps each biomarker to your sliders automatically!
+          </div>
+        </div>
+
+        <div class="guide-packages-grid">
+          <!-- Package 1 -->
+          <div class="guide-package-card">
+            <div class="guide-pkg-badge">⭐ Recommended Single Test</div>
+            <div class="guide-pkg-title">🏥 Master Health / Executive Wellness Panel</div>
+            <div class="guide-biomarker-tags">
+              <span class="guide-tag">HbA1c</span>
+              <span class="guide-tag">Glucose</span>
+              <span class="guide-tag">Creatinine</span>
+              <span class="guide-tag">eGFR</span>
+              <span class="guide-tag">K+ / Na+</span>
+              <span class="guide-tag">BP</span>
+              <span class="guide-tag">Lipids</span>
+            </div>
+            <div class="guide-pkg-desc">
+              The ideal single checkup. Bundles CBC, Kidney (KFT/RFT), Liver, Lipid Profile, 3-Month Glucose, and Physical Vitals on a single unified report.
+            </div>
+          </div>
+
+          <!-- Package 2 -->
+          <div class="guide-package-card">
+            <div class="guide-pkg-badge">🧪 Kidney &amp; Electrolytes</div>
+            <div class="guide-pkg-title">Kidney Function Test (KFT / RFT / CMP)</div>
+            <div class="guide-biomarker-tags">
+              <span class="guide-tag">Serum Creatinine</span>
+              <span class="guide-tag">eGFR</span>
+              <span class="guide-tag">Blood Urea</span>
+              <span class="guide-tag">Potassium (K+)</span>
+              <span class="guide-tag">Sodium (Na+)</span>
+            </div>
+            <div class="guide-pkg-desc">
+              Essential for KDIGO CKD staging. Evaluates glomerular filtration rate, potassium arrhythmia safety floors, and fluid retention limits.
+            </div>
+          </div>
+
+          <!-- Package 3 -->
+          <div class="guide-package-card">
+            <div class="guide-pkg-badge">🩸 Glycemic &amp; Metabolic Control</div>
+            <div class="guide-pkg-title">Diabetic Profile (HbA1c + Fasting Sugar)</div>
+            <div class="guide-biomarker-tags">
+              <span class="guide-tag">HbA1c (%)</span>
+              <span class="guide-tag">Fasting Glucose (FBG)</span>
+              <span class="guide-tag">Postprandial (PPBS)</span>
+            </div>
+            <div class="guide-pkg-desc">
+              HbA1c represents your average blood glucose over the last 90 days (&lt;5.7% Normal, 5.7–6.4% Prediabetes, &ge;6.5% Diabetes). Guides carbohydrate and craving limits.
+            </div>
+          </div>
+
+          <!-- Package 4 -->
+          <div class="guide-package-card">
+            <div class="guide-pkg-badge">🫀 Cardio &amp; Physical Anthropometry</div>
+            <div class="guide-pkg-title">Lipid Profile &amp; Vitals / BMI</div>
+            <div class="guide-biomarker-tags">
+              <span class="guide-tag">Systolic / Diastolic BP</span>
+              <span class="guide-tag">Height &amp; Weight (BMI)</span>
+              <span class="guide-tag">Cholesterol</span>
+            </div>
+            <div class="guide-pkg-desc">
+              Establishes DASH sodium thresholds (Stage 1/2 Hypertension) and basal caloric budgeting derived from your Height &amp; Weight measurements.
+            </div>
+          </div>
+        </div>
+
+        <div class="guide-callout-box">
+          <span style="font-size: 20px; line-height: 1;">💡</span>
+          <div>
+            <strong>Single-test slips are 100% welcome!</strong> You do not need a whole-body panel. If you only have an HbA1c slip, a blood pressure reading, or a kidney panel, upload it! The agent will extract those specific biomarkers and preserve your previous safe baselines for the rest.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-modal-upload-lab" class="btn btn-gold" style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 15px;">📁</span>
+          <span>Browse &amp; Upload Report Now</span>
+        </button>
+        <button id="btn-dismiss-lab-guide" class="btn btn-secondary">
+          <span>✕</span> Close
         </button>
       </div>
     </div>

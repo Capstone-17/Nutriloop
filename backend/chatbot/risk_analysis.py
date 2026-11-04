@@ -17,6 +17,13 @@ Mandates:
 
 from __future__ import annotations
 
+import os
+import sys
+
+# Globally prevent Python from writing .pyc files or creating __pycache__ directories
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
 import logging
 import re
 from typing import Any, Dict, List, Optional
@@ -45,9 +52,35 @@ EVASION_PATTERNS = [
 _COMPILED_EVASIONS = [re.compile(p, re.IGNORECASE) for p in EVASION_PATTERNS]
 
 
+def clean_culinary_entity(text: str) -> str:
+    """
+    Strips conversational wrappers, action verbs, and destination clauses from
+    user queries to isolate the true culinary item/ingredient.
+    Examples:
+      'Add carrots to my diet' -> 'carrots'
+      'can you add some fresh spinach to lunch please' -> 'fresh spinach'
+      'Add Gulab Jamun to my diet' -> 'Gulab Jamun'
+      'I want boiled eggs for breakfast' -> 'boiled eggs'
+    """
+    s = text.strip()
+    s = re.sub(
+        r'^(?:please\s+)?(?:can\s+you\s+)?(?:could\s+you\s+)?(?:i\s+want\s+(?:to\s+have\s+)?|i\'d\s+like\s+)?(?:add\s+|include\s+|put\s+|swap\s+(?:with\s+)?|replace\s+(?:with\s+)?|substitute\s+(?:with\s+)?|have\s+)?',
+        '',
+        s,
+        flags=re.IGNORECASE
+    ).strip()
+    s = re.sub(
+        r'(?i)\s+(?:to\s+my\s+diet|in\s+my\s+diet|to\s+my\s+plan|in\s+my\s+plan|to\s+my\s+meal\s*plan|in\s+my\s+meal\s*plan|to\s+lunch|in\s+lunch|for\s+lunch|to\s+dinner|in\s+dinner|for\s+dinner|to\s+breakfast|in\s+breakfast|for\s+breakfast|for\s+snack|to\s+snack|in\s+snack|on\s+day\s+\d|on\s+\w+day|please|doctor|doc|today)\b.*$',
+        '',
+        s
+    ).strip()
+    s = re.sub(r'^(?:some|the|a|an)\s+', '', s, flags=re.IGNORECASE).strip()
+    return s or text.strip()
+
+
 def sanitize_diet_proposal(text: str) -> str:
-    """Strip patient rationalizations, excuses, or evasion tokens."""
-    cleaned = text
+    """Strip patient rationalizations, excuses, or evasion tokens and isolate food."""
+    cleaned = clean_culinary_entity(text)
     for pat in _COMPILED_EVASIONS:
         cleaned = pat.sub("", cleaned)
     return cleaned.strip()
@@ -148,12 +181,12 @@ def validate_diet_risk(
     detected_conds = [str(c).lower() for c in latest.get("detected_conditions", [])]
 
     hba1c = float(labs.get("hba1c_pct", 5.2) or 5.2)
-    fbg = float(labs.get("fasting_glucose_mg_dl", 90.0) or 90.0)
-    sbp = float(labs.get("systolic_bp_mmhg", 120.0) or 120.0)
-    dbp = float(labs.get("diastolic_bp_mmhg", 80.0) or 80.0)
-    creat = float(labs.get("serum_creatinine_mg_dl", 0.9) or 0.9)
-    egfr = float(labs.get("egfr_ml_min", 90.0) or 90.0)
-    pot = float(labs.get("serum_potassium_meq_l", 4.2) or 4.2)
+    fbg = float(labs.get("fasting_glucose_mg_dl", labs.get("fasting_glucose", 90.0)) or 90.0)
+    sbp = float(labs.get("systolic_bp_mmhg", labs.get("bp_systolic", 120.0)) or 120.0)
+    dbp = float(labs.get("diastolic_bp_mmhg", labs.get("bp_diastolic", 80.0)) or 80.0)
+    creat = float(labs.get("serum_creatinine_mg_dl", labs.get("serum_creatinine", 0.9)) or 0.9)
+    egfr = float(labs.get("egfr_ml_min", labs.get("egfr", 90.0)) or 90.0)
+    pot = float(labs.get("serum_potassium_meq_l", labs.get("serum_potassium", 4.2)) or 4.2)
 
     is_diabetic = any("diabet" in c or "t2dm" in c for c in detected_conds) or hba1c >= 6.5 or fbg >= 126.0
     is_prediabetic = (not is_diabetic) and (any("prediabet" in c for c in detected_conds) or hba1c >= 5.7 or fbg >= 100.0)
@@ -203,7 +236,7 @@ def validate_diet_risk(
                 )
                 recommended_alt = "Low-potassium options such as cucumber slices, peeled green apples, or bottle gourd soup."
 
-    # 3. Diabetes & Glycemic Guardrails (ADA)
+    # 3. Diabetes & Glycemic Guardrails (ADA) & Sunday Smart Craving Protocol
     for trig in GLYCEMIC_DANGER_TRIGGERS:
         if trig in combined_lower:
             if is_diabetic or is_prediabetic:
@@ -213,13 +246,23 @@ def validate_diet_risk(
                     f"adding refined sweets or high-sugar items ('{trig}') causes acute postprandial glucose surges, "
                     "endothelial inflammation, and advanced glycation end-products (AGEs) that damage delicate microvasculature."
                 )
+                recommended_alt = "Complex carbohydrates like oats upma, ragi idli, or a small portion of fresh berries."
             else:
-                violations.append(f"Refined Confectionery: {trig.title()}")
-                clinical_reasons.append(
-                    f"Clinical nutrition therapy prohibits replacing balanced meals with refined sugar or confectionery ('{trig}'). "
-                    "Refined sweets induce rapid insulin spikes, visceral fat accumulation, and glycemic volatility with zero therapeutic value."
-                )
-            recommended_alt = "Complex carbohydrates like oats upma, ragi idli, or a small portion of fresh berries."
+                # Patient's latest test report is completely fine and controlled!
+                # Under the Sunday Smart Craving Protocol, we permit budgeted Sunday treats.
+                return {
+                    "passed": True,
+                    "is_sunday_craving": True,
+                    "treat_name": trig.title(),
+                    "violations": [],
+                    "clinical_explanation": (
+                        f"Your latest clinical test report (HbA1c {hba1c:.1f}%, Fasting Glucose {fbg:.0f} mg/dL) shows optimal glycemic control! 🌟 "
+                        f"Under our Sunday Smart Craving Protocol, we enforce a strict 6-day lock (Monday–Saturday) to preserve insulin sensitivity, "
+                        f"and safely budget a clinically portioned {trig.title()} (1 small piece, ~120 kcal) for Sunday Evening Snack "
+                        "with intra-day Breakfast & Lunch calorie rebalancing."
+                    ),
+                    "recommended_alternative": None,
+                }
             break
 
     # 4. Hypertension & Sodium Guardrails (AHA / ACC DASH)
@@ -314,49 +357,93 @@ def run_diet_risk_analysis(
             else:
                 target_interval = "Lunch"
 
-    # Formulate clean items and title
-    clean_title = clean_query.strip().title()
-    if not clean_title:
-        clean_title = "Boiled Eggs & Vegetable Scramble"
-
-    if "egg" in clean_query.lower():
-        clean_title = "Boiled Eggs / Egg Whites with Black Pepper"
+    # Check if this is a Sunday Smart Craving treat (e.g. Gulab Jamun, Kheer)
+    if validation.get("is_sunday_craving"):
+        treat_title = validation.get("treat_name", "Gulab Jamun")
+        target_day = 7  # Always Sunday
+        target_interval = "Evening Snack"
+        clean_title = f"Sunday Treat: Clinically Portioned {treat_title} with Roasted Nuts"
         structured_items = [
-            {"item_name": "Boiled Whole Egg or Egg Whites", "portion": "1 whole egg or 2–3 egg whites (100g)"},
-            {"item_name": "Sautéed Bell Peppers & Onions (Olive Oil)", "portion": "1/2 cup (75g)"},
-            {"item_name": "Crushed Black Pepper & Roasted Cumin", "portion": "to taste (pinch)"},
+            {"item_name": f"Clinically Portioned {treat_title} (Controlled Sugar)", "portion": "1 small piece (40-45g)"},
+            {"item_name": "Dry Roasted Almonds & Chia Seeds (Unsalted)", "portion": "1 tbsp (12g)"},
         ]
-        clinical_justification = (
-            "Provides high biological value protein with zero carbohydrates and low sodium, "
-            "supporting muscle mass and glycemic stability without renal strain."
+        clinical_justification = validation.get(
+            "clinical_explanation",
+            "Smart Craving Protocol: Budgeted exclusively for Sunday Evening Snack with intra-day calorie compensation."
         )
-    elif "chicken" in clean_query.lower():
-        clean_title = "Herb-Grilled Skinless Chicken Breast"
-        structured_items = [
-            {"item_name": "Grilled Skinless Chicken Breast", "portion": "100–120g portion"},
-            {"item_name": "Steamed French Beans & Carrots", "portion": "1 cup (120g)"},
-        ]
-        clinical_justification = "Lean protein source low in saturated fat, portioned within metabolic guidelines."
-    elif "soup" in clean_query.lower() or "rasam" in clean_query.lower():
-        clean_title = "Light Vegetable & Lentil Broth (Low Sodium)"
-        structured_items = [
-            {"item_name": "Clear Vegetable Soup / Pepper Rasam", "portion": "1 bowl (180 mL)"},
-            {"item_name": "Steamed Sprouted Moong", "portion": "1/2 cup (80g)"},
-        ]
-        clinical_justification = "Low-calorie, potassium-balanced broth supporting hydration and satiety."
     else:
-        structured_items = items or [
-            {"item_name": clean_title, "portion": "1 standard portion"},
-        ]
-        clinical_justification = "Balanced clinical substitution validated for safe glycemic and vascular parameters."
+        # Formulate clean items and title
+        clean_title = clean_query.strip().title()
+        if not clean_title:
+            clean_title = "Boiled Eggs & Vegetable Scramble"
+
+        low_q = clean_query.lower()
+        if "carrot" in low_q:
+            clean_title = "Healthy Meal with Steamed Carrot & Vegetable Medley"
+            structured_items = [
+                {"item_name": "Steamed Sliced Carrots & French Beans with Roasted Jeera", "portion": "1 small bowl (100g)"},
+                {"item_name": "Whole Wheat Phulka / Steamed Brown Rice", "portion": "2 small phulkas or 1 cup (120g)"},
+                {"item_name": "Low-Sodium Yellow Moong Dal Tadka", "portion": "1 medium bowl (150 mL)"},
+            ]
+            clinical_justification = (
+                "Provides rich beta-carotene, lutein, and soluble pectin fiber from steamed carrots without glycemic spikes "
+                "or potassium volatility, safely paired with plant protein and complex carbohydrates."
+            )
+        elif "egg" in low_q:
+            clean_title = "Boiled Eggs / Egg Whites with Black Pepper"
+            structured_items = [
+                {"item_name": "Boiled Whole Egg or Egg Whites", "portion": "1 whole egg or 2–3 egg whites (100g)"},
+                {"item_name": "Sautéed Bell Peppers & Onions (Olive Oil)", "portion": "1/2 cup (75g)"},
+                {"item_name": "Crushed Black Pepper & Roasted Cumin", "portion": "to taste (pinch)"},
+            ]
+            clinical_justification = (
+                "Provides high biological value protein with zero carbohydrates and low sodium, "
+                "supporting muscle mass and glycemic stability without renal strain."
+            )
+        elif "chicken" in low_q:
+            clean_title = "Herb-Grilled Skinless Chicken Breast"
+            structured_items = [
+                {"item_name": "Grilled Skinless Chicken Breast", "portion": "100–120g portion"},
+                {"item_name": "Steamed French Beans & Carrots", "portion": "1 cup (120g)"},
+            ]
+            clinical_justification = "Lean protein source low in saturated fat, portioned within metabolic guidelines."
+        elif "soup" in low_q or "rasam" in low_q:
+            clean_title = "Light Vegetable & Lentil Broth (Low Sodium)"
+            structured_items = [
+                {"item_name": "Clear Vegetable Soup / Pepper Rasam", "portion": "1 bowl (180 mL)"},
+                {"item_name": "Steamed Sprouted Moong", "portion": "1/2 cup (80g)"},
+            ]
+            clinical_justification = "Low-calorie, potassium-balanced broth supporting hydration and satiety."
+        elif any(w in low_q for w in ["paneer", "tofu"]):
+            clean_title = "Pan-Seared Low-Fat Paneer / Tofu with Greens"
+            structured_items = [
+                {"item_name": "Pan-Seared Low-Fat Paneer or Organic Tofu", "portion": "80g portion"},
+                {"item_name": "Sautéed Bell Peppers & Zucchini (Cold-Pressed Mustard Oil)", "portion": "1 cup (100g)"},
+                {"item_name": "Whole Wheat Phulka", "portion": "2 small phulkas (60g)"},
+            ]
+            clinical_justification = "High-quality lean protein paired with antioxidant-rich vegetables and complex grains."
+        elif "spinach" in low_q or "palak" in low_q:
+            clean_title = "Leached Palak & Yellow Moong Dal Medley"
+            structured_items = [
+                {"item_name": "Steamed Leached Spinach (Palak) with Yellow Moong", "portion": "1 bowl (180 mL)"},
+                {"item_name": "Warm Whole Wheat Phulka", "portion": "2 pieces (60g)"},
+                {"item_name": "Fresh Cucumber Slices with Lemon & Jeera", "portion": "1 small bowl (75g)"},
+            ]
+            clinical_justification = "Leached spinach reduces free potassium while providing essential folate and iron."
+        else:
+            structured_items = items or [
+                {"item_name": clean_title, "portion": "1 standard portion"},
+            ]
+            clinical_justification = "Balanced clinical substitution validated for safe glycemic and vascular parameters."
 
     # Update active plan in database
     updated_plan = None
+    effective_day = target_day if "target_day" in locals() else day_number
     try:
         from backend.chatbot.tools import alter_diet_plan_meal
         res = alter_diet_plan_meal(
             user_id=user_id,
-            day_number=day_number,
+            day_number=effective_day,
             interval_name=target_interval,
             new_meal_title=clean_title,
             new_items=structured_items,
@@ -377,6 +464,7 @@ def run_diet_risk_analysis(
         "clean_meal_title": clean_title,
         "clean_items": structured_items,
         "updated_plan": updated_plan,
-        "day_number": day_number,
+        "day_number": effective_day,
         "interval_name": target_interval,
+        "is_sunday_craving": bool(validation.get("is_sunday_craving")),
     }

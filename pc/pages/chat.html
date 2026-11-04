@@ -1,0 +1,67 @@
+<!-- ──────────────────────────────────────────────────────────────────────────
+     PAGE: NutriBot Clinical Assistant (ChatGPT Full-Height Conversational Stage)
+     ────────────────────────────────────────────────────────────────────────── -->
+<div class="page-content page-chat-content" id="page-chat">
+
+  <div class="chat-container">
+    <div class="chat-header-bar">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div class="chat-avatar bot-avatar">
+          <img src="../assets/Nutriloop_2.png" alt="Dr. Nutriloop" class="bot-avatar-img">
+        </div>
+        <div>
+          <div style="font-weight: 700; color: #ffffff; font-size: 14px;">Dr. Nutriloop Clinical AI Assistant</div>
+          <div style="font-size: 11px; color: var(--secondary-gold);" id="chat-engine-status">Offline Medical Knowledge Base + Ollama LLM</div>
+        </div>
+      </div>
+      <div class="status-pill" id="chat-status-pill">
+        <span id="ollama-dot" class="status-dot offline"></span>
+        <span id="ollama-text">Checking Local Engine...</span>
+      </div>
+    </div>
+
+    <div class="chat-messages-scroll-area">
+      <div class="chat-messages-area" id="chat-history">
+        <div class="chat-msg assistant">
+          <div class="chat-avatar bot-avatar">
+            <img src="../assets/Nutriloop_2.png" alt="Dr. Nutriloop" class="bot-avatar-img">
+          </div>
+          <div class="chat-bubble">
+            <p>Hello! I'm Nutriloop, your clinical nutrition assistant. How can I help you today with your diet, meals, or nutrition questions?</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ChatGPT Style Bottom Dock -->
+    <div class="chat-bottom-dock">
+      <div class="chat-quick-chips">
+        <button type="button" class="chip-btn" onclick="sendQuickPrompt('What is a low-potassium breakfast for CKD Stage 3?')">
+          🥣 Low-Potassium Breakfast
+        </button>
+        <button type="button" class="chip-btn" onclick="sendQuickPrompt('What regional South Indian foods are safe for diabetes?')">
+          🍛 South Indian Diabetic Options
+        </button>
+        <button type="button" class="chip-btn" onclick="sendQuickPrompt('Can I eat bananas or oranges with kidney disease?')">
+          🍌 Fruits &amp; Renal Safety
+        </button>
+        <button type="button" class="chip-btn" onclick="sendQuickPrompt('I have severe chest pain and breathlessness')">
+          🚨 Emergency Guardrail Test
+        </button>
+      </div>
+
+      <div class="chat-input-bar">
+        <button type="button" id="btn-chat-attach" class="btn-chat-attach" title="Attach Lab Report (.pdf, .docx, .txt)">
+          📎
+        </button>
+        <input type="file" id="chat-file-input" accept=".pdf,.docx,.doc,.txt" style="display: none;">
+        <input type="text" id="chat-input-text" class="chat-input" placeholder="Ask a question about your diet, food safety, or meal plan...">
+        <button id="btn-chat-send" class="btn btn-primary btn-chat-send">
+          <span>Send</span> 💬
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+

@@ -23,8 +23,16 @@ like existing API / terminal flows.  The schema already has this column
 
 from __future__ import annotations
 
+import os
+import sys
+
+# Globally prevent Python from writing .pyc files or creating __pycache__ directories
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
 import json
 import logging
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -474,6 +482,47 @@ def alter_diet_plan_meal(
     if not target_interval:
         return {"status": "error", "error": f"Meal interval '{interval_name}' not found on Day {day_number}."}
 
+    # Sanitize meal title and items against conversational noise (e.g. "Carrots to my diet")
+    from backend.chatbot.risk_analysis import clean_culinary_entity
+    cleaned_food = clean_culinary_entity(new_meal_title)
+    if "diet" in new_meal_title.lower() or "add " in new_meal_title.lower() or len(cleaned_food) < len(new_meal_title):
+        if "carrot" in cleaned_food.lower():
+            new_meal_title = "Steamed Carrot & Wholesome Vegetable Medley"
+            if not new_items or len(new_items) <= 1:
+                new_items = [
+                    {"item_name": "Steamed Sliced Carrots & French Beans with Roasted Jeera", "portion": "1 small bowl (100g)"},
+                    {"item_name": "Whole Wheat Phulka / Steamed Brown Rice", "portion": "2 small phulkas or 1 cup (120g)"},
+                    {"item_name": "Low-Sodium Yellow Moong Dal Tadka", "portion": "1 medium bowl (150 mL)"},
+                ]
+                clinical_justification = (
+                    "Provides rich beta-carotene, lutein, and soluble pectin fiber from steamed carrots without glycemic spikes "
+                    "or potassium volatility, safely paired with plant protein and complex grains."
+                )
+        elif "egg" in cleaned_food.lower():
+            new_meal_title = "Boiled Eggs / Egg Whites with Black Pepper"
+            if not new_items or len(new_items) <= 1:
+                new_items = [
+                    {"item_name": "Boiled Whole Egg or Egg Whites", "portion": "1 whole egg or 2–3 egg whites (100g)"},
+                    {"item_name": "Sautéed Bell Peppers & Onions (Olive Oil)", "portion": "1/2 cup (75g)"},
+                ]
+        elif cleaned_food:
+            new_meal_title = f"Nutrient-Balanced {cleaned_food.title()} Medley"
+
+    # Sanitize individual items to remove conversational artifacts
+    cleaned_items = []
+    for it in (new_items or []):
+        if isinstance(it, dict):
+            raw_name = str(it.get("item_name", ""))
+            cleaned_it_name = clean_culinary_entity(raw_name)
+            if "diet" in raw_name.lower() or "add " in raw_name.lower():
+                raw_name = f"Fresh Steamed {cleaned_it_name.title()}" if cleaned_it_name else raw_name
+            it_copy = dict(it)
+            it_copy["item_name"] = raw_name
+            cleaned_items.append(it_copy)
+        else:
+            cleaned_items.append(it)
+    new_items = cleaned_items
+
     # Update interval
     target_interval["meal_title"] = new_meal_title
     target_interval["items"] = new_items
@@ -531,15 +580,170 @@ def alter_diet_plan_meal(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Tool 7 — rebalance_off_diet_meal (Dynamic Intra-Day Compensation Engine)
+# ──────────────────────────────────────────────────────────────────────────────
+
+OFF_DIET_ESTIMATES: Dict[str, Dict[str, float]] = {
+    "samosa": {"calories": 260.0, "carbs_g": 24.0, "protein_g": 4.0, "sodium_mg": 340.0},
+    "samosas": {"calories": 260.0, "carbs_g": 24.0, "protein_g": 4.0, "sodium_mg": 340.0},
+    "pizza": {"calories": 285.0, "carbs_g": 32.0, "protein_g": 11.0, "sodium_mg": 550.0},
+    "burger": {"calories": 440.0, "carbs_g": 42.0, "protein_g": 17.0, "sodium_mg": 820.0},
+    "fries": {"calories": 320.0, "carbs_g": 40.0, "protein_g": 3.5, "sodium_mg": 310.0},
+    "french fries": {"calories": 320.0, "carbs_g": 40.0, "protein_g": 3.5, "sodium_mg": 310.0},
+    "pakora": {"calories": 180.0, "carbs_g": 16.0, "protein_g": 3.5, "sodium_mg": 260.0},
+    "pakoras": {"calories": 180.0, "carbs_g": 16.0, "protein_g": 3.5, "sodium_mg": 260.0},
+    "gulab jamun": {"calories": 150.0, "carbs_g": 26.0, "protein_g": 2.5, "sodium_mg": 45.0},
+    "jalebi": {"calories": 160.0, "carbs_g": 32.0, "protein_g": 1.5, "sodium_mg": 35.0},
+    "biryani": {"calories": 480.0, "carbs_g": 58.0, "protein_g": 18.0, "sodium_mg": 740.0},
+    "cake": {"calories": 310.0, "carbs_g": 44.0, "protein_g": 3.0, "sodium_mg": 180.0},
+    "pastry": {"calories": 320.0, "carbs_g": 45.0, "protein_g": 3.0, "sodium_mg": 190.0},
+    "ice cream": {"calories": 210.0, "carbs_g": 28.0, "protein_g": 4.0, "sodium_mg": 75.0},
+    "chips": {"calories": 160.0, "carbs_g": 15.0, "protein_g": 2.0, "sodium_mg": 180.0},
+    "noodles": {"calories": 380.0, "carbs_g": 52.0, "protein_g": 8.0, "sodium_mg": 920.0},
+    "maggi": {"calories": 380.0, "carbs_g": 52.0, "protein_g": 8.0, "sodium_mg": 920.0},
+}
+
+
+def rebalance_off_diet_meal(
+    user_id: str,
+    consumed_food: Optional[str] = None,
+    quantity: float = 1.0,
+    interval_name: Optional[str] = None,
+    day_number: Optional[int] = None,
+    consumed_description: Optional[str] = None,
+    meal_interval: Optional[str] = None,
+    **kwargs: Any,
+) -> Dict[str, Any]:
+    """
+    Dynamically recalculates today's remaining meal schedule when a patient reports
+    eating off-diet (e.g. 2 samosas, pizza, sweets).
+    Adjusts Dinner/subsequent intervals to buffer calories and sodium while strictly
+    enforcing clinical safety floors (>= 350 kcal, >= 15g protein).
+    """
+    food_input = consumed_description or consumed_food or "snack"
+    clean_food = str(food_input).lower().strip()
+    active_interval = meal_interval or interval_name or "Snack"
+    est = None
+    for k, v in OFF_DIET_ESTIMATES.items():
+        if k in clean_food:
+            est = v
+            break
+
+    if not est:
+        est = {"calories": 280.0, "carbs_g": 35.0, "protein_g": 6.0, "sodium_mg": 350.0}
+
+    total_off_cals = int(est["calories"] * max(1.0, quantity))
+    total_off_sod = int(est["sodium_mg"] * max(1.0, quantity))
+
+    # Determine day number
+    from datetime import datetime
+    if not day_number or not (1 <= day_number <= 7):
+        day_number = datetime.now().weekday() + 1  # 1 = Monday, 7 = Sunday
+
+    plan = get_active_weekly_plan(user_id)
+    if not plan:
+        try:
+            from backend.weekly_diet_engine import WeeklyDietEngine, WeeklyDietPlanRequest
+            engine = WeeklyDietEngine()
+            plan_resp = engine.generate_weekly_plan(WeeklyDietPlanRequest(
+                user_id=user_id,
+                cuisine_region="South Indian",
+                dietary_preference="Vegetarian"
+            ))
+            plan = plan_resp.model_dump() if hasattr(plan_resp, "model_dump") else dict(plan_resp)
+            save_active_weekly_plan(user_id, plan)
+        except Exception as exc:
+            log.warning("Could not auto-generate plan for rebalancing: %s", exc)
+            return {
+                "status": "error",
+                "error": "No active weekly plan found to rebalance.",
+                "consumed_cals": total_off_cals,
+                "consumed_sod": total_off_sod,
+            }
+
+    days = plan.get("days", [])
+    target_day = None
+    for d in days:
+        if d.get("day_number") == day_number:
+            target_day = d
+            break
+    if not target_day and len(days) >= day_number:
+        target_day = days[day_number - 1]
+
+    if not target_day:
+        return {"status": "error", "error": f"Day {day_number} not found."}
+
+    # Find Dinner interval to rebalance
+    dinner_interval = None
+    for inv in target_day.get("intervals", []):
+        if "dinner" in inv.get("interval_name", "").lower():
+            dinner_interval = inv
+            break
+
+    if not dinner_interval and target_day.get("intervals"):
+        dinner_interval = target_day.get("intervals")[-1]
+
+    cur_cals = int(dinner_interval.get("total_nutrients", {}).get("calories") or 480)
+    # Calculate buffer deduction, ensuring >= 350 kcal safety floor
+    cals_to_buffer = min(int(total_off_cals * 0.55), 180)
+    new_dinner_cals = max(350, cur_cals - cals_to_buffer)
+    saved_cals = cur_cals - new_dinner_cals
+
+    # Rebalance dinner items
+    dinner_interval["meal_title"] = f"Restorative Rebalanced Dinner (Compensating {food_input.title()})"
+    dinner_interval["items"] = [
+        {"item_name": "Clear Moong Dal & Bottle Gourd Broth with Mint & Cumin", "portion": "1.5 bowls (220 mL)"},
+        {"item_name": "Steamed Sliced Vegetables (Zucchini, French Beans, Carrots) with Lemon Pepper", "portion": "1 bowl (120g)"},
+        {"item_name": "Pan-Seared Organic Tofu or Low-Fat Paneer (Zero Salt Marinade)", "portion": "75g portion"},
+    ]
+    dinner_interval["total_nutrients"] = {
+        "calories": new_dinner_cals,
+        "protein_g": 21.5,
+        "sodium_mg": 125.0,
+    }
+    dinner_interval["clinical_justification"] = (
+        f"Intra-day restorative compensation: Dinner calories reduced by -{saved_cals} kcal and sodium minimized "
+        f"to absorb earlier off-diet {food_input} ({total_off_cals} kcal, {total_off_sod}mg Na) "
+        "while meeting daily nutritional limits and renal/glycemic safety thresholds."
+    )
+
+    # Recalculate daily totals
+    day_cals = sum(int(inv.get("total_nutrients", {}).get("calories") or 0) for inv in target_day.get("intervals", []))
+    day_pro = sum(float(inv.get("total_nutrients", {}).get("protein_g") or 0.0) for inv in target_day.get("intervals", []))
+    day_sod = sum(float(inv.get("total_nutrients", {}).get("sodium_mg") or 0.0) for inv in target_day.get("intervals", []))
+    target_day["daily_total_nutrients"] = {
+        "calories": int(day_cals),
+        "protein_g": round(day_pro, 1),
+        "sodium_mg": round(day_sod, 1),
+        "potassium_mg": target_day.get("daily_total_nutrients", {}).get("potassium_mg", 1800),
+    }
+
+    save_active_weekly_plan(user_id, plan)
+    log.info("[rebalance_off_diet_meal] Successfully rebalanced Day %d Dinner for user %s", day_number, user_id)
+
+    return {
+        "status": "success",
+        "day_number": day_number,
+        "consumed_food": food_input,
+        "consumed_calories": total_off_cals,
+        "consumed_sodium_mg": total_off_sod,
+        "dinner_saved_cals": saved_cals,
+        "new_dinner_calories": new_dinner_cals,
+        "updated_plan": plan,
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Tool dispatch registry (used by agent.py)
 # ──────────────────────────────────────────────────────────────────────────────
 
 TOOL_REGISTRY = {
-    "get_risk_profile":     get_risk_profile,
-    "get_diet_plan":        get_diet_plan,
-    "search_food_kb":       search_food_kb,
-    "log_meal":             log_meal,
-    "log_interaction":      log_interaction,
-    "alter_diet_plan_meal": alter_diet_plan_meal,
+    "get_risk_profile":        get_risk_profile,
+    "get_diet_plan":           get_diet_plan,
+    "search_food_kb":          search_food_kb,
+    "log_meal":                log_meal,
+    "log_interaction":         log_interaction,
+    "alter_diet_plan_meal":    alter_diet_plan_meal,
+    "rebalance_off_diet_meal": rebalance_off_diet_meal,
 }
 

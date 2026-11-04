@@ -7,6 +7,16 @@ KDOQI, ADA, and DASH dietary guidelines.
 """
 
 from __future__ import annotations
+
+
+import os
+import sys
+
+# Globally prevent Python from writing .pyc files or creating __pycache__ directories
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
+
 import json
 import logging
 from datetime import datetime, timezone

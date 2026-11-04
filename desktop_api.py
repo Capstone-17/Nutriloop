@@ -250,139 +250,108 @@ class DesktopAPI:
         if not text or not text.strip():
             return {"extracted": {}, "count": 0, "message": "No text provided to parse."}
 
-        t = text.lower()
-        extracted: Dict[str, Any] = {}
-
-        # 1. Blood Pressure (e.g. 142/90, 130 / 85 mmHg, BP: 140/90, SBP 140 DBP 90)
-        bp_match = re.search(r'(?:bp|blood\s*pressure)?(?:\s*\([^)]*\))?\s*[:=]?\s*(\d{2,3})\s*[/]\s*(\d{2,3})', t)
-        if bp_match:
-            sys_val = float(bp_match.group(1))
-            dia_val = float(bp_match.group(2))
-            if 60 <= sys_val <= 260 and 35 <= dia_val <= 160:
-                extracted["systolic_bp_mmhg"] = int(sys_val)
-                extracted["diastolic_bp_mmhg"] = int(dia_val)
-        else:
-            sbp_m = re.search(r'(?:systolic|sbp)(?:\s*\([^)]*\))?\s*[:=]?\s*(\d{2,3})', t)
-            if sbp_m:
-                v = float(sbp_m.group(1))
-                if 60 <= v <= 260:
-                    extracted["systolic_bp_mmhg"] = int(v)
-            dbp_m = re.search(r'(?:diastolic|dbp)(?:\s*\([^)]*\))?\s*[:=]?\s*(\d{2,3})', t)
-            if dbp_m:
-                v = float(dbp_m.group(1))
-                if 35 <= v <= 160:
-                    extracted["diastolic_bp_mmhg"] = int(v)
-
-        # 2. Fasting Blood Glucose (e.g. FBG: 126, FBS 110 mg/dL, Fasting glucose 95, Blood Sugar 140)
-        fbg_match = re.search(
-            r'(?:fasting\s*(?:blood\s*)?glucose|fasting\s*blood\s*sugar|fbg|fbs|fasting\s*sugar)(?:\s*\([^)]*\))?\s*[:=]?\s*(\d{2,3}(?:\.\d+)?)\s*(?:mg/dl)?',
-            t
-        )
-        if fbg_match:
-            val = float(fbg_match.group(1))
-            if 40 <= val <= 450:
-                extracted["fasting_glucose_mg_dl"] = round(val, 1)
-        else:
-            gluc_m = re.search(r'(?:blood\s*glucose|glucose)(?:\s*\([^)]*\))?\s*[:=]?\s*(\d{2,3}(?:\.\d+)?)\s*(?:mg/dl)?', t)
-            if gluc_m:
-                val = float(gluc_m.group(1))
-                if 40 <= val <= 450:
-                    extracted["fasting_glucose_mg_dl"] = round(val, 1)
-
-        # 3. HbA1c (e.g. HbA1c: 7.2%, A1C 6.5, Glycated Hemoglobin 7.8%, Glycosylated Hb (HbA1c) 7.1%)
-        hba1c_match = re.search(
-            r'(?:hba1c|a1c|glyc(?:ated|osylated)\s*h(?:a?emoglobin)?)(?:\s*\([^)]*\))?\s*[:=]?\s*(\d{1,2}(?:\.\d{1,2})?)\s*%?',
-            t
-        )
-        if hba1c_match:
-            val = float(hba1c_match.group(1))
-            if 3.0 <= val <= 20.0:
-                extracted["hba1c_pct"] = round(val, 1)
-
-        # 4. Serum Creatinine (e.g. Serum Creatinine: 1.4 mg/dL, S. Creat 1.1, Creatinine 0.9)
-        cr_match = re.search(
-            r'(?:serum\s*creatinine|s\.?\s*creat(?:inine)?|creatinine|s\.?\s*cr)(?:\s*\([^)]*\))?\s*[:=]?\s*(\d{1,2}(?:\.\d{1,2})?)\s*(?:mg/dl)?',
-            t
-        )
-        if cr_match:
-            val = float(cr_match.group(1))
-            if 0.1 <= val <= 25.0:
-                extracted["serum_creatinine_mg_dl"] = round(val, 2)
-
-        # 5. eGFR (e.g. eGFR: 45 mL/min, GFR 58, Estimated GFR: 92)
-        egfr_match = re.search(
-            r'(?:egfr|estimated\s*(?:glomerular\s*filtration\s*rate|gfr)|gfr)(?:\s*\([^)]*\))?\s*[:=]?\s*(\d{1,3}(?:\.\d{1,2})?)\s*(?:ml/min)?',
-            t
-        )
-        if egfr_match:
-            val = float(egfr_match.group(1))
-            if 5.0 <= val <= 160.0:
-                extracted["egfr_ml_min"] = round(val, 1)
-
-        # 6. Serum Potassium (e.g. Potassium: 4.5, K+: 4.8 mEq/L, Serum K 4.2)
-        pot_match = re.search(
-            r'(?:serum\s*potassium|potassium|k\+?)(?:\s*\([^)]*\))?\s*[:=]?\s*(\d{1,2}(?:\.\d{1,2})?)\s*(?:meq/l|mmol/l)?',
-            t
-        )
-        if pot_match:
-            val = float(pot_match.group(1))
-            if 2.0 <= val <= 8.5:
-                extracted["serum_potassium_meq_l"] = round(val, 1)
-
-        # 7. Serum Sodium (e.g. Sodium: 139, Na+: 141 mEq/L, Serum Na 140)
-        sod_match = re.search(
-            r'(?:serum\s*sodium|sodium|na\+?)(?:\s*\([^)]*\))?\s*[:=]?\s*(\d{2,3}(?:\.\d{1,2})?)\s*(?:meq/l|mmol/l)?',
-            t
-        )
-        if sod_match:
-            val = float(sod_match.group(1))
-            if 100.0 <= val <= 180.0:
-                extracted["serum_sodium_meq_l"] = int(val)
-
-        # 8. BMI (e.g. BMI: 28.4 kg/m2, Body Mass Index: 24.5)
-        bmi_match = re.search(
-            r'(?:body\s*mass\s*index|bmi)(?:\s*\([^)]*\))?\s*[:=]?\s*(\d{1,2}(?:\.\d{1,2})?)\s*(?:kg/m2)?',
-            t
-        )
-        if bmi_match:
-            val = float(bmi_match.group(1))
-            if 10.0 <= val <= 90.0:
-                extracted["body_mass_index"] = round(val, 1)
-
-        # 9. Age (e.g. 56-year-old, 56 yo, Age: 52, 45M)
-        age_match = re.search(
-            r'(?:age\s*[:=]?\s*(\d{1,3})|(\d{1,3})\s*(?:-|–|\s)?(?:year(?:s)?(?:-|\s)?old|yo|y/o|yr(?:s)?)\b)',
-            t
-        )
-        if age_match:
-            val_str = age_match.group(1) or age_match.group(2)
-            if val_str:
-                val = int(val_str)
-                if 18 <= val <= 100:
-                    extracted["age_years"] = val
-        else:
-            shorthand = re.search(r'\b(\d{2})\s*([mf])\b', t)
-            if shorthand:
-                val = int(shorthand.group(1))
-                if 18 <= val <= 100:
-                    extracted["age_years"] = val
-                    extracted["sex"] = "male" if shorthand.group(2) == 'm' else "female"
-
-        # 10. Sex (e.g. male, female, man, woman)
-        if "sex" not in extracted:
-            if re.search(r'\b(?:female|woman)\b', t):
-                extracted["sex"] = "female"
-            elif re.search(r'\b(?:male|man)\b', t):
-                extracted["sex"] = "male"
-
-        count = len(extracted)
-        names = list(extracted.keys())
+        from backend.lab_agent import LabDocumentAgent
+        res = LabDocumentAgent.parse_biomarkers(text)
+        vals = res.get("extracted_values", {})
         return {
-            "extracted": extracted,
-            "count": count,
-            "fields": names,
-            "message": f"Successfully extracted {count} biomarker(s) from report text!" if count > 0 else "No recognized clinical biomarkers found in the pasted text.",
+            "success": res.get("success", False),
+            "extracted": vals,
+            "count": len(vals),
+            "fields": list(vals.keys()),
+            "details": res.get("matched_details", {}),
+            "clinical_summary": res.get("clinical_summary", ""),
+            "message": f"Successfully extracted {len(vals)} clinical biomarker(s)!" if len(vals) > 0 else "No recognized clinical biomarkers found in the text.",
         }
+
+    def parse_lab_file(self, filename: str, file_base64: str) -> Dict[str, Any]:
+        """
+        Parses an uploaded lab report (.pdf, .docx, .txt) delivered via base64.
+        """
+        try:
+            import base64
+            # Strip data url prefix if present
+            if "," in file_base64:
+                file_base64 = file_base64.split(",", 1)[1]
+            raw_bytes = base64.b64decode(file_base64)
+            from backend.lab_agent import LabDocumentAgent
+            res = LabDocumentAgent.process_document(raw_bytes, filename=filename)
+            vals = res.get("extracted_values", {})
+            return {
+                "success": res.get("success", False),
+                "filename": filename,
+                "extracted": vals,
+                "count": len(vals),
+                "fields": list(vals.keys()),
+                "details": res.get("matched_details", {}),
+                "clinical_summary": res.get("clinical_summary", ""),
+                "message": f"Successfully parsed {len(vals)} biomarker(s) from '{filename}'!" if len(vals) > 0 else f"No recognizable clinical values found in '{filename}'.",
+            }
+        except Exception as exc:
+            log.exception("Error parsing lab file: %s", exc)
+            return {"success": False, "error": str(exc), "extracted": {}, "count": 0}
+
+    def select_and_parse_lab_file(self) -> Dict[str, Any]:
+        """
+        Opens a native Windows Open File dialog for the user to pick a lab report (.pdf, .docx, .txt).
+        Parses the chosen file and returns all extracted clinical biomarkers.
+        """
+        try:
+            import webview
+            if not webview.windows:
+                return {"success": False, "error": "Desktop window not available."}
+            file_types = (
+                "Clinical Lab Reports (*.pdf;*.docx;*.txt;*.doc)",
+                "PDF Reports (*.pdf)",
+                "Word Documents (*.docx;*.doc)",
+                "Text Reports (*.txt)",
+                "All Files (*.*)",
+            )
+            res = webview.windows[0].create_file_dialog(
+                webview.OPEN_DIALOG,
+                allow_multiple=False,
+                file_types=file_types,
+            )
+            if not res or len(res) == 0:
+                return {"success": False, "cancelled": True}
+
+            selected_path = res[0]
+            from backend.lab_agent import LabDocumentAgent
+            from pathlib import Path
+            p = Path(selected_path)
+            parse_res = LabDocumentAgent.process_document(selected_path, filename=p.name)
+            vals = parse_res.get("extracted_values", {})
+            return {
+                "success": parse_res.get("success", False),
+                "filename": p.name,
+                "file_path": str(p),
+                "extracted": vals,
+                "count": len(vals),
+                "fields": list(vals.keys()),
+                "details": parse_res.get("matched_details", {}),
+                "clinical_summary": parse_res.get("clinical_summary", ""),
+                "message": f"Successfully imported {len(vals)} biomarker(s) from '{p.name}'!" if len(vals) > 0 else f"No recognizable clinical values found in '{p.name}'.",
+            }
+        except Exception as exc:
+            log.exception("File picker parse error: %s", exc)
+            return {"success": False, "error": str(exc), "extracted": {}, "count": 0}
+
+    def log_off_diet_meal(
+        self,
+        user_id: str,
+        food_item: str,
+        quantity: float = 1.0,
+        day_number: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Exposed bridge method for logging an off-diet meal and rebalancing today's dinner.
+        """
+        from backend.chatbot.tools import rebalance_off_diet_meal
+        return rebalance_off_diet_meal(
+            user_id=user_id,
+            consumed_food=food_item,
+            quantity=quantity,
+            day_number=day_number,
+        )
 
     # ──────────────────────────────────────────────────────────────────────────
     # Multi-Disease Risk Assessment

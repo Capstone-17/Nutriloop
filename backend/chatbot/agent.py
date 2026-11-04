@@ -867,10 +867,9 @@ def _attempt_plan_alteration_from_text(user_id: str, message: str, disease: Opti
     elif "dinner" in msg_low:
         interval = "Dinner"
 
-    # Extract proposed food
-    m_with = re.search(r"(?:with|to|for|add)\s+([a-zA-Z0-9\s,\(\)]+)", message, re.IGNORECASE)
-    new_dish = m_with.group(1).strip() if m_with else message
-    new_dish = re.sub(r"(?i)\s+(please|doctor|in my plan|in my diet|on day \d|on \w+day).*", "", new_dish).strip()
+    # Extract proposed food cleanly
+    from backend.chatbot.risk_analysis import clean_culinary_entity
+    new_dish = clean_culinary_entity(message)
 
     analysis = run_diet_risk_analysis(
         user_id=user_id,
@@ -879,10 +878,16 @@ def _attempt_plan_alteration_from_text(user_id: str, message: str, disease: Opti
         interval_name=interval,
     )
     if analysis["passed"]:
-        note = (
-            f"I've updated your meal plan to include {analysis['clean_meal_title']} for {analysis['interval_name']} on Day {analysis['day_number']}. "
-            f"This modification fits safely within your clinical nutrient targets."
-        )
+        if analysis.get("is_sunday_craving"):
+            note = (
+                f"Great news! 🌟 {analysis['clinical_explanation']} "
+                f"I've scheduled your {analysis['clean_meal_title']} into Day 7 (Sunday) Evening Snack with intra-day calorie compensation. 🎯✨"
+            )
+        else:
+            note = (
+                f"I've updated your meal plan to include {analysis['clean_meal_title']} for {analysis['interval_name']} on Day {analysis['day_number']}. "
+                f"This modification fits safely within your clinical nutrient targets. 🥗✨"
+            )
         return note, analysis["updated_plan"]
     else:
         note = f"I cannot add '{new_dish}' to your meal plan: {analysis['clinical_explanation']}"
@@ -988,7 +993,59 @@ def _generate_deep_clinical_response(
                 None
             )
 
-    # 4. Explicit Meal Alteration & Diet Modification Requests
+    # 4. Off-Diet / Cheat Meal Consumption Reporting
+    # Detect phrases like "I ate 2 samosas", "I had pizza", "I cheated and ate a burger", etc.
+    m_cheat = re.search(
+        r"\b(?:i\s+(?:just\s+)?(?:ate|had|consumed|drank|cheated\s+with|binged\s+on)|cheated\s+and\s+(?:ate|had)|ate\s+outside|outside\s+food)\b\s*(.*)",
+        msg_low,
+    )
+    if m_cheat:
+        consumed_raw = m_cheat.group(1).strip()
+        # Parse quantity e.g. "2 samosas" -> qty=2, food="samosas"
+        qty = 1.0
+        m_qty = re.search(r"(\d+(?:\.\d+)?)\s*(?:pieces?|slices?|bowls?|cups?|plates?)?\s*([a-zA-Z\s]+)", consumed_raw)
+        if m_qty:
+            try:
+                qty = float(m_qty.group(1))
+                food_entity = m_qty.group(2).strip()
+            except Exception:
+                food_entity = consumed_raw
+        else:
+            food_entity = consumed_raw or "off-diet meal"
+
+        food_entity = re.sub(r"(?i)\s+(for\s+(?:lunch|dinner|snack|breakfast)|today|earlier|just\s+now|please).*", "", food_entity).strip()
+        
+        from backend.chatbot.tools import rebalance_off_diet_meal
+        from datetime import datetime
+        today_num = datetime.now().weekday() + 1
+        
+        reb = rebalance_off_diet_meal(
+            user_id=user_id,
+            consumed_food=food_entity,
+            quantity=qty,
+            day_number=today_num,
+        )
+        if reb.get("status") == "success":
+            return (
+                f"Thank you for being open and telling me! 🌟 Healthy living is about lifelong balance and bounce-back, not guilt or perfection. "
+                f"I've logged your off-diet {qty:g} {food_entity} (~{reb['consumed_calories']} kcal, {reb['consumed_sodium_mg']}mg sodium). "
+                f"To keep your daily metabolic targets protected and prevent blood sugar volatility, I have automatically recalculated tonight's Dinner on Day {reb['day_number']} "
+                f"to a restorative, light Moong Dal & Steamed Vegetable Medley (-{reb['dinner_saved_cals']} kcal, low sodium). "
+                f"Your 7-day plan is now updated and on track! 🥗✨",
+                reb.get("updated_plan")
+            )
+        else:
+            cals = reb.get("consumed_cals", 350)
+            sod = reb.get("consumed_sod", 400)
+            return (
+                f"Thank you for being open and telling me! 🌟 Healthy living is about lifelong balance and bounce-back, not guilt or perfection. "
+                f"I've logged your off-diet {qty:g} {food_entity} (~{cals} kcal, {sod}mg sodium). "
+                "Drink plenty of water and stay active today. Once you generate your 7-day meal plan in the Diet tab, "
+                "I'll automatically balance your meals around your preferences! 🥗✨",
+                None
+            )
+
+    # 5. Explicit Meal Alteration & Diet Modification Requests
     diet_action_tokens = [
         "change", "add", "swap", "replace", "substitute", "include", "switch",
         "alter", "incorporate", "put in my plan", "put in my diet", "update my plan",
@@ -1021,10 +1078,8 @@ def _generate_deep_clinical_response(
         elif "coconut water" in msg_low:
             target_food = "coconut water"
         else:
-            m_with = re.search(r"(?:with|to|for|add)\s+([a-zA-Z0-9\s,\(\)]+)", message, re.IGNORECASE)
-            if m_with:
-                target_food = m_with.group(1).strip()
-                target_food = re.sub(r"(?i)\s+(please|doctor|in my plan|in my diet|on day \d|on \w+day).*", "", target_food).strip()
+            from backend.chatbot.risk_analysis import clean_culinary_entity
+            target_food = clean_culinary_entity(message)
 
         if target_food:
             day_num = 1
@@ -1055,14 +1110,20 @@ def _generate_deep_clinical_response(
             )
 
             if analysis["passed"]:
+                if analysis.get("is_sunday_craving"):
+                    return (
+                        f"Great news! 🌟 {analysis['clinical_explanation']} "
+                        f"I've safely scheduled your {analysis['clean_meal_title']} into Day 7 (Sunday) Evening Snack and precision-reduced Sunday's earlier meals. "
+                        "Enjoy your budgeted weekend treat guilt-free! 🎯✨",
+                        analysis["updated_plan"]
+                    )
                 return (
                     f"I've updated your meal plan to include {analysis['clean_meal_title']} for {analysis['interval_name']} on Day {analysis['day_number']}. "
                     + (
-                        "Since eggs have zero carbohydrates and provide high-quality protein without excess sodium, they're a safe and effective addition for your metabolic goals. "
+                        "Since eggs have zero carbohydrates and provide high-quality protein without excess sodium, they're a safe and effective addition for your metabolic goals. 🥗✨"
                         if "egg" in target_food.lower() else
-                        f"{analysis['clinical_explanation']} "
-                    )
-                    + "I've updated your 7-day schedule accordingly. Would you like me to add them to other days as well?",
+                        f"{analysis['clinical_explanation']} 🥗✨"
+                    ),
                     analysis["updated_plan"]
                 )
             else:

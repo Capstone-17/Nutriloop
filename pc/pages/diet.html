@@ -1,0 +1,150 @@
+<!-- ──────────────────────────────────────────────────────────────────────────
+     PAGE: 7-Day Regional Weekly Diet (Personalized & Rebalanced)
+     ────────────────────────────────────────────────────────────────────────── -->
+<div class="page-content" id="page-diet">
+
+  <!-- Historical Test Warning Banner -->
+  <div id="diet-historical-warning" class="craving-strategy-box" style="display: none; border-left-color: var(--secondary); background: rgba(245, 158, 11, 0.1); margin-bottom: 20px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 16px;">⚠️</span>
+      <div>
+        <strong style="color: var(--secondary-light);">Historical Test Selected:</strong> Meal plan is being calibrated against report from <span id="diet-warning-date" style="font-weight: 700; text-decoration: underline;">--</span>, not your latest test result.
+      </div>
+    </div>
+  </div>
+
+  <div class="diet-layout-stack">
+
+    <!-- 1. Patient Cultural & Culinary Profile (Top Full-Width Card) -->
+    <div class="card" id="culinary-profile-card">
+      <div class="card-header">
+        <div class="card-title">🍽️ Patient Cultural &amp; Culinary Profile</div>
+        <span class="risk-badge badge-normal" style="font-size: 11.5px;">Precision Rebalancing Engine</span>
+      </div>
+
+      <!-- Top Row: Cuisine, Pattern, Cooking Skill, Max Prep Time -->
+      <div class="diet-profile-grid">
+        <div class="form-group">
+          <label class="form-label">Regional Cuisine (Native Place)</label>
+          <select id="diet-cuisine" class="form-select">
+            <option value="South Indian" selected>South Indian (Dosa, Idli, Rasam, Sambar)</option>
+            <option value="North Indian">North Indian (Roti, Dal, Paneer, Sabzi)</option>
+            <option value="Western Indian">Western Indian (Gujarati/Maharashtrian)</option>
+            <option value="Eastern Indian">Eastern Indian (Bengali/Odia)</option>
+            <option value="Continental">Continental / Western</option>
+          </select>
+          <input type="hidden" id="diet-region" value="South Indian">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Dietary Pattern</label>
+          <select id="diet-type" class="form-select">
+            <option value="vegetarian" selected>Vegetarian</option>
+            <option value="non_vegetarian">Non-Vegetarian</option>
+            <option value="vegan">Vegan</option>
+            <option value="eggetarian">Eggetarian</option>
+            <option value="jain">Jain (No Onion/Garlic)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cooking Skill</label>
+          <select id="diet-cooking" class="form-select">
+            <option value="intermediate" selected>Intermediate</option>
+            <option value="beginner">Beginner</option>
+            <option value="advanced">Advanced</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Max Prep Time (mins)</label>
+          <input type="number" id="diet-time" class="form-input" value="30" min="10" max="120">
+        </div>
+      </div>
+
+      <!-- Second Row: Likes, Dislikes, Medications, Sunday Craving -->
+      <div class="diet-profile-grid" style="margin-top: 14px;">
+        <div class="form-group">
+          <label class="form-label">Preferred Foods &amp; Interests (Likes)</label>
+          <input type="text" id="diet-likes" class="form-input" value="millet, dalia, spinach" placeholder="e.g. oats, paneer, ragi, khichdi">
+          <span class="input-hint">Separated by commas. Prioritized with ⭐ badge.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Food Allergens &amp; Dislikes (Excluded)</label>
+          <input type="text" id="diet-dislikes" class="form-input" value="" placeholder="e.g. None, peanuts, mushrooms">
+          <span class="input-hint">Zero-tolerance clinical exclusion scrubber.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Active Medications (Drug-Nutrient Check)</label>
+          <input type="text" id="diet-meds" class="form-input" value="" placeholder="e.g. None, or metformin, lisinopril">
+          <span class="input-hint">Cross-referenced against clinical pharmacopeia.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">🎯 Smart Craving Sunday Treat (Optional)</label>
+          <input type="text" id="diet-craving" class="form-input" value="" placeholder="e.g. Pizza, Gulab Jamun, Biryani">
+          <span class="input-hint">Strictly budgeted for Sunday (Day 7) metabolic lock.</span>
+        </div>
+      </div>
+
+      <input type="hidden" id="diet-calories" value="">
+
+      <div class="diet-action-bar">
+        <button id="btn-generate-diet" class="btn btn-emerald" style="min-width: 320px; padding: 12px 24px; font-size: 14px; font-weight: 700;">
+          🥗 Generate Personalized 7-Day Regional Diet
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. 7-Day Clinically Rebalanced Diet Schedule (Bottom Full-Width Card) -->
+    <div class="card" id="diet-results-card">
+      <div class="card-header">
+        <div class="card-title">📅 7-Day Clinically Rebalanced Diet Schedule</div>
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-save-diet" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;" disabled>
+            💾 Save Plan
+          </button>
+          <button id="btn-open-folder-diet" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">
+            📂 Open Folder
+          </button>
+        </div>
+      </div>
+
+      <div id="diet-placeholder" style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
+        <div style="font-size: 40px; margin-bottom: 12px; opacity: 0.7;">🥗</div>
+        <h4 style="color: #ffffff; margin-bottom: 6px;">No Diet Plan Generated Yet</h4>
+        <p style="font-size: 13px; max-width: 440px; margin: 0 auto;">
+          Configure patient culinary preferences above and click "Generate Personalized 7-Day Regional Diet".
+        </p>
+      </div>
+
+      <!-- Container for actual results -->
+      <div id="weekly-plan-results" style="display: none;">
+        <!-- Craving Rebalancing Banner -->
+        <div id="diet-craving-box" class="craving-strategy-box" style="display: none;"></div>
+
+        <!-- Medication Alert Banner -->
+        <div id="diet-med-alerts" class="med-alert-box" style="display: none;"></div>
+
+        <!-- Macro Targets Row -->
+        <div id="diet-targets-row" class="nutri-targets-row"></div>
+
+        <!-- 7-Day Column Buttons Navigator (Easy click access for patient) -->
+        <div id="diet-day-nav" class="diet-days-bar"></div>
+
+        <!-- Active Selected Day View Container -->
+        <div id="diet-active-day-view" class="day-active-view">
+          <div id="diet-active-day-header" class="day-active-header"></div>
+          <div id="diet-active-day-meals" class="day-intervals-container"></div>
+        </div>
+
+        <!-- Grocery Checklist Container -->
+        <div id="diet-grocery-container" style="margin-top: 24px;">
+          <div class="card-header">
+            <div class="card-title" style="font-size: 13.5px;">🛒 Weekly Clinical Grocery Checklist</div>
+          </div>
+          <div id="diet-grocery-list"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
