@@ -1491,17 +1491,22 @@ async function runAssessment() {
 }
 
 function renderAssessmentResults(res) {
-  const ass = res.assessments;
+  if (!res) return;
+  const ass = res.assessments || (res.ckd ? res : null);
+  if (!ass) return;
 
-  updateRiskMeter("ckd", ass.ckd);
-  updateRiskMeter("hypertension", ass.hypertension);
-  updateRiskMeter("diabetes", ass.diabetes);
+  currentAssessmentData = ass;
+
+  if (ass.ckd) updateRiskMeter("ckd", ass.ckd);
+  if (ass.hypertension) updateRiskMeter("hypertension", ass.hypertension);
+  if (ass.diabetes) updateRiskMeter("diabetes", ass.diabetes);
 
   const condContainer = document.getElementById("detected-conditions-tags");
   if (condContainer) {
     condContainer.innerHTML = "";
-    if (res.detected_conditions && res.detected_conditions.length > 0) {
-      res.detected_conditions.forEach((c) => {
+    const detected = res.detected_conditions || ass.detected_conditions || [];
+    if (detected && detected.length > 0) {
+      detected.forEach((c) => {
         const tag = document.createElement("span");
         tag.className = "brand-badge";
         tag.style.background = "rgba(244, 63, 94, 0.18)";
@@ -1727,7 +1732,60 @@ async function runWeeklyDiet() {
   }
 }
 
+function selectDietDay(selectedIdx) {
+  const plan = currentWeeklyPlan || PAGE_STATE.diet.weekly_plan;
+  if (!plan || !plan.days || plan.days.length === 0) return;
+
+  const day = plan.days[selectedIdx];
+  if (!day) return;
+
+  PAGE_STATE.diet.active_day_index = selectedIdx;
+
+  const dayNav = document.getElementById("diet-day-nav");
+  const activeHeader = document.getElementById("diet-active-day-header");
+  const activeMeals = document.getElementById("diet-active-day-meals");
+
+  // Update active state on column buttons
+  if (dayNav) {
+    dayNav.querySelectorAll(".day-col-btn").forEach((btn, i) => {
+      if (i === selectedIdx) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+  }
+
+  // Update active day header banner
+  if (activeHeader) {
+    const tot = day.daily_total_nutrients || {};
+    activeHeader.innerHTML = `
+      <div class="day-active-title-wrap">
+        <span class="day-num-badge">Day ${day.day_number}</span>
+        <span class="day-active-title">${day.day_name} Clinically Rebalanced Regimen</span>
+      </div>
+      <div class="day-strip-metrics">
+        <span class="day-metric-pill"><span class="metric-icon">🔥</span> <strong>${formatDecimal(tot.calories, 2)}</strong> kcal</span>
+        <span class="day-metric-pill"><span class="metric-icon">🥩</span> P: <strong>${formatDecimal(tot.protein_g, 2)}</strong>g</span>
+        <span class="day-metric-pill"><span class="metric-icon">🧂</span> Na: <strong>${formatDecimal(tot.sodium_mg, 2)}</strong>mg</span>
+        <span class="day-metric-pill"><span class="metric-icon">⚡</span> K: <strong>${formatDecimal(tot.potassium_mg, 2)}</strong>mg</span>
+      </div>
+    `;
+  }
+
+  // Render active day meal intervals
+  if (activeMeals) {
+    activeMeals.innerHTML = renderDayIntervals(day.intervals, selectedIdx);
+  }
+}
+window.selectDietDay = selectDietDay;
+
 function renderWeeklyDietResults(plan) {
+  if (!plan) return;
+  currentWeeklyPlan = plan;
+  PAGE_STATE.diet.weekly_plan = plan;
+  PAGE_STATE.diet.has_generated = true;
+
   const container = document.getElementById("weekly-plan-results");
   if (container) container.style.display = "block";
   const placeholder = document.getElementById("diet-placeholder");
@@ -1819,44 +1877,6 @@ function renderWeeklyDietResults(plan) {
   const activeMeals = document.getElementById("diet-active-day-meals");
 
   if (plan.days && plan.days.length > 0) {
-    function selectDietDay(selectedIdx) {
-      const day = plan.days[selectedIdx];
-      if (!day) return;
-
-      // Update active state on column buttons
-      if (dayNav) {
-        dayNav.querySelectorAll(".day-col-btn").forEach((btn, i) => {
-          if (i === selectedIdx) {
-            btn.classList.add("active");
-          } else {
-            btn.classList.remove("active");
-          }
-        });
-      }
-
-      // Update active day header banner
-      if (activeHeader) {
-        const tot = day.daily_total_nutrients || {};
-        activeHeader.innerHTML = `
-          <div class="day-active-title-wrap">
-            <span class="day-num-badge">Day ${day.day_number}</span>
-            <span class="day-active-title">${day.day_name} Clinically Rebalanced Regimen</span>
-          </div>
-          <div class="day-strip-metrics">
-            <span class="day-metric-pill"><span class="metric-icon">🔥</span> <strong>${formatDecimal(tot.calories, 2)}</strong> kcal</span>
-            <span class="day-metric-pill"><span class="metric-icon">🥩</span> P: <strong>${formatDecimal(tot.protein_g, 2)}</strong>g</span>
-            <span class="day-metric-pill"><span class="metric-icon">🧂</span> Na: <strong>${formatDecimal(tot.sodium_mg, 2)}</strong>mg</span>
-            <span class="day-metric-pill"><span class="metric-icon">⚡</span> K: <strong>${formatDecimal(tot.potassium_mg, 2)}</strong>mg</span>
-          </div>
-        `;
-      }
-
-      // Render active day meal intervals
-      if (activeMeals) {
-        activeMeals.innerHTML = renderDayIntervals(day.intervals, selectedIdx);
-      }
-    }
-
     // Auto-select current day of week (Monday = 0 ... Sunday = 6)
     const currentDayIdx = (new Date().getDay() + 6) % 7;
     const defaultDayIdx = (currentDayIdx >= 0 && currentDayIdx < plan.days.length) ? currentDayIdx : 0;

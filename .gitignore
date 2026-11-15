@@ -41,3 +41,6 @@ build/
 dist/
 *.egg-info/
 datasets/preprocessed/
+
+# documents
+docs/
